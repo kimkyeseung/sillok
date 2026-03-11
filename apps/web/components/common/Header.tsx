@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -19,11 +20,8 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-lg">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-8 px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-            실
-          </div>
-          <span className="text-lg font-bold text-gray-900">실록</span>
+        <Link href="/" className="shrink-0">
+          <Image src="/logo.png" alt="실록" width={80} height={30} priority />
         </Link>
 
         {/* Nav */}

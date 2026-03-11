@@ -6,6 +6,13 @@ export const metadata: Metadata = {
   title: '실록 - 한국 인물 아카이브',
   description:
     '단군부터 현재까지, 한국의 이름있는 인물을 하나의 노드로 연결하는 그래프형 인물 아카이브 플랫폼',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32' },
+      { url: '/favicon.png', type: 'image/png', sizes: '180x180' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     title: '실록 - 한국 인물 아카이브',
     description:
