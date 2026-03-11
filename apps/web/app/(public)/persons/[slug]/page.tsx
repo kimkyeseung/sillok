@@ -3,10 +3,43 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import FollowButton from '@/components/person/FollowButton';
+import VoteTodayButton from '@/components/person/VoteTodayButton';
+import RelationSuggestForm from '@/components/person/RelationSuggestForm';
+import PersonRequestButton from '@/components/person/PersonRequestButton';
 
 interface Props {
   params: { slug: string };
 }
+
+const RELATION_TYPE_LABELS: Record<string, string> = {
+  FAMILY: '가족',
+  TEACHER: '스승/제자',
+  ALLY: '동맹',
+  RIVAL: '라이벌',
+  LORD_VASSAL: '군신',
+  INFLUENCE: '영향',
+};
+
+const RELATION_TYPE_COLORS: Record<string, string> = {
+  FAMILY: 'bg-rose-50 text-rose-700',
+  TEACHER: 'bg-blue-50 text-blue-700',
+  ALLY: 'bg-green-50 text-green-700',
+  RIVAL: 'bg-red-50 text-red-700',
+  LORD_VASSAL: 'bg-purple-50 text-purple-700',
+  INFLUENCE: 'bg-amber-50 text-amber-700',
+};
+
+const NODE_TYPE_LABELS: Record<string, string> = {
+  ARTIFACT: '유물',
+  MEDIA: '미디어',
+  EVENT: '사건',
+};
+
+const NODE_TYPE_COLORS: Record<string, string> = {
+  ARTIFACT: 'bg-amber-50 text-amber-700',
+  MEDIA: 'bg-blue-50 text-blue-700',
+  EVENT: 'bg-purple-50 text-purple-700',
+};
 
 async function getPerson(slug: string) {
   const { data } = await supabaseAdmin
@@ -35,28 +68,80 @@ export default async function PersonDetailPage({ params }: Props) {
   const person = await getPerson(params.slug);
   if (!person) notFound();
 
-  const [{ data: timeline }, { data: threads }, { data: tags }] =
-    await Promise.all([
-      supabaseAdmin
-        .from('person_timeline')
-        .select('id, year, title, description')
-        .eq('person_id', person.id)
-        .order('year', { ascending: true }),
-      supabaseAdmin
-        .from('threads')
-        .select(
-          `id, title, like_count, reply_count, created_at,
-           profiles!threads_author_id_fkey ( nickname )`
-        )
-        .eq('person_id', person.id)
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: false })
-        .limit(10),
-      supabaseAdmin
-        .from('person_tags')
-        .select('tags!inner ( id, name, category )')
-        .eq('person_id', person.id),
-    ]);
+  const [
+    { data: timeline },
+    { data: threads },
+    { data: tags },
+    { data: nodeLinks },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('person_timeline')
+      .select('id, year, title, description')
+      .eq('person_id', person.id)
+      .order('year', { ascending: true }),
+    supabaseAdmin
+      .from('threads')
+      .select(
+        `id, title, like_count, reply_count, created_at,
+         profiles!threads_author_id_fkey ( nickname )`
+      )
+      .eq('person_id', person.id)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabaseAdmin
+      .from('person_tags')
+      .select('tags!inner ( id, name, category )')
+      .eq('person_id', person.id),
+    supabaseAdmin
+      .from('person_node_links')
+      .select(
+        `id, link_type,
+         nodes!inner ( id, slug, node_type, title, thumbnail )`
+      )
+      .eq('person_id', person.id)
+      .eq('nodes.is_deleted', false),
+  ]);
+
+  // Relations — fetch via RPC
+  let relations: {
+    relation_id: string;
+    other_person_id: string;
+    rel_type: string;
+    direction: string;
+    rel_description: string | null;
+  }[] = [];
+  let relatedPersons: Record<
+    string,
+    {
+      id: string;
+      slug: string;
+      name_ko: string;
+      thumbnail: string | null;
+      birth_year: number | null;
+      death_year: number | null;
+    }
+  > = {};
+
+  const { data: relData } = await supabaseAdmin.rpc('get_person_relations', {
+    p_id: person.id,
+  });
+
+  if (relData && relData.length > 0) {
+    relations = relData;
+    const otherIds = relData.map(
+      (r: { other_person_id: string }) => r.other_person_id
+    );
+    const { data: relPersons } = await supabaseAdmin
+      .from('persons')
+      .select('id, slug, name_ko, thumbnail, birth_year, death_year')
+      .in('id', otherIds)
+      .eq('is_deleted', false);
+
+    relatedPersons = Object.fromEntries(
+      (relPersons ?? []).map((p) => [p.id, p])
+    );
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -105,14 +190,19 @@ export default async function PersonDetailPage({ params }: Props) {
               })}
             </div>
 
-            <div className="mt-4 flex items-center gap-6 text-sm">
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
               <div>
                 <span className="font-semibold text-gray-900">
                   {(person.view_count ?? 0).toLocaleString()}
                 </span>
                 <span className="ml-1 text-gray-500">조회</span>
               </div>
-              <FollowButton targetType="person" targetId={person.id} initialCount={person.follow_count ?? 0} />
+              <FollowButton
+                targetType="person"
+                targetId={person.id}
+                initialCount={person.follow_count ?? 0}
+              />
+              <VoteTodayButton personSlug={params.slug} />
             </div>
           </div>
         </div>
@@ -129,14 +219,170 @@ export default async function PersonDetailPage({ params }: Props) {
           </div>
         )}
 
+        {/* 인물 관계 */}
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+              인물 관계
+            </h2>
+            <RelationSuggestForm
+              personId={person.id}
+              personName={person.name_ko}
+            />
+          </div>
+          {relations.length > 0 ? (
+            <div className="card-flat divide-y divide-gray-100">
+              {relations.map((rel) => {
+                const other = relatedPersons[rel.other_person_id];
+                if (!other) return null;
+                return (
+                  <Link
+                    key={rel.relation_id}
+                    href={`/persons/${other.slug}`}
+                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50"
+                  >
+                    {other.thumbnail ? (
+                      <img
+                        src={other.thumbnail}
+                        alt={other.name_ko}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-500">
+                        {other.name_ko.charAt(0)}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">
+                          {other.name_ko}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            RELATION_TYPE_COLORS[rel.rel_type] ??
+                            'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {RELATION_TYPE_LABELS[rel.rel_type] ?? rel.rel_type}
+                        </span>
+                      </div>
+                      {rel.rel_description && (
+                        <p className="mt-0.5 truncate text-xs text-gray-500">
+                          {rel.rel_description}
+                        </p>
+                      )}
+                    </div>
+                    <svg
+                      className="h-4 w-4 shrink-0 text-gray-300"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="card-flat py-8 text-center">
+              <p className="text-sm text-gray-400">
+                아직 등록된 관계가 없습니다
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* 연결된 노드 (유물/미디어/사건) */}
+        {(nodeLinks ?? []).length > 0 && (
+          <div>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+              관련 유물 · 미디어 · 사건
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(nodeLinks ?? []).map((link: Record<string, unknown>) => {
+                const node = link.nodes as Record<string, unknown>;
+                const nodeType = node.node_type as string;
+                return (
+                  <Link
+                    key={link.id as string}
+                    href={`/nodes/${node.slug}`}
+                    className="card-flat flex items-center gap-3 p-3 transition-colors hover:bg-gray-50"
+                  >
+                    {node.thumbnail ? (
+                      <img
+                        src={node.thumbnail as string}
+                        alt={node.title as string}
+                        className="h-12 w-12 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-lg">
+                        {nodeType === 'ARTIFACT'
+                          ? '🏛'
+                          : nodeType === 'MEDIA'
+                            ? '🎬'
+                            : '📅'}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                            NODE_TYPE_COLORS[nodeType] ??
+                            'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {NODE_TYPE_LABELS[nodeType] ?? nodeType}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-sm font-medium text-gray-900">
+                        {node.title as string}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* 스레드 */}
         <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-            스레드
-          </h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+              스레드
+            </h2>
+            <Link
+              href={`/threads/new?person_id=${person.id}`}
+              className="btn-ghost text-xs"
+            >
+              <svg
+                className="mr-1 inline h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              글쓰기
+            </Link>
+          </div>
           <div className="card-flat divide-y divide-gray-100">
             {(threads ?? []).map((thread: Record<string, unknown>) => {
-              const profile = thread.profiles as Record<string, unknown> | null;
+              const profile = thread.profiles as Record<
+                string,
+                unknown
+              > | null;
               return (
                 <Link
                   key={thread.id as string}
@@ -163,8 +409,9 @@ export default async function PersonDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* 사이드바 — 타임라인 */}
+      {/* 사이드바 */}
       <aside className="space-y-6">
+        {/* 타임라인 */}
         {timeline && timeline.length > 0 && (
           <div className="card-flat p-4">
             <h2 className="mb-4 text-sm font-semibold text-gray-900">
@@ -190,6 +437,17 @@ export default async function PersonDetailPage({ params }: Props) {
             </div>
           </div>
         )}
+
+        {/* 인물 추가 요청 */}
+        <div className="card-flat p-4">
+          <h2 className="mb-2 text-sm font-semibold text-gray-900">
+            인물이 없나요?
+          </h2>
+          <p className="mb-3 text-xs text-gray-500">
+            찾는 인물이 실록에 등록되어 있지 않다면 추가를 요청해주세요.
+          </p>
+          <PersonRequestButton />
+        </div>
       </aside>
     </div>
   );
