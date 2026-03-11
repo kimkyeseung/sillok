@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-11T00:35:22.443Z",
+  "lastUpdated": "2026-03-11T00:37:09.957Z",
   "activeFeatures": [
     "project-setup",
     "db-schema",
@@ -33,9 +33,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T10:38:18.171Z",
-        "lastUpdated": "2026-03-11T00:35:22.443Z"
+        "lastUpdated": "2026-03-11T00:37:09.957Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/sillok/apps/web/app/(public)/page.tsx"
+      "lastFile": "/Users/kimkyeseung/Documents/sillok/apps/web/components/common/Header.tsx"
     }
   },
   "pipeline": {
@@ -46,7 +46,7 @@
   "session": {
     "startedAt": "2026-03-10T10:22:19.493Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-11T00:35:22.443Z"
+    "lastActivity": "2026-03-11T00:37:09.957Z"
   },
   "history": [
     {
@@ -834,6 +834,60 @@
     },
     {
       "timestamp": "2026-03-11T00:35:22.443Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:35:48.803Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:36:08.257Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:36:09.635Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:36:20.509Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:36:22.174Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:36:36.818Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:36:38.056Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:36:49.382Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:37:09.957Z",
       "feature": "web",
       "phase": "do",
       "action": "updated"
