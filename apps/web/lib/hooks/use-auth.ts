@@ -38,11 +38,45 @@ export function useAuth() {
     });
   }, [supabase.auth]);
 
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string, nickname: string) => {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { nickname },
+          emailRedirectTo: `${window.location.origin}/callback`,
+        },
+      });
+      return { data, error };
+    },
+    [supabase.auth],
+  );
+
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { data, error };
+    },
+    [supabase.auth],
+  );
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     window.location.href = '/';
   }, [supabase.auth]);
 
-  return { user, loading, signInWithKakao, signInWithGoogle, signOut };
+  return {
+    user,
+    loading,
+    signInWithKakao,
+    signInWithGoogle,
+    signUpWithEmail,
+    signInWithEmail,
+    signOut,
+  };
 }
