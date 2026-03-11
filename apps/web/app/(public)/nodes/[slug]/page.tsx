@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { NodeActions, CommentActions, CommentFormWrapper } from '@/components/thread/NodeInteractions';
 
 interface Props {
   params: { slug: string };
@@ -92,19 +93,14 @@ export default async function NodeDetailPage({ params }: Props) {
             </p>
           )}
 
-          <div className="mt-5 flex gap-6 border-t border-gray-100 pt-4 text-sm">
+          <div className="mt-5 flex items-center gap-6 border-t border-gray-100 pt-4 text-sm">
             <div>
               <span className="font-semibold text-gray-900">
                 {(node.view_count ?? 0).toLocaleString()}
               </span>
               <span className="ml-1 text-gray-500">조회</span>
             </div>
-            <div>
-              <span className="font-semibold text-gray-900">
-                {(node.follow_count ?? 0).toLocaleString()}
-              </span>
-              <span className="ml-1 text-gray-500">팔로우</span>
-            </div>
+            <NodeActions nodeId={node.id} nodeSlug={params.slug} followCount={node.follow_count ?? 0} />
           </div>
         </div>
       </div>
@@ -135,14 +131,7 @@ export default async function NodeDetailPage({ params }: Props) {
                 <p className="mt-1.5 pl-[38px] text-sm leading-relaxed text-gray-700">
                   {comment.content as string}
                 </p>
-                <div className="mt-1 pl-[38px] text-xs text-gray-400">
-                  <span className="inline-flex items-center gap-1">
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    {comment.like_count as number}
-                  </span>
-                </div>
+                <CommentActions commentId={comment.id as string} likeCount={comment.like_count as number} />
               </div>
             );
           })}
@@ -155,6 +144,9 @@ export default async function NodeDetailPage({ params }: Props) {
             </div>
           )}
         </div>
+
+        {/* 댓글 작성 폼 */}
+        <CommentFormWrapper nodeSlug={params.slug} />
       </div>
     </div>
   );

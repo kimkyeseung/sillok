@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-10T15:47:12.238Z",
+  "lastUpdated": "2026-03-11T00:35:22.443Z",
   "activeFeatures": [
     "project-setup",
     "db-schema",
@@ -33,9 +33,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-10T10:38:18.171Z",
-        "lastUpdated": "2026-03-10T15:47:12.238Z"
+        "lastUpdated": "2026-03-11T00:35:22.443Z"
       },
-      "lastFile": "/Users/kimkyeseung/Documents/sillok/apps/web/app/admin/reports/page.tsx"
+      "lastFile": "/Users/kimkyeseung/Documents/sillok/apps/web/app/(public)/page.tsx"
     }
   },
   "pipeline": {
@@ -46,7 +46,7 @@
   "session": {
     "startedAt": "2026-03-10T10:22:19.493Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-03-10T15:47:12.238Z"
+    "lastActivity": "2026-03-11T00:35:22.443Z"
   },
   "history": [
     {
@@ -672,6 +672,168 @@
     },
     {
       "timestamp": "2026-03-10T15:47:12.238Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:30:22.883Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:30:28.727Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:30:36.769Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:30:43.503Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:30:58.109Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:31:17.120Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:31:40.040Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:31:42.548Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:31:45.101Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:32:23.872Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:32:29.562Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:32:42.385Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:32:45.931Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:32:54.809Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:33:11.172Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:33:25.242Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:33:37.274Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:33:44.726Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:33:52.119Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:34:09.344Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:34:16.723Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:34:26.411Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:34:33.770Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:34:40.792Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:34:53.237Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:35:07.371Z",
+      "feature": "web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-11T00:35:22.443Z",
       "feature": "web",
       "phase": "do",
       "action": "updated"

@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import FollowButton from '@/components/person/FollowButton';
 
 interface Props {
   params: { slug: string };
@@ -104,19 +105,14 @@ export default async function PersonDetailPage({ params }: Props) {
               })}
             </div>
 
-            <div className="mt-4 flex gap-6 text-sm">
+            <div className="mt-4 flex items-center gap-6 text-sm">
               <div>
                 <span className="font-semibold text-gray-900">
                   {(person.view_count ?? 0).toLocaleString()}
                 </span>
                 <span className="ml-1 text-gray-500">조회</span>
               </div>
-              <div>
-                <span className="font-semibold text-gray-900">
-                  {(person.follow_count ?? 0).toLocaleString()}
-                </span>
-                <span className="ml-1 text-gray-500">팔로우</span>
-              </div>
+              <FollowButton targetType="person" targetId={person.id} initialCount={person.follow_count ?? 0} />
             </div>
           </div>
         </div>

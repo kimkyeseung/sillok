@@ -74,9 +74,14 @@ export default async function HomePage() {
 
         {/* 최근 스레드 피드 */}
         <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-            최근 스레드
-          </h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+              최근 스레드
+            </h2>
+            <Link href="/threads/new" className="btn-primary text-xs">
+              글쓰기
+            </Link>
+          </div>
           <div className="card-flat divide-y divide-gray-100">
             {recentThreads.map((thread: Record<string, unknown>) => {
               const profile = thread.profiles as Record<string, unknown> | null;
