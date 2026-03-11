@@ -32,7 +32,7 @@ export default function AdminPersonsPage() {
   const [cursor, setCursor] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const url = `/api/persons?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}`;
+  const url = `/api/admin/persons?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}`;
   const { data, isLoading, mutate } = useSWR<PersonsResponse>(url, fetcher);
 
   const handleDelete = async (slug: string, nameKo: string) => {

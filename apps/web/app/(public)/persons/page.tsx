@@ -15,9 +15,10 @@ export default async function PersonsPage({
   let query = supabaseAdmin
     .from('persons')
     .select(
-      'id, slug, name_ko, name_hanja, birth_year, death_year, thumbnail, description'
+      'id, slug, name_ko, name_hanja, birth_year, death_year, thumbnail, summary'
     )
     .eq('is_deleted', false)
+    .eq('is_published', true)
     .order('created_at', { ascending: false })
     .limit(40);
 
