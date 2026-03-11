@@ -91,7 +91,7 @@ export default async function PersonDetailPage({ params }: Props) {
       .limit(10),
     supabaseAdmin
       .from('person_tags')
-      .select('tags!inner ( id, name, category )')
+      .select('tags!inner ( id, name, type )')
       .eq('person_id', person.id),
     supabaseAdmin
       .from('person_node_links')
