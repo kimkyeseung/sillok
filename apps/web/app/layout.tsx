@@ -3,9 +3,9 @@ import { ToastProvider } from '@/components/common/Toast';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '실록 - 한국 인물 아카이브',
+  title: 'Sillok - Korean Historical Figures Archive',
   description:
-    '단군부터 현재까지, 한국의 이름있는 인물을 하나의 노드로 연결하는 그래프형 인물 아카이브 플랫폼',
+    'A graph-based archive platform connecting notable Korean figures from Dangun to the present as interconnected nodes',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '16x16 32x32' },
@@ -14,12 +14,12 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   openGraph: {
-    title: '실록 - 한국 인물 아카이브',
+    title: 'Sillok - Korean Historical Figures Archive',
     description:
-      '단군부터 현재까지, 한국의 이름있는 인물을 하나의 노드로 연결하는 그래프형 인물 아카이브 플랫폼',
+      'A graph-based archive platform connecting notable Korean figures from Dangun to the present as interconnected nodes',
     url: 'https://sillok.net',
-    siteName: '실록',
-    locale: 'ko_KR',
+    siteName: 'Sillok',
+    locale: 'en_US',
     type: 'website',
   },
 };
@@ -30,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
+    <html lang="en">
       <body>
         <ToastProvider>{children}</ToastProvider>
       </body>
