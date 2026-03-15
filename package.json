@@ -13,5 +13,6 @@
     "lint": "npm run lint --workspace=apps/web",
     "type-check": "npm run type-check --workspace=apps/web",
     "db:generate": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > packages/types/src/database.ts"
-  }
+  },
+  "dependencies": {}
 }
