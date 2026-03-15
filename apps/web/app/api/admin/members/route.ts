@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
   let query = supabaseAdmin
     .from('profiles')
-    .select('id, nickname, avatar_url, role, is_banned, banned_until, created_at')
+    .select('id, nickname, avatar_url, role, is_banned, ban_until, created_at')
     .order('created_at', { ascending: false });
 
   if (q) query = query.ilike('nickname', `%${q}%`);

@@ -10,7 +10,7 @@ interface Member {
   avatar_url: string | null;
   role: string;
   is_banned: boolean;
-  banned_until: string | null;
+  ban_until: string | null;
   created_at: string;
 }
 
