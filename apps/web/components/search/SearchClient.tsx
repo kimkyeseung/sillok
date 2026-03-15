@@ -9,7 +9,7 @@ interface SearchResult {
   persons?: Array<{
     id: string;
     slug: string;
-    name_ko: string;
+    name_en: string;
     name_hanja?: string;
     thumbnail?: string;
   }>;
@@ -108,17 +108,17 @@ export default function SearchClient() {
                     {p.thumbnail ? (
                       <img
                         src={p.thumbnail}
-                        alt={p.name_ko}
+                        alt={p.name_en}
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-600">
-                        {p.name_ko.charAt(0)}
+                        {p.name_en.charAt(0)}
                       </div>
                     )}
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {p.name_ko}
+                        {p.name_en}
                       </p>
                       {p.name_hanja && (
                         <p className="text-xs text-gray-400">{p.name_hanja}</p>

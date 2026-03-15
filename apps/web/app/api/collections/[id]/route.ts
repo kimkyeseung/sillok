@@ -17,7 +17,7 @@ export async function GET(
       profiles!collections_user_id_fkey ( nickname, avatar_url ),
       collection_items (
         id, person_id, added_at,
-        persons!collection_items_person_id_fkey ( slug, name_ko, thumbnail )
+        persons!collection_items_person_id_fkey ( slug, name_en, thumbnail )
       )
     `
     )

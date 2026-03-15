@@ -22,7 +22,7 @@ export default async function PersonsPage({
   let query = supabaseAdmin
     .from('persons')
     .select(
-      'id, slug, name_ko, name_hanja, birth_year, death_year, thumbnail, summary'
+      'id, slug, name_en, name_hanja, birth_year, death_year, thumbnail, summary'
     )
     .eq('is_deleted', false)
     .eq('is_published', true)
@@ -30,7 +30,7 @@ export default async function PersonsPage({
     .limit(40);
 
   if (searchParams.q) {
-    query = query.ilike('name_ko', `%${searchParams.q}%`);
+    query = query.or(`name_en.ilike.%${searchParams.q}%,name_ko.ilike.%${searchParams.q}%`);
   }
 
   const { data: persons } = await query;
@@ -70,16 +70,16 @@ export default async function PersonsPage({
             {person.thumbnail ? (
               <img
                 src={person.thumbnail}
-                alt={person.name_ko}
+                alt={person.name_en}
                 className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-gray-100 transition-all group-hover:ring-brand-200"
               />
             ) : (
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-2xl font-bold text-brand-600 ring-2 ring-gray-100 transition-all group-hover:ring-brand-200">
-                {person.name_ko.charAt(0)}
+                {person.name_en.charAt(0)}
               </div>
             )}
             <p className="mt-3 text-sm font-semibold text-gray-900 group-hover:text-brand-600">
-              {person.name_ko}
+              {person.name_en}
             </p>
             {person.name_hanja && (
               <p className="text-xs text-gray-400">{person.name_hanja}</p>

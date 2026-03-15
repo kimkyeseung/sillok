@@ -56,21 +56,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson(params.slug);
   if (!person) return {};
 
-  const description = person.description?.slice(0, 160) ?? `About ${person.name_ko}`;
+  const description = person.description?.slice(0, 160) ?? `About ${person.name_en}`;
 
   return {
-    title: `${person.name_ko}`,
+    title: `${person.name_en}`,
     description,
     alternates: { canonical: `/persons/${params.slug}` },
     openGraph: {
-      title: `${person.name_ko} - Sillok`,
+      title: `${person.name_en} - Sillok`,
       description,
       type: 'profile',
       images: person.thumbnail ? [person.thumbnail] : [],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${person.name_ko} - Sillok`,
+      title: `${person.name_en} - Sillok`,
       description,
       ...(person.thumbnail && { images: [person.thumbnail] }),
     },
@@ -129,7 +129,7 @@ export default async function PersonDetailPage({ params }: Props) {
     {
       id: string;
       slug: string;
-      name_ko: string;
+      name_en: string;
       thumbnail: string | null;
       birth_year: number | null;
       death_year: number | null;
@@ -147,7 +147,7 @@ export default async function PersonDetailPage({ params }: Props) {
     );
     const { data: relPersons } = await supabaseAdmin
       .from('persons')
-      .select('id, slug, name_ko, thumbnail, birth_year, death_year')
+      .select('id, slug, name_en, thumbnail, birth_year, death_year')
       .in('id', otherIds)
       .eq('is_deleted', false);
 
@@ -172,17 +172,17 @@ export default async function PersonDetailPage({ params }: Props) {
               {person.thumbnail ? (
                 <img
                   src={person.thumbnail}
-                  alt={person.name_ko}
+                  alt={person.name_en}
                   className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-md"
                 />
               ) : (
                 <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-brand-400 to-brand-600 text-3xl font-bold text-white shadow-md">
-                  {person.name_ko.charAt(0)}
+                  {person.name_en.charAt(0)}
                 </div>
               )}
               <div className="pb-1">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {person.name_ko}
+                  {person.name_en}
                 </h1>
                 {person.name_hanja && (
                   <p className="text-sm text-gray-500">{person.name_hanja}</p>
@@ -244,7 +244,7 @@ export default async function PersonDetailPage({ params }: Props) {
             </h2>
             <RelationSuggestForm
               personId={person.id}
-              personName={person.name_ko}
+              personName={person.name_en}
             />
           </div>
           {relations.length > 0 ? (
@@ -261,18 +261,18 @@ export default async function PersonDetailPage({ params }: Props) {
                     {other.thumbnail ? (
                       <img
                         src={other.thumbnail}
-                        alt={other.name_ko}
+                        alt={other.name_en}
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-500">
-                        {other.name_ko.charAt(0)}
+                        {other.name_en.charAt(0)}
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900">
-                          {other.name_ko}
+                          {other.name_en}
                         </span>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${

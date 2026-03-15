@@ -13,7 +13,7 @@ async function getThread(id: string) {
     .from('threads')
     .select(
       `*, profiles!threads_author_id_fkey ( nickname, avatar_url ),
-       persons!threads_person_id_fkey ( slug, name_ko ),
+       persons!threads_person_id_fkey ( slug, name_en ),
        thread_images ( id, image_url, display_order )`
     )
     .eq('id', id)
@@ -84,9 +84,9 @@ export default async function ThreadDetailPage({ params }: Props) {
               className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
             >
               <span className="flex h-5 w-5 items-center justify-center rounded bg-brand-100 text-[10px] font-bold text-brand-700">
-                {(person.name_ko as string).charAt(0)}
+                {(person.name_en as string).charAt(0)}
               </span>
-              {person.name_ko as string}
+              {person.name_en as string}
             </Link>
           </div>
         )}

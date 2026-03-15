@@ -26,11 +26,11 @@ export default function RelationSuggestForm({
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<
-    { id: string; name_ko: string; slug: string }[]
+    { id: string; name_en: string; slug: string }[]
   >([]);
   const [selectedPerson, setSelectedPerson] = useState<{
     id: string;
-    name_ko: string;
+    name_en: string;
   } | null>(null);
   const [relationType, setRelationType] = useState('FAMILY');
   const [description, setDescription] = useState('');
@@ -47,7 +47,7 @@ export default function RelationSuggestForm({
     setSearching(true);
     try {
       const res = await apiFetch<{
-        persons: { id: string; name_ko: string; slug: string }[];
+        persons: { id: string; name_en: string; slug: string }[];
       }>(`/api/search?q=${encodeURIComponent(q)}&type=person&limit=5`);
       setSearchResults(
         (res.persons ?? []).filter((p) => p.id !== personId)
@@ -136,7 +136,7 @@ export default function RelationSuggestForm({
             {selectedPerson ? (
               <div className="flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2">
                 <span className="text-sm font-medium text-brand-700">
-                  {selectedPerson.name_ko}
+                  {selectedPerson.name_en}
                 </span>
                 <button
                   onClick={() => {
@@ -182,14 +182,14 @@ export default function RelationSuggestForm({
                         onClick={() => {
                           setSelectedPerson({
                             id: p.id,
-                            name_ko: p.name_ko,
+                            name_en: p.name_en,
                           });
                           setSearchResults([]);
                           setSearchQuery('');
                         }}
                         className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                       >
-                        {p.name_ko}
+                        {p.name_en}
                       </button>
                     ))}
                   </div>

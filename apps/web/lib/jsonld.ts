@@ -20,7 +20,7 @@ export function websiteJsonLd() {
 }
 
 export function personJsonLd(person: {
-  name_ko: string;
+  name_en: string;
   name_hanja?: string | null;
   description?: string | null;
   thumbnail?: string | null;
@@ -31,7 +31,7 @@ export function personJsonLd(person: {
   return {
     '@context': 'https://schema.org',
     '@type': 'Person',
-    name: person.name_ko,
+    name: person.name_en,
     ...(person.name_hanja && { alternateName: person.name_hanja }),
     ...(person.description && { description: person.description.slice(0, 300) }),
     ...(person.thumbnail && { image: person.thumbnail }),

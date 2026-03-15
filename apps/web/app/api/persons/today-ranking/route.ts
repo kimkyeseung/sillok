@@ -43,7 +43,7 @@ export async function GET(request: Request) {
   const personIds = sorted.map(([id]) => id);
   const { data: persons } = await supabaseAdmin
     .from('persons')
-    .select('id, slug, name_ko, thumbnail')
+    .select('id, slug, name_en, thumbnail')
     .in('id', personIds)
     .eq('is_deleted', false);
 

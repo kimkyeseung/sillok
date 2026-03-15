@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       id, person_id, title, content, video_url, like_count, reply_count, view_count,
       is_pinned, created_at, updated_at, author_id,
       profiles!threads_author_id_fkey ( nickname, avatar_url ),
-      persons!threads_person_id_fkey ( slug, name_ko )
+      persons!threads_person_id_fkey ( slug, name_en )
     `
     )
     .in('person_id', personIds)

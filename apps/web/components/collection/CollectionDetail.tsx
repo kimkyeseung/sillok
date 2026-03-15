@@ -14,7 +14,7 @@ interface CollectionData {
     persons: {
       id: string;
       slug: string;
-      name_ko: string;
+      name_en: string;
       thumbnail: string | null;
       birth_year: number | null;
       death_year: number | null;
@@ -73,16 +73,16 @@ export default function CollectionDetail({
               {p.thumbnail ? (
                 <img
                   src={p.thumbnail}
-                  alt={p.name_ko}
+                  alt={p.name_en}
                   className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-gray-100 transition-all group-hover:ring-brand-200"
                 />
               ) : (
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-2xl font-bold text-brand-600 ring-2 ring-gray-100 transition-all group-hover:ring-brand-200">
-                  {p.name_ko.charAt(0)}
+                  {p.name_en.charAt(0)}
                 </div>
               )}
               <p className="mt-3 text-sm font-semibold text-gray-900 group-hover:text-brand-600">
-                {p.name_ko}
+                {p.name_en}
               </p>
               {(p.birth_year || p.death_year) && (
                 <p className="mt-0.5 text-xs text-gray-400">

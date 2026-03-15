@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       created_at, updated_at,
       author_id,
       profiles!threads_author_id_fkey ( nickname, avatar_url ),
-      persons!threads_person_id_fkey ( slug, name_ko, thumbnail ),
+      persons!threads_person_id_fkey ( slug, name_en, thumbnail ),
       thread_images ( id, url, sort_order )
     `
     )

@@ -26,9 +26,9 @@ export async function GET(request: Request) {
 
   const { data: persons } = await supabaseAdmin
     .from('persons')
-    .select('id, slug, name_ko, thumbnail')
+    .select('id, slug, name_en, thumbnail')
     .eq('is_deleted', false)
-    .ilike('name_ko', `%${q}%`)
+    .or(`name_en.ilike.%${q}%,name_ko.ilike.%${q}%`)
     .limit(limit);
 
   const { data: nodes } = await supabaseAdmin

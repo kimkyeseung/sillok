@@ -18,7 +18,7 @@ async function getHomeData() {
   ] = await Promise.all([
     supabaseAdmin
       .from('persons')
-      .select('id, slug, name_ko, thumbnail, birth_year, death_year')
+      .select('id, slug, name_en, thumbnail, birth_year, death_year')
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
       .limit(8),
@@ -160,17 +160,17 @@ export default async function HomePage() {
                 {person.thumbnail ? (
                   <img
                     src={person.thumbnail}
-                    alt={person.name_ko}
+                    alt={person.name_en}
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-medium text-gray-500">
-                    {person.name_ko.charAt(0)}
+                    {person.name_en.charAt(0)}
                   </div>
                 )}
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {person.name_ko}
+                    {person.name_en}
                   </p>
                   {(person.birth_year || person.death_year) && (
                     <p className="text-xs text-gray-400">

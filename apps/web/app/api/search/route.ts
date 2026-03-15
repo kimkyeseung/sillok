@@ -29,9 +29,9 @@ export async function GET(request: Request) {
   if (type === 'all' || type === 'person') {
     const { data } = await supabaseAdmin
       .from('persons')
-      .select('id, slug, name_ko, name_hanja, birth_year, death_year, thumbnail')
+      .select('id, slug, name_en, name_hanja, birth_year, death_year, thumbnail')
       .eq('is_deleted', false)
-      .or(`name_ko.ilike.%${q}%,name_hanja.ilike.%${q}%`)
+      .or(`name_en.ilike.%${q}%,name_ko.ilike.%${q}%,name_hanja.ilike.%${q}%`)
       .limit(limit);
     results.persons = data ?? [];
   }
