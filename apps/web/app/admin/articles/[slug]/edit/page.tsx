@@ -27,7 +27,7 @@ export default function AdminEditArticlePage() {
     return (
       <div className="flex items-center gap-2 py-12 text-gray-400">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-        <span className="text-sm">Loading...</span>
+        <span className="text-sm">로딩 중...</span>
       </div>
     );
   }
@@ -35,7 +35,7 @@ export default function AdminEditArticlePage() {
   if (!data) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-        Article not found
+        아티클을 찾을 수 없습니다
       </div>
     );
   }
@@ -43,7 +43,7 @@ export default function AdminEditArticlePage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Edit Article</h1>
+        <h1 className="text-2xl font-bold text-gray-900">아티클 수정</h1>
         <p className="mt-0.5 text-sm text-gray-500">
           {data.title}
         </p>

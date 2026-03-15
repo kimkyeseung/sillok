@@ -40,13 +40,13 @@ export default function AdminArticlesPage() {
   const { data, isLoading, mutate } = useSWR<ArticlesResponse>(url, fetcher);
 
   const handleDelete = async (slug: string, title: string) => {
-    if (!confirm(`"${title}"? Are you sure you want to delete this?`)) return;
+    if (!confirm(`"${title}"을(를) 삭제하시겠습니까?`)) return;
     try {
       await apiFetch(`/api/articles/${slug}`, { method: 'DELETE' });
-      toast('Deleted successfully');
+      toast('삭제되었습니다');
       mutate();
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제에 실패했습니다', 'error');
     }
   };
 
@@ -54,9 +54,9 @@ export default function AdminArticlesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manage Articles</h1>
+          <h1 className="text-2xl font-bold text-gray-900">아티클 관리</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Manage articles and notices
+            아티클과 공지를 관리합니다
           </p>
         </div>
         <Link href="/admin/articles/new" className="btn-primary text-sm">
@@ -73,25 +73,25 @@ export default function AdminArticlesPage() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          Write Article
+          아티클 작성
         </Link>
       </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">로딩 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Tag</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-right">Views</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">제목</th>
+                <th className="px-4 py-3">태그</th>
+                <th className="px-4 py-3 text-center">상태</th>
+                <th className="px-4 py-3 text-right">조회</th>
+                <th className="px-4 py-3 text-right">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -104,7 +104,7 @@ export default function AdminArticlesPage() {
                     <div className="flex items-center gap-2">
                       {article.is_notice && (
                         <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
-                          Notice
+                          공지
                         </span>
                       )}
                       <span className="font-medium text-gray-900">
@@ -129,7 +129,7 @@ export default function AdminArticlesPage() {
                           : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {article.is_published ? 'Public' : 'Private'}
+                      {article.is_published ? '공개' : '비공개'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-500">
@@ -185,7 +185,7 @@ export default function AdminArticlesPage() {
                     colSpan={5}
                     className="px-4 py-12 text-center text-gray-400"
                   >
-                    No articles yet
+                    아티클이 없습니다
                   </td>
                 </tr>
               )}
@@ -200,7 +200,7 @@ export default function AdminArticlesPage() {
             onClick={() => setCursor(data.next_cursor)}
             className="btn-ghost text-sm"
           >
-            Load More
+            더 보기
           </button>
         </div>
       )}

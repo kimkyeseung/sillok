@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 
-const TAGS = ['Feature', 'Special', 'Profile', 'Modern', 'Notice', 'Guide'] as const;
+const TAGS = ['기획', '특집', '인물탐구', '현대', '공지', '안내'] as const;
 
 interface ArticleData {
   slug: string;
@@ -39,7 +39,7 @@ export default function ArticleForm({
     body: initialData?.body ?? '',
     summary: initialData?.summary ?? '',
     thumbnail: initialData?.thumbnail ?? '',
-    tag: initialData?.tag ?? 'Feature',
+    tag: initialData?.tag ?? '기획',
     is_notice: initialData?.is_notice ?? false,
     is_published: initialData?.is_published ?? false,
   });
@@ -82,19 +82,19 @@ export default function ArticleForm({
           method: 'POST',
           body: JSON.stringify(body),
         });
-        toast('Article has been created');
+        toast('아티클이 작성되었습니다');
       } else {
         await apiFetch(`/api/articles/${slug}`, {
           method: 'PUT',
           body: JSON.stringify(body),
         });
-        toast('Article has been updated');
+        toast('아티클이 수정되었습니다');
       }
 
       router.push('/admin/articles');
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : 'An error occurred';
+        err instanceof Error ? err.message : '오류가 발생했습니다';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -104,7 +104,7 @@ export default function ArticleForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="card-flat p-6 space-y-5">
-        <h2 className="text-sm font-semibold text-gray-900">Basic Info</h2>
+        <h2 className="text-sm font-semibold text-gray-900">기본 정보</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -124,7 +124,7 @@ export default function ArticleForm({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              Tag *
+              태그 *
             </label>
             <select
               name="tag"
@@ -143,14 +143,14 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            Title *
+            제목 *
           </label>
           <input
             type="text"
             name="title"
             value={form.title}
             onChange={handleChange}
-            placeholder="Article title"
+            placeholder="아티클 제목"
             maxLength={300}
             required
             className="input"
@@ -159,14 +159,14 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            Summary
+            요약
           </label>
           <input
             type="text"
             name="summary"
             value={form.summary}
             onChange={handleChange}
-            placeholder="Brief summary (shown in listing)"
+            placeholder="간단한 요약 (목록에 표시됩니다)"
             maxLength={500}
             className="input"
           />
@@ -174,7 +174,7 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            Thumbnail URL
+            썸네일 URL
           </label>
           <input
             type="url"
@@ -188,13 +188,13 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            Body *
+            본문 *
           </label>
           <textarea
             name="body"
             value={form.body}
             onChange={handleChange}
-            placeholder="Write article body (Markdown supported)"
+            placeholder="아티클 본문을 작성하세요 (Markdown 지원)"
             rows={15}
             required
             className="input resize-none font-mono text-sm"
@@ -202,9 +202,9 @@ export default function ArticleForm({
         </div>
       </div>
 
-      {/* Options */}
+      {/* 옵션 */}
       <div className="card-flat p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-900">Options</h2>
+        <h2 className="text-sm font-semibold text-gray-900">옵션</h2>
         <label className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -214,9 +214,9 @@ export default function ArticleForm({
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           />
           <div>
-            <span className="text-sm font-medium text-gray-900">Published</span>
+            <span className="text-sm font-medium text-gray-900">공개</span>
             <p className="text-xs text-gray-500">
-              Visible in the article listing when checked
+              체크하면 아티클 목록에 노출됩니다
             </p>
           </div>
         </label>
@@ -229,15 +229,15 @@ export default function ArticleForm({
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           />
           <div>
-            <span className="text-sm font-medium text-gray-900">Notice</span>
+            <span className="text-sm font-medium text-gray-900">공지</span>
             <p className="text-xs text-gray-500">
-              Shows a notice badge at the top when checked
+              체크하면 상단에 공지 배지가 표시됩니다
             </p>
           </div>
         </label>
       </div>
 
-      {/* Submit */}
+      {/* 제출 */}
       <div className="flex items-center gap-3">
         <button
           type="submit"
@@ -250,17 +250,17 @@ export default function ArticleForm({
           className="btn-primary disabled:opacity-50"
         >
           {saving
-            ? 'Saving...'
+            ? '저장 중...'
             : mode === 'create'
-              ? 'Create Article'
-              : 'Save Changes'}
+              ? '아티클 작성'
+              : '수정 저장'}
         </button>
         <button
           type="button"
           onClick={() => router.push('/admin/articles')}
           className="btn-ghost"
         >
-          Cancel
+          취소
         </button>
       </div>
     </form>
