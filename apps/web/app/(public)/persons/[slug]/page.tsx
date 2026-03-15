@@ -6,6 +6,7 @@ import FollowButton from '@/components/person/FollowButton';
 import VoteTodayButton from '@/components/person/VoteTodayButton';
 import RelationSuggestForm from '@/components/person/RelationSuggestForm';
 import PersonRequestButton from '@/components/person/PersonRequestButton';
+import { personJsonLd } from '@/lib/jsonld';
 
 interface Props {
   params: { slug: string };
@@ -54,12 +55,24 @@ async function getPerson(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson(params.slug);
   if (!person) return {};
+
+  const description = person.description?.slice(0, 160) ?? `About ${person.name_ko}`;
+
   return {
-    title: `${person.name_ko} - Sillok`,
-    description: person.description?.slice(0, 160) ?? `About ${person.name_ko}`,
+    title: `${person.name_ko}`,
+    description,
+    alternates: { canonical: `/persons/${params.slug}` },
     openGraph: {
       title: `${person.name_ko} - Sillok`,
+      description,
+      type: 'profile',
       images: person.thumbnail ? [person.thumbnail] : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${person.name_ko} - Sillok`,
+      description,
+      ...(person.thumbnail && { images: [person.thumbnail] }),
     },
   };
 }
@@ -145,6 +158,10 @@ export default async function PersonDetailPage({ params }: Props) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd(person)) }}
+      />
       {/* Main */}
       <div className="space-y-6">
         {/* Profile Card */}

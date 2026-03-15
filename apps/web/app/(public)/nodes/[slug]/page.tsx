@@ -21,9 +21,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const node = await getNode(params.slug);
   if (!node) return {};
 
+  const description = node.description?.slice(0, 160) ?? `${node.title} info`;
+
   return {
-    title: `${node.title} - Sillok`,
-    description: node.description?.slice(0, 160) ?? `${node.title} info`,
+    title: `${node.title}`,
+    description,
+    alternates: { canonical: `/nodes/${params.slug}` },
+    openGraph: {
+      title: `${node.title} - Sillok`,
+      description,
+      ...(node.thumbnail && { images: [node.thumbnail] }),
+    },
   };
 }
 

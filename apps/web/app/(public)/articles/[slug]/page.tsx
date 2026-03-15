@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { articleJsonLd } from '@/lib/jsonld';
 
 interface Props {
   params: { slug: string };
@@ -21,9 +22,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticle(params.slug);
   if (!article) return {};
 
+  const description = article.summary?.slice(0, 160) ?? article.title;
+
   return {
-    title: `${article.title} - Sillok`,
-    description: article.summary?.slice(0, 160),
+    title: `${article.title}`,
+    description,
+    alternates: { canonical: `/articles/${params.slug}` },
+    openGraph: {
+      title: `${article.title} - Sillok`,
+      description,
+      type: 'article',
+      ...(article.thumbnail && { images: [article.thumbnail] }),
+    },
   };
 }
 
@@ -33,6 +43,10 @@ export default async function ArticleDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd(article)) }}
+      />
       <article className="card-flat overflow-hidden">
         {article.thumbnail && (
           <img

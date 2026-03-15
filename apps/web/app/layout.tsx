@@ -3,7 +3,11 @@ import { ToastProvider } from '@/components/common/Toast';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Sillok - Korean Historical Figures Archive',
+  metadataBase: new URL('https://sillok.kr'),
+  title: {
+    default: 'Sillok - Korean Historical Figures Archive',
+    template: '%s | Sillok',
+  },
   description:
     'A graph-based archive platform connecting notable Korean figures from Dangun to the present as interconnected nodes',
   icons: {
@@ -13,14 +17,20 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-touch-icon.png',
   },
+  manifest: '/manifest.json',
   openGraph: {
     title: 'Sillok - Korean Historical Figures Archive',
     description:
       'A graph-based archive platform connecting notable Korean figures from Dangun to the present as interconnected nodes',
-    url: 'https://sillok.net',
+    url: 'https://sillok.kr',
     siteName: 'Sillok',
     locale: 'en_US',
     type: 'website',
+    images: ['/og-image.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@sillok_kr',
   },
 };
 

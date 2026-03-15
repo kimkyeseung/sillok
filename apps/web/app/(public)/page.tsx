@@ -1,5 +1,11 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+import { websiteJsonLd } from '@/lib/jsonld';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +53,10 @@ export default async function HomePage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }}
+      />
       {/* Main Feed */}
       <div className="space-y-6">
         {/* Hero Card */}

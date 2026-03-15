@@ -26,9 +26,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const thread = await getThread(params.id);
   if (!thread) return {};
 
+  const description = thread.content?.slice(0, 160) ?? thread.title;
+
   return {
-    title: `${thread.title} - Sillok`,
-    description: thread.content?.slice(0, 160),
+    title: `${thread.title}`,
+    description,
+    alternates: { canonical: `/threads/${params.id}` },
+    openGraph: {
+      title: `${thread.title} - Sillok`,
+      description,
+      type: 'article',
+    },
   };
 }
 

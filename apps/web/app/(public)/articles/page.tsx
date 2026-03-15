@@ -1,5 +1,12 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Articles',
+  description: 'Stories and announcements from the Sillok team',
+  alternates: { canonical: '/articles' },
+};
 
 export const dynamic = 'force-dynamic';
 

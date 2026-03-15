@@ -1,5 +1,12 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Figures',
+  description: 'Explore Korean historical figures from Dangun to the present',
+  alternates: { canonical: '/persons' },
+};
 
 export const dynamic = 'force-dynamic';
 
