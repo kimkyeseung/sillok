@@ -50,7 +50,7 @@ export default function NodeCommentForm({ nodeSlug }: NodeCommentFormProps) {
         disabled={submitting || !content.trim()}
         className="btn-primary shrink-0 disabled:opacity-50"
       >
-        {submitting ? '...' : Post}
+        {submitting ? '...' : 'Post'}
       </button>
     </form>
   );

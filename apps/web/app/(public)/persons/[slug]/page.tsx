@@ -444,7 +444,7 @@ export default async function PersonDetailPage({ params }: Props) {
             Missing a figure?
           </h2>
           <p className="mb-3 text-xs text-gray-500">
-            If you can't find someone, request them to be added.
+            If you can&apos;t find someone, request them to be added.
           </p>
           <PersonRequestButton />
         </div>

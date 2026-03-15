@@ -56,7 +56,7 @@ export default function ReplyForm({ threadId, parentId, onSuccess }: ReplyFormPr
         disabled={submitting || !content.trim()}
         className="btn-primary shrink-0 disabled:opacity-50"
       >
-        {submitting ? '...' : Post}
+        {submitting ? '...' : 'Post'}
       </button>
     </form>
   );
