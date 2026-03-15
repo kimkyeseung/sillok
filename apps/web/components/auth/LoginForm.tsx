@@ -70,6 +70,8 @@ function LoginContent() {
       const { error: authError } = await signInWithEmail(email, password);
       if (authError) {
         setError('Invalid email or password.');
+      } else {
+        window.location.href = '/';
       }
     }
 
