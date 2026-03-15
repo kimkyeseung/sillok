@@ -43,13 +43,13 @@ export default function CollectionsClient() {
           ...(desc ? { description: desc.trim() } : {}),
         }),
       });
-      toast('컬렉션이 생성되었습니다');
+      toast('Collection created');
       setShowCreate(false);
       setName('');
       setDesc('');
       mutate();
     } catch {
-      toast('로그인이 필요합니다', 'error');
+      toast('Login required', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -59,18 +59,18 @@ export default function CollectionsClient() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">컬렉션</h1>
-          <p className="mt-0.5 text-sm text-gray-500">관심있는 인물을 모아보세요</p>
+          <h1 className="text-2xl font-bold text-gray-900">Collections</h1>
+          <p className="mt-0.5 text-sm text-gray-500">Organize your favorite figures</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary text-xs">
-          새 컬렉션
+          New Collection
         </button>
       </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">로딩 중...</span>
+          <span className="text-sm">Loading...</span>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -86,13 +86,13 @@ export default function CollectionsClient() {
                 </svg>
                 <p className="text-sm font-semibold text-gray-900">{c.name}</p>
                 {!c.is_public && (
-                  <span className="badge-gray text-[10px]">비공개</span>
+                  <span className="badge-gray text-[10px]">Private</span>
                 )}
               </div>
               {c.description && (
                 <p className="mt-1.5 text-xs text-gray-500 line-clamp-2">{c.description}</p>
               )}
-              <p className="mt-2 text-xs text-gray-400">인물 {c.item_count}명</p>
+              <p className="mt-2 text-xs text-gray-400">Figures: {c.item_count}</p>
             </Link>
           ))}
         </div>
@@ -103,38 +103,38 @@ export default function CollectionsClient() {
           <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
-          <p className="mt-3 text-sm font-medium text-gray-500">컬렉션이 없습니다</p>
-          <p className="text-xs text-gray-400">첫 컬렉션을 만들어보세요!</p>
+          <p className="mt-3 text-sm font-medium text-gray-500">No collections yet</p>
+          <p className="text-xs text-gray-400">Create your first collection!</p>
         </div>
       )}
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="새 컬렉션 만들기">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Collection Create">
         <div className="space-y-3">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="컬렉션 이름"
+            placeholder="Collection name"
             maxLength={100}
             className="input"
           />
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
-            placeholder="설명 (선택)"
+            placeholder="Description (optional)"
             rows={3}
             className="input resize-none"
           />
           <div className="flex justify-end gap-2">
             <button onClick={() => setShowCreate(false)} className="btn-secondary text-xs">
-              취소
+              Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={submitting || !name.trim()}
               className="btn-primary text-xs disabled:opacity-50"
             >
-              {submitting ? '생성 중...' : '만들기'}
+              {submitting ? 'Creating...' : 'Create'}
             </button>
           </div>
         </div>

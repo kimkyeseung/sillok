@@ -4,7 +4,7 @@ import { requireUser, requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { personRequestLimiter } from '@/lib/rate-limit';
 
-// ─── POST /api/person-requests — 인물 추가 요청 [USER] ───
+// ─── POST /api/person-requests — Person addition request [USER] ───
 
 const PersonRequestSchema = z.object({
   name_ko: z.string().min(1).max(100),
@@ -15,22 +15,22 @@ const PersonRequestSchema = z.object({
 export async function POST(request: Request) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { success } = await personRequestLimiter.check(user.id);
   if (!success)
-    return apiError('RATE_LIMIT_EXCEEDED', '요청이 너무 많습니다.', 429);
+    return apiError('RATE_LIMIT_EXCEEDED', 'Too many requests.', 429);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = PersonRequestSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data, error } = await supabaseAdmin
     .from('person_requests')
@@ -43,12 +43,12 @@ export async function POST(request: Request) {
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(data);
 }
 
-// ─── GET /api/person-requests — 인물 추가 요청 목록 [ADMIN] ───
+// ─── GET /api/person-requests — Person addition request list [ADMIN] ───
 
 const ListQuerySchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
@@ -59,12 +59,12 @@ const ListQuerySchema = z.object({
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { searchParams } = new URL(request.url);
   const parsed = ListQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { status, limit, cursor } = parsed.data;
 
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);

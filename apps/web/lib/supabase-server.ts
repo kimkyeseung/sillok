@@ -2,9 +2,9 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 /**
- * SSR 서버 컴포넌트 전용 Supabase 클라이언트
- * - Server Component에서 읽기 요청 처리
- * - 유저 세션 기반 RLS 적용
+ * SSR Server Component Supabase client
+ * - Handles read requests in Server Components
+ * - Applies RLS based on user session
  */
 export function createSupabaseServer() {
   const cookieStore = cookies();
@@ -29,7 +29,7 @@ export function createSupabaseServer() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Server Component에서는 cookie set 불가 — 무시
+            // Cannot set cookies in Server Components — ignore
           }
         },
       },

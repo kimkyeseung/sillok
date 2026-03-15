@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── DELETE /api/relations/:id/reject — 관계 거부 (삭제) [ADMIN] ───
+// ─── DELETE /api/relations/:id/reject — Reject relation (delete) [ADMIN] ───
 
 export async function DELETE(
   request: Request,
@@ -10,7 +10,7 @@ export async function DELETE(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { error } = await supabaseAdmin
     .from('person_relations')
@@ -19,7 +19,7 @@ export async function DELETE(
     .eq('is_approved', false);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ deleted: true });
 }

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/persons/today-ranking — 오늘의 인물 투표 랭킹 (공개) ───
+// ─── GET /api/persons/today-ranking — Person of the day ranking (public) ───
 
 const QuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -13,21 +13,21 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = QuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const today = parsed.data.date ?? new Date().toISOString().split('T')[0];
   const limit = parsed.data.limit;
 
-  // 오늘 날짜 투표를 person_id 별로 집계
+  // Aggregate today votes by person_id
   const { data: votes, error } = await supabaseAdmin
     .from('person_of_day_votes')
     .select('person_id')
     .eq('vote_date', today);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  // 투표 집계
+  // Vote aggregation
   const countMap = new Map<string, number>();
   (votes ?? []).forEach((v) => {
     countMap.set(v.person_id, (countMap.get(v.person_id) ?? 0) + 1);

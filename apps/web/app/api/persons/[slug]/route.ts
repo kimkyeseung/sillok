@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/persons/:slug — 인물 상세 (공개) ───
+// ─── GET /api/persons/:slug — Person detail (public) ───
 
 export async function GET(
   _request: Request,
@@ -22,13 +22,13 @@ export async function GET(
     .single();
 
   if (error || !person)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
   return apiSuccess(person);
 }
 
-// ─── PUT /api/persons/:slug — 인물 수정 [ADMIN] ───
-// NOTE: slug을 기준으로 찾아서 id로 업데이트
+// ─── PUT /api/persons/:slug — Update person [ADMIN] ───
+// NOTE: Find by slug, update by id
 
 const UpdatePersonSchema = z.object({
   slug: z
@@ -67,20 +67,20 @@ export async function PUT(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = UpdatePersonSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422, result.error.issues);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, result.error.issues);
 
-  // slug으로 인물 조회
+  // Find person by slug
   const { data: existing } = await supabaseAdmin
     .from('persons')
     .select('id')
@@ -89,11 +89,11 @@ export async function PUT(
     .single();
 
   if (!existing)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
   const { tag_ids, ...updateData } = result.data;
 
-  // 변경할 필드가 있는 경우만 업데이트
+  // Only update if there are fields to change
   if (Object.keys(updateData).length > 0) {
     const { error } = await supabaseAdmin
       .from('persons')
@@ -102,12 +102,12 @@ export async function PUT(
 
     if (error) {
       if (error.code === '23505')
-        return apiError('VALIDATION_ERROR', '이미 존재하는 slug입니다.', 409);
-      return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+        return apiError('VALIDATION_ERROR', 'Slug already exists.', 409);
+      return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
     }
   }
 
-  // 태그 교체
+  // Replace tags
   if (tag_ids !== undefined) {
     await supabaseAdmin
       .from('person_tags')
@@ -123,7 +123,7 @@ export async function PUT(
     }
   }
 
-  // 업데이트된 데이터 반환
+  // Return updated data
   const { data: updated } = await supabaseAdmin
     .from('persons')
     .select('*')
@@ -133,7 +133,7 @@ export async function PUT(
   return apiSuccess(updated);
 }
 
-// ─── DELETE /api/persons/:slug — 인물 soft delete [ADMIN] ───
+// ─── DELETE /api/persons/:slug — Soft delete person [ADMIN] ───
 
 export async function DELETE(
   request: Request,
@@ -141,7 +141,7 @@ export async function DELETE(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { data: existing } = await supabaseAdmin
     .from('persons')
@@ -151,7 +151,7 @@ export async function DELETE(
     .single();
 
   if (!existing)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
   const { error } = await supabaseAdmin
     .from('persons')
@@ -159,7 +159,7 @@ export async function DELETE(
     .eq('id', existing.id);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ deleted: true });
 }

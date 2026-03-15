@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── PUT /api/person-requests/:id/reject — 인물 추가 요청 거절 [ADMIN] ───
+// ─── PUT /api/person-requests/:id/reject — Reject person addition request [ADMIN] ───
 
 const RejectSchema = z.object({
   admin_note: z.string().max(500).optional(),
@@ -15,13 +15,13 @@ export async function PUT(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   let body = {};
   try {
     body = await request.json();
   } catch {
-    // body 없이도 거절 가능
+    // rejection can proceed without a body
   }
 
   const result = RejectSchema.safeParse(body);
@@ -39,13 +39,13 @@ export async function PUT(
     .single();
 
   if (error || !data)
-    return apiError('NODE_NOT_FOUND', '요청을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Request not found.', 404);
 
   await supabaseAdmin.from('notifications').insert({
     user_id: data.requested_by,
     type: 'REQUEST_REJECTED',
-    title: '인물 추가 요청이 반려되었습니다',
-    body: adminNote || `"${data.name_ko}" 요청이 반려되었습니다.`,
+    title: 'Your person addition request has been rejected',
+    body: adminNote || `Your request for "${data.name_ko}" has been rejected.`,
     link: null,
   });
 

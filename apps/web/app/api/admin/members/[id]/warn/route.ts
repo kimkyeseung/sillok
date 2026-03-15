@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── PUT /api/admin/members/:id/warn — 회원 경고 [ADMIN] ───
+// ─── PUT /api/admin/members/:id/warn — Warn member [ADMIN] ───
 
 const WarnSchema = z.object({
   reason: z.string().min(1).max(500),
@@ -17,18 +17,18 @@ export async function PUT(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = WarnSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data, error } = await supabaseAdmin
     .from('warning_logs')
@@ -44,13 +44,13 @@ export async function PUT(
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  // 경고 알림 전송
+  // Send warning notification
   await supabaseAdmin.from('notifications').insert({
     user_id: params.id,
     type: 'WARNING',
-    title: '경고가 접수되었습니다',
+    title: 'You have received a warning',
     body: result.data.reason,
     link: null,
   });

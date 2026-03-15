@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── PUT /api/person-requests/:id/approve — 인물 추가 요청 승인 [ADMIN] ───
+// ─── PUT /api/person-requests/:id/approve — Approve person addition request [ADMIN] ───
 
 export async function PUT(
   request: Request,
@@ -10,7 +10,7 @@ export async function PUT(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { data, error } = await supabaseAdmin
     .from('person_requests')
@@ -21,14 +21,14 @@ export async function PUT(
     .single();
 
   if (error || !data)
-    return apiError('NODE_NOT_FOUND', '요청을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Request not found.', 404);
 
-  // 요청자에게 알림
+  // Notify the requester
   await supabaseAdmin.from('notifications').insert({
     user_id: data.requested_by,
     type: 'REQUEST_APPROVED',
-    title: '인물 추가 요청이 승인되었습니다',
-    body: `"${data.name_ko}" 인물이 곧 등록됩니다.`,
+    title: 'Your person addition request has been approved',
+    body: `"${data.name_ko}" will be registered soon.`,
     link: null,
   });
 

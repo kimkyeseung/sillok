@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/articles/:slug — 아티클 상세 (공개) ───
+// ─── GET /api/articles/:slug — Article detail (public) ───
 
 export async function GET(
   _request: Request,
@@ -17,12 +17,12 @@ export async function GET(
     .single();
 
   if (error || !data)
-    return apiError('NODE_NOT_FOUND', '아티클을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Article not found.', 404);
 
   return apiSuccess(data);
 }
 
-// ─── PUT /api/articles/:slug — 아티클 수정 [ADMIN] ───
+// ─── PUT /api/articles/:slug — Update article [ADMIN] ───
 
 const UpdateArticleSchema = z.object({
   slug: z.string().min(1).max(200).regex(/^[a-z0-9-]+$/).optional(),
@@ -41,18 +41,18 @@ export async function PUT(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = UpdateArticleSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data, error } = await supabaseAdmin
     .from('articles')
@@ -63,12 +63,12 @@ export async function PUT(
     .single();
 
   if (error || !data)
-    return apiError('NODE_NOT_FOUND', '아티클을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Article not found.', 404);
 
   return apiSuccess(data);
 }
 
-// ─── DELETE /api/articles/:slug — 아티클 soft delete [ADMIN] ───
+// ─── DELETE /api/articles/:slug — Article soft delete [ADMIN] ───
 
 export async function DELETE(
   request: Request,
@@ -76,7 +76,7 @@ export async function DELETE(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { error } = await supabaseAdmin
     .from('articles')
@@ -85,7 +85,7 @@ export async function DELETE(
     .eq('is_deleted', false);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ deleted: true });
 }

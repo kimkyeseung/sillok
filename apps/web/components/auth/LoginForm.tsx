@@ -8,15 +8,15 @@ import { Suspense } from 'react';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().email('올바른 이메일 주소를 입력해주세요.'),
-  password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.'),
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
 });
 
 const signupSchema = loginSchema.extend({
   nickname: z
     .string()
-    .min(2, '닉네임은 2자 이상이어야 합니다.')
-    .max(20, '닉네임은 20자 이하여야 합니다.'),
+    .min(2, 'Nickname must be at least 2 characters.')
+    .max(20, 'Nickname must be 20 characters or less.'),
 });
 
 function LoginContent() {
@@ -60,7 +60,7 @@ function LoginContent() {
         setError(authError.message);
       } else {
         setMessage(
-          '회원가입이 완료되었습니다. 이메일을 확인하여 인증을 완료해주세요.',
+          'Sign up complete. Please verify your email to continue.',
         );
         setEmail('');
         setPassword('');
@@ -69,7 +69,7 @@ function LoginContent() {
     } else {
       const { error: authError } = await signInWithEmail(email, password);
       if (authError) {
-        setError('이메일 또는 비밀번호가 올바르지 않습니다.');
+        setError('Invalid email or password.');
       }
     }
 
@@ -79,33 +79,33 @@ function LoginContent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
-        {/* 로고 */}
+        {/* Logo */}
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white">
-              실
+              S
             </div>
-            <span className="text-2xl font-bold text-gray-900">실록</span>
+            <span className="text-2xl font-bold text-gray-900">Sillok</span>
           </Link>
           <p className="mt-3 text-sm text-gray-500">
-            한국 인물 아카이브에 오신 것을 환영합니다
+            Welcome to the Korean Historical Figures Archive
           </p>
         </div>
 
-        {/* 카드 */}
+        {/* Card */}
         <div className="card-flat p-6">
           <h2 className="text-center text-lg font-semibold text-gray-900">
-            {mode === 'login' ? '로그인' : '회원가입'}
+            {mode === 'login' ? 'Log In' : 'Sign Up'}
           </h2>
           <p className="mt-1 text-center text-xs text-gray-400">
             {mode === 'login'
-              ? '소셜 계정 또는 이메일로 로그인하세요'
-              : '이메일로 새 계정을 만드세요'}
+              ? 'Log in with social account or email'
+              : 'Create a new account with email'}
           </p>
 
           {(urlError || error) && (
             <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600">
-              {error || '로그인에 실패했습니다. 다시 시도해주세요.'}
+              {error || 'Login failed. Please try again.'}
             </div>
           )}
 
@@ -115,7 +115,7 @@ function LoginContent() {
             </div>
           )}
 
-          {/* 소셜 로그인 */}
+          {/* Social Login */}
           <div className="mt-6 space-y-3">
             <button
               onClick={signInWithKakao}
@@ -127,7 +127,7 @@ function LoginContent() {
                   d="M9 1C4.58 1 1 3.79 1 7.24c0 2.2 1.46 4.13 3.66 5.23l-.93 3.43c-.08.3.26.54.52.37l4.1-2.72c.22.02.43.03.65.03 4.42 0 8-2.79 8-6.24S13.42 1 9 1z"
                 />
               </svg>
-              카카오로 시작하기
+              Continue with Kakao
             </button>
 
             <button
@@ -152,23 +152,23 @@ function LoginContent() {
                   d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
                 />
               </svg>
-              Google로 시작하기
+              Continue with Google
             </button>
           </div>
 
-          {/* 구분선 */}
+          {/* Divider */}
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs text-gray-400">또는</span>
+            <span className="text-xs text-gray-400">or</span>
             <div className="h-px flex-1 bg-gray-200" />
           </div>
 
-          {/* 이메일 폼 */}
+          {/* Email Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
             {mode === 'signup' && (
               <input
                 type="text"
-                placeholder="닉네임"
+                placeholder="Nickname"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
@@ -176,14 +176,14 @@ function LoginContent() {
             )}
             <input
               type="email"
-              placeholder="이메일"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
             <input
               type="password"
-              placeholder="비밀번호 (6자 이상)"
+              placeholder="Password (6+ characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
@@ -194,18 +194,18 @@ function LoginContent() {
               className="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
             >
               {submitting
-                ? '처리 중...'
+                ? 'Processing...'
                 : mode === 'login'
-                  ? '이메일로 로그인'
-                  : '회원가입'}
+                  ? 'Log in with Email'
+                  : 'Sign Up'}
             </button>
           </form>
 
-          {/* 모드 전환 */}
+          {/* Mode Switch */}
           <p className="mt-4 text-center text-xs text-gray-500">
             {mode === 'login' ? (
               <>
-                계정이 없으신가요?{' '}
+                Don&apos;t have an account?{' '}
                 <button
                   type="button"
                   onClick={() => {
@@ -215,12 +215,12 @@ function LoginContent() {
                   }}
                   className="font-medium text-brand-600 hover:text-brand-700"
                 >
-                  회원가입
+                  Sign Up
                 </button>
               </>
             ) : (
               <>
-                이미 계정이 있으신가요?{' '}
+                Already have an account?{' '}
                 <button
                   type="button"
                   onClick={() => {
@@ -230,7 +230,7 @@ function LoginContent() {
                   }}
                   className="font-medium text-brand-600 hover:text-brand-700"
                 >
-                  로그인
+                  Log In
                 </button>
               </>
             )}
@@ -238,15 +238,15 @@ function LoginContent() {
         </div>
 
         <p className="mt-6 text-center text-xs leading-relaxed text-gray-400">
-          계속 진행하면{' '}
+          By continuing, you agree to our{' '}
           <span className="underline cursor-pointer hover:text-gray-600">
-            서비스 이용약관
+            Terms of Service
           </span>{' '}
-          및{' '}
+          and{' '}
           <span className="underline cursor-pointer hover:text-gray-600">
-            개인정보 처리방침
+            Privacy Policy
           </span>
-          에 동의하게 됩니다.
+          .
         </p>
       </div>
     </div>

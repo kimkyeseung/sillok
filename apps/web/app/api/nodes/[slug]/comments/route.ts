@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/nodes/:slug/comments — 노드 댓글 목록 (공개) ───
+// ─── GET /api/nodes/:slug/comments — Node comment list (public) ───
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -17,7 +17,7 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const parsed = ListQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data: node } = await supabaseAdmin
     .from('nodes')
@@ -27,7 +27,7 @@ export async function GET(
     .single();
 
   if (!node)
-    return apiError('NODE_NOT_FOUND', '노드를 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Node not found.', 404);
 
   const { limit, cursor } = parsed.data;
 
@@ -49,7 +49,7 @@ export async function GET(
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);
@@ -62,7 +62,7 @@ export async function GET(
   });
 }
 
-// ─── POST /api/nodes/:slug/comments — 노드 댓글 작성 [USER] ───
+// ─── POST /api/nodes/:slug/comments — Create node comment [USER] ───
 
 const CreateCommentSchema = z.object({
   content: z.string().min(1).max(5000),
@@ -74,7 +74,7 @@ export async function POST(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: node } = await supabaseAdmin
     .from('nodes')
@@ -84,18 +84,18 @@ export async function POST(
     .single();
 
   if (!node)
-    return apiError('NODE_NOT_FOUND', '노드를 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Node not found.', 404);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = CreateCommentSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data: comment, error } = await supabaseAdmin
     .from('node_comments')
@@ -108,7 +108,7 @@ export async function POST(
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(comment);
 }

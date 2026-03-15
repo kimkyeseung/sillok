@@ -33,7 +33,7 @@ export default function FollowButton({
         setFollowing(res.followed);
         setCount((prev) => (res.followed ? prev + 1 : prev - 1));
       } catch {
-        toast('로그인이 필요합니다', 'error');
+        toast('Login required', 'error');
       }
     });
   };
@@ -53,14 +53,14 @@ export default function FollowButton({
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-          팔로잉 {count}
+          Following {count}
         </>
       ) : (
         <>
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          팔로우 {count}
+          Follow {count}
         </>
       )}
     </button>

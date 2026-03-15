@@ -3,12 +3,12 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 let _supabaseAdmin: SupabaseClient | null = null;
 
 /**
- * 서버 전용 Supabase 클라이언트 (Service Role Key 사용)
- * - API Routes에서 인증/쓰기 요청 처리
- * - SSG (generateStaticParams)에서 빌드 타임 데이터 조회
- * - 클라이언트 컴포넌트에서 절대 import 금지
+ * Server-only Supabase client (uses Service Role Key)
+ * - Handles auth/write requests in API Routes
+ * - Fetches build-time data in SSG (generateStaticParams)
+ * - NEVER import from client components
  *
- * Lazy 초기화: 빌드 타임에 env 없어도 에러 발생하지 않음
+ * Lazy initialization: no error even if env vars are missing at build time
  */
 export const supabaseAdmin: SupabaseClient = new Proxy({} as SupabaseClient, {
   get(_target, prop) {

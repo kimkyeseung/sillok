@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/persons — 인물 목록 (공개) ───
+// ─── GET /api/persons — Person list (public) ───
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = ListQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { limit, cursor, era, field, sort, q } = parsed.data;
 
@@ -35,12 +35,12 @@ export async function GET(request: Request) {
     .eq('is_deleted', false)
     .eq('is_published', true);
 
-  // 검색
+  // Search
   if (q) {
     query = query.or(`name_ko.ilike.%${q}%,name_hanja.ilike.%${q}%,name_en.ilike.%${q}%`);
   }
 
-  // 태그 필터 (era / field) — person_tags 조인
+  // Tag filter (era / field) — person_tags join
   if (era || field) {
     const tagNames: string[] = [];
     if (era) tagNames.push(era);
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 정렬 + 커서
+  // Sort + cursor
   if (sort === 'name') {
     query = query.order('name_ko', { ascending: true });
     if (cursor) query = query.gt('name_ko', cursor);
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
     query = query.order('view_count', { ascending: false });
     if (cursor) query = query.lt('view_count', Number(cursor));
   } else {
-    // recent (기본)
+    // recent (default)
     query = query.order('created_at', { ascending: false });
     if (cursor) query = query.lt('created_at', cursor);
   }
@@ -93,7 +93,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);
@@ -114,14 +114,14 @@ export async function GET(request: Request) {
   });
 }
 
-// ─── POST /api/persons — 인물 등록 [ADMIN] ───
+// ─── POST /api/persons — Create person [ADMIN] ───
 
 const CreatePersonSchema = z.object({
   slug: z
     .string()
     .min(1)
     .max(200)
-    .regex(/^[a-z0-9-]+$/, '영문 소문자, 숫자, 하이픈만 허용'),
+    .regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens allowed'),
   name_ko: z.string().min(1).max(100),
   name_hanja: z.string().max(100).optional(),
   name_en: z.string().max(200).optional(),
@@ -147,18 +147,18 @@ const CreatePersonSchema = z.object({
 export async function POST(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = CreatePersonSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422, result.error.issues);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, result.error.issues);
 
   const { tag_ids, ...personData } = result.data;
 
@@ -170,11 +170,11 @@ export async function POST(request: Request) {
 
   if (error) {
     if (error.code === '23505')
-      return apiError('VALIDATION_ERROR', '이미 존재하는 slug입니다.', 409);
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+      return apiError('VALIDATION_ERROR', 'Slug already exists.', 409);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
   }
 
-  // 태그 연결
+  // Link tags
   if (tag_ids && tag_ids.length > 0) {
     const tagLinks = tag_ids.map((tag_id) => ({
       person_id: person.id,

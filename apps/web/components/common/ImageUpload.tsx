@@ -31,7 +31,7 @@ export default function ImageUpload({
 
     const remaining = maxFiles - images.length;
     if (remaining <= 0) {
-      toast(`최대 ${maxFiles}장까지 업로드 가능합니다`, 'error');
+      toast(`You can upload up to ${maxFiles} images`, 'error');
       return;
     }
 
@@ -41,7 +41,7 @@ export default function ImageUpload({
     try {
       for (const file of filesToUpload) {
         if (file.size > 5 * 1024 * 1024) {
-          toast('파일 크기는 5MB 이하만 가능합니다', 'error');
+          toast('File size must be 5MB or less', 'error');
           continue;
         }
 
@@ -74,7 +74,7 @@ export default function ImageUpload({
         });
       }
     } catch {
-      toast('업로드에 실패했습니다', 'error');
+      toast('Upload failed', 'error');
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -118,14 +118,14 @@ export default function ImageUpload({
           {uploading ? (
             <>
               <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-600" />
-              업로드 중...
+              Uploading...
             </>
           ) : (
             <>
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              이미지 첨부 ({images.length}/{maxFiles})
+              Attach Image ({images.length}/{maxFiles})
             </>
           )}
           <input

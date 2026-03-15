@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
 
-// ─── POST /api/upload/presigned-url — Presigned URL 발급 [USER] ───
+// ─── POST /api/upload/presigned-url — Issue presigned URL [USER] ───
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -12,9 +12,9 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const PresignedSchema = z.object({
   bucket: z.enum(['avatars', 'threads', 'persons']),
   content_type: z.string().refine((v) => ALLOWED_TYPES.includes(v), {
-    message: '허용되지 않는 파일 형식입니다.',
+    message: 'Unsupported file type.',
   }),
-  file_size: z.number().max(MAX_SIZE, '파일 크기는 5MB 이하여야 합니다.'),
+  file_size: z.number().max(MAX_SIZE, 'File size must be 5MB or less.'),
   thread_id: z.string().uuid().optional(),
   person_id: z.string().uuid().optional(),
 });
@@ -22,18 +22,18 @@ const PresignedSchema = z.object({
 export async function POST(request: Request) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = PresignedSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422, result.error.issues);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, result.error.issues);
 
   const { bucket, content_type, thread_id, person_id } = result.data;
   const ext = content_type === 'image/webp' ? 'webp' : content_type === 'image/png' ? 'png' : 'jpg';
@@ -46,12 +46,12 @@ export async function POST(request: Request) {
       break;
     case 'threads':
       if (!thread_id)
-        return apiError('VALIDATION_ERROR', 'thread_id가 필요합니다.', 422);
+        return apiError('VALIDATION_ERROR', 'thread_id is required.', 422);
       path = `threads/${user.id}/${thread_id}/${fileId}.${ext}`;
       break;
     case 'persons':
       if (!person_id)
-        return apiError('VALIDATION_ERROR', 'person_id가 필요합니다.', 422);
+        return apiError('VALIDATION_ERROR', 'person_id is required.', 422);
       path = `persons/${person_id}/${fileId}.${ext}`;
       break;
   }
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     .createSignedUploadUrl(path);
 
   if (error)
-    return apiError('SERVER_ERROR', 'URL 생성에 실패했습니다.', 500);
+    return apiError('SERVER_ERROR', 'Failed to generate URL.', 500);
 
   return apiSuccess({
     upload_url: data.signedUrl,

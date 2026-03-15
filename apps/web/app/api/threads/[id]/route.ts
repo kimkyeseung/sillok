@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/threads/:id — 스레드 상세 (공개) ───
+// ─── GET /api/threads/:id — Thread detail (public) ───
 
 export async function GET(
   _request: Request,
@@ -24,12 +24,12 @@ export async function GET(
     .single();
 
   if (error || !thread)
-    return apiError('THREAD_NOT_FOUND', '스레드를 찾을 수 없습니다.', 404);
+    return apiError('THREAD_NOT_FOUND', 'Thread not found.', 404);
 
   return apiSuccess(thread);
 }
 
-// ─── PUT /api/threads/:id — 스레드 수정 [OWNER] ───
+// ─── PUT /api/threads/:id — Update thread [OWNER] ───
 
 const UpdateThreadSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -44,7 +44,7 @@ export async function PUT(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: thread } = await supabaseAdmin
     .from('threads')
@@ -54,20 +54,20 @@ export async function PUT(
     .single();
 
   if (!thread)
-    return apiError('THREAD_NOT_FOUND', '스레드를 찾을 수 없습니다.', 404);
+    return apiError('THREAD_NOT_FOUND', 'Thread not found.', 404);
   if (thread.author_id !== user.id)
-    return apiError('FORBIDDEN', '수정 권한이 없습니다.', 403);
+    return apiError('FORBIDDEN', 'No permission to edit.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = UpdateThreadSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { image_ids, ...updateData } = result.data;
 
@@ -78,10 +78,10 @@ export async function PUT(
       .eq('id', params.id);
 
     if (error)
-      return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+      return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
   }
 
-  // 이미지 교체
+  // Replace images
   if (image_ids !== undefined) {
     await supabaseAdmin
       .from('thread_images')
@@ -105,7 +105,7 @@ export async function PUT(
   return apiSuccess(updated);
 }
 
-// ─── DELETE /api/threads/:id — 스레드 soft delete [OWNER|ADMIN] ───
+// ─── DELETE /api/threads/:id — Soft delete thread [OWNER|ADMIN] ───
 
 export async function DELETE(
   request: Request,
@@ -113,7 +113,7 @@ export async function DELETE(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: thread } = await supabaseAdmin
     .from('threads')
@@ -123,9 +123,9 @@ export async function DELETE(
     .single();
 
   if (!thread)
-    return apiError('THREAD_NOT_FOUND', '스레드를 찾을 수 없습니다.', 404);
+    return apiError('THREAD_NOT_FOUND', 'Thread not found.', 404);
 
-  // OWNER 또는 ADMIN 확인
+  // Check OWNER or ADMIN
   if (thread.author_id !== user.id) {
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -134,7 +134,7 @@ export async function DELETE(
       .single();
 
     if (profile?.role !== 'ADMIN')
-      return apiError('FORBIDDEN', '삭제 권한이 없습니다.', 403);
+      return apiError('FORBIDDEN', 'No permission to delete.', 403);
   }
 
   const { error } = await supabaseAdmin
@@ -143,7 +143,7 @@ export async function DELETE(
     .eq('id', params.id);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ deleted: true });
 }

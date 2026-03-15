@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/collections/:id — 컬렉션 상세 (공개이면 누구나, 비공개면 OWNER) ───
+// ─── GET /api/collections/:id — Collection detail (public: anyone, private: OWNER) ───
 
 export async function GET(
   request: Request,
@@ -25,18 +25,18 @@ export async function GET(
     .single();
 
   if (error || !collection)
-    return apiError('NODE_NOT_FOUND', '컬렉션을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Collection not found.', 404);
 
   if (!collection.is_public) {
     const user = await requireUser(request);
     if (!user || user.id !== collection.user_id)
-      return apiError('FORBIDDEN', '비공개 컬렉션입니다.', 403);
+      return apiError('FORBIDDEN', 'This collection is private.', 403);
   }
 
   return apiSuccess(collection);
 }
 
-// ─── PUT /api/collections/:id — 컬렉션 수정 [OWNER] ───
+// ─── PUT /api/collections/:id — Update collection [OWNER] ───
 
 const UpdateSchema = z.object({
   title: z.string().min(1).max(100).optional(),
@@ -50,7 +50,7 @@ export async function PUT(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: collection } = await supabaseAdmin
     .from('collections')
@@ -59,20 +59,20 @@ export async function PUT(
     .single();
 
   if (!collection)
-    return apiError('NODE_NOT_FOUND', '컬렉션을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Collection not found.', 404);
   if (collection.user_id !== user.id)
-    return apiError('FORBIDDEN', '수정 권한이 없습니다.', 403);
+    return apiError('FORBIDDEN', 'No permission to edit.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = UpdateSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data, error } = await supabaseAdmin
     .from('collections')
@@ -82,12 +82,12 @@ export async function PUT(
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(data);
 }
 
-// ─── DELETE /api/collections/:id — 컬렉션 삭제 [OWNER] ───
+// ─── DELETE /api/collections/:id — Delete collection [OWNER] ───
 
 export async function DELETE(
   request: Request,
@@ -95,7 +95,7 @@ export async function DELETE(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: collection } = await supabaseAdmin
     .from('collections')
@@ -104,9 +104,9 @@ export async function DELETE(
     .single();
 
   if (!collection)
-    return apiError('NODE_NOT_FOUND', '컬렉션을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Collection not found.', 404);
   if (collection.user_id !== user.id)
-    return apiError('FORBIDDEN', '삭제 권한이 없습니다.', 403);
+    return apiError('FORBIDDEN', 'No permission to delete.', 403);
 
   await supabaseAdmin
     .from('collection_items')
@@ -119,7 +119,7 @@ export async function DELETE(
     .eq('id', params.id);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ deleted: true });
 }

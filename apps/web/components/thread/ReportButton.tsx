@@ -11,12 +11,12 @@ interface ReportButtonProps {
 }
 
 const REASONS = [
-  { value: 'SPAM', label: '스팸' },
-  { value: 'ABUSE', label: '욕설/비방' },
-  { value: 'HATE_SPEECH', label: '혐오 표현' },
-  { value: 'MISINFORMATION', label: '허위 정보' },
-  { value: 'OFF_TOPIC', label: '주제 무관' },
-  { value: 'OTHER', label: '기타' },
+  { value: 'SPAM', label: 'Spam' },
+  { value: 'ABUSE', label: 'Abuse / Harassment' },
+  { value: 'HATE_SPEECH', label: 'Hate Speech' },
+  { value: 'MISINFORMATION', label: 'Misinformation' },
+  { value: 'OFF_TOPIC', label: 'Off Topic' },
+  { value: 'OTHER', label: 'Other' },
 ];
 
 export default function ReportButton({ targetType, targetId }: ReportButtonProps) {
@@ -28,7 +28,7 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
 
   const handleSubmit = async () => {
     if (!reason) {
-      toast('신고 사유를 선택해주세요', 'error');
+      toast('Please select a reason', 'error');
       return;
     }
     setSubmitting(true);
@@ -42,12 +42,12 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
           ...(detail ? { detail } : {}),
         }),
       });
-      toast('신고가 접수되었습니다');
+      toast('Report has been submitted');
       setOpen(false);
       setReason('');
       setDetail('');
     } catch {
-      toast('로그인이 필요합니다', 'error');
+      toast('Login required', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -62,10 +62,10 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
         </svg>
-        신고
+        Report
       </button>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="신고하기">
+      <Modal open={open} onClose={() => setOpen(false)} title="Submit Report">
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {REASONS.map((r) => (
@@ -86,7 +86,7 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
           <textarea
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
-            placeholder="상세 내용 (선택)"
+            placeholder="Additional details (optional)"
             rows={3}
             className="input resize-none text-xs"
           />
@@ -96,7 +96,7 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
               onClick={() => setOpen(false)}
               className="btn-secondary text-xs"
             >
-              취소
+              Cancel
             </button>
             <button
               type="button"
@@ -104,7 +104,7 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
               disabled={submitting || !reason}
               className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
-              {submitting ? '접수 중...' : '신고하기'}
+              {submitting ? 'Submitting...' : 'Submit Report'}
             </button>
           </div>
         </div>

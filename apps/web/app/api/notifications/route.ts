@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/notifications — 내 알림 목록 [USER] ───
+// ─── GET /api/notifications — My notifications list [USER] ───
 
 const QuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -14,12 +14,12 @@ const QuerySchema = z.object({
 export async function GET(request: Request) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { searchParams } = new URL(request.url);
   const parsed = QuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { limit, cursor, unread_only } = parsed.data;
 
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   });
 }
 
-// ─── PUT /api/notifications — 알림 읽음 처리 [USER] ───
+// ─── PUT /api/notifications — Mark notifications as read [USER] ───
 
 const MarkReadSchema = z.object({
   notification_ids: z.array(z.string().uuid()).min(1).max(100),
@@ -57,18 +57,18 @@ const MarkReadSchema = z.object({
 export async function PUT(request: Request) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = MarkReadSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { error } = await supabaseAdmin
     .from('notifications')
@@ -77,7 +77,7 @@ export async function PUT(request: Request) {
     .in('id', result.data.notification_ids);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ updated: true });
 }

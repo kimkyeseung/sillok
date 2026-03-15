@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/threads/:id/replies — 댓글 목록 (공개) ───
+// ─── GET /api/threads/:id/replies — List replies (public) ───
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -17,7 +17,7 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const parsed = ListQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { limit, cursor } = parsed.data;
 
@@ -39,7 +39,7 @@ export async function GET(
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);
@@ -52,7 +52,7 @@ export async function GET(
   });
 }
 
-// ─── POST /api/threads/:id/replies — 댓글 작성 [USER] ───
+// ─── POST /api/threads/:id/replies — Create reply [USER] ───
 
 const CreateReplySchema = z.object({
   parent_id: z.string().uuid().optional(),
@@ -65,9 +65,9 @@ export async function POST(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
-  // 스레드 존재 확인
+  // Check thread exists
   const { data: thread } = await supabaseAdmin
     .from('threads')
     .select('id')
@@ -76,20 +76,20 @@ export async function POST(
     .single();
 
   if (!thread)
-    return apiError('THREAD_NOT_FOUND', '스레드를 찾을 수 없습니다.', 404);
+    return apiError('THREAD_NOT_FOUND', 'Thread not found.', 404);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = CreateReplySchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  // depth는 트리거(calc_reply_depth)에서 자동 계산
+  // depth is auto-calculated by trigger (calc_reply_depth)
   const { data: reply, error } = await supabaseAdmin
     .from('thread_replies')
     .insert({
@@ -102,7 +102,7 @@ export async function POST(
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(reply);
 }

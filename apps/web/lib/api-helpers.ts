@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 
 /**
- * API 성공 응답 헬퍼
- * 형식: { success: true, data: T }
+ * API success response helper
+ * Format: { success: true, data: T }
  */
 export function apiSuccess<T>(data: T, status = 200) {
   return NextResponse.json({ success: true, data }, { status });
 }
 
 /**
- * API 에러 응답 헬퍼
- * 형식: { success: false, error: { code, message, details? } }
+ * API error response helper
+ * Format: { success: false, error: { code, message, details? } }
  *
- * 에러 코드:
+ * Error codes:
  * PERSON_NOT_FOUND, NODE_NOT_FOUND, THREAD_NOT_FOUND
  * UNAUTHORIZED, FORBIDDEN, ADMIN_REQUIRED
  * RATE_LIMIT_EXCEEDED, VALIDATION_ERROR

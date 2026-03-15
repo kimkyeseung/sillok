@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
-// ─── GET /callback — OAuth 콜백 (Supabase Auth PKCE) ───
+// ─── GET /callback — OAuth callback (Supabase Auth PKCE) ───
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
                 cookieStore.set(name, value, options)
               );
             } catch {
-              // Server Component에서는 무시
+              // Ignore in Server Components
             }
           },
         },

@@ -2,12 +2,12 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/admin/stats — 어드민 대시보드 통계 [ADMIN] ───
+// ─── GET /api/admin/stats — Admin dashboard stats [ADMIN] ───
 
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       .eq('status', 'PENDING'),
   ]);
 
-  // 최근 7일 인기 인물 Top 5
+  // Top 5 popular persons in last 7 days
   const { data: topPersons } = await supabaseAdmin
     .from('persons')
     .select('id, slug, name_ko, view_count')

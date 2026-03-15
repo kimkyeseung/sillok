@@ -22,21 +22,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!node) return {};
 
   return {
-    title: `${node.title} - 실록`,
-    description: node.description?.slice(0, 160) ?? `${node.title} 정보`,
+    title: `${node.title} - Sillok`,
+    description: node.description?.slice(0, 160) ?? `${node.title} info`,
   };
 }
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return '방금';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
+  if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d}일 전`;
-  return new Date(dateStr).toLocaleDateString('ko-KR');
+  if (d < 30) return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US');
 }
 
 export default async function NodeDetailPage({ params }: Props) {
@@ -55,9 +55,9 @@ export default async function NodeDetailPage({ params }: Props) {
     .limit(20);
 
   const typeLabel: Record<string, string> = {
-    ARTIFACT: '유물',
-    MEDIA: '미디어',
-    EVENT: '사건',
+    ARTIFACT: 'Artifact',
+    MEDIA: 'Media',
+    EVENT: 'Event',
   };
 
   const typeColor: Record<string, string> = {
@@ -68,7 +68,7 @@ export default async function NodeDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      {/* 노드 정보 카드 */}
+      {/* Node Info Card */}
       <div className="card-flat overflow-hidden">
         {node.thumbnail && (
           <div className="relative h-64 w-full">
@@ -98,23 +98,23 @@ export default async function NodeDetailPage({ params }: Props) {
               <span className="font-semibold text-gray-900">
                 {(node.view_count ?? 0).toLocaleString()}
               </span>
-              <span className="ml-1 text-gray-500">조회</span>
+              <span className="ml-1 text-gray-500">Views</span>
             </div>
             <NodeActions nodeId={node.id} nodeSlug={params.slug} followCount={node.follow_count ?? 0} />
           </div>
         </div>
       </div>
 
-      {/* 댓글 섹션 */}
+      {/* Comments Section */}
       <div className="card-flat">
         <div className="border-b border-gray-100 px-5 py-3">
-          <h2 className="text-sm font-semibold text-gray-900">댓글</h2>
+          <h2 className="text-sm font-semibold text-gray-900">Comments</h2>
         </div>
 
         <div className="divide-y divide-gray-50">
           {(comments ?? []).map((comment: Record<string, unknown>) => {
             const author = comment.profiles as Record<string, unknown> | null;
-            const commentName = (author?.nickname as string) ?? '익명';
+            const commentName = (author?.nickname as string) ?? 'Anonymous';
             return (
               <div key={comment.id as string} className="px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
@@ -140,12 +140,12 @@ export default async function NodeDetailPage({ params }: Props) {
               <svg className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="mt-2 text-sm">아직 댓글이 없습니다</p>
+              <p className="mt-2 text-sm">No comments yet</p>
             </div>
           )}
         </div>
 
-        {/* 댓글 작성 폼 */}
+        {/* Comment Form */}
         <CommentFormWrapper nodeSlug={params.slug} />
       </div>
     </div>

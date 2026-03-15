@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── DELETE /api/persons/:slug/hard — 인물 hard delete [ADMIN] ───
+// ─── DELETE /api/persons/:slug/hard — Hard delete person [ADMIN] ───
 
 export async function DELETE(
   request: Request,
@@ -10,7 +10,7 @@ export async function DELETE(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { data: existing } = await supabaseAdmin
     .from('persons')
@@ -19,7 +19,7 @@ export async function DELETE(
     .single();
 
   if (!existing)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
   const { error } = await supabaseAdmin
     .from('persons')
@@ -27,7 +27,7 @@ export async function DELETE(
     .eq('id', existing.id);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ hard_deleted: true });
 }

@@ -12,12 +12,12 @@ interface Props {
 }
 
 const RELATION_TYPE_LABELS: Record<string, string> = {
-  FAMILY: '가족',
-  TEACHER: '스승/제자',
-  ALLY: '동맹',
-  RIVAL: '라이벌',
-  LORD_VASSAL: '군신',
-  INFLUENCE: '영향',
+  FAMILY: 'Family',
+  TEACHER: 'Teacher/Student',
+  ALLY: 'Ally',
+  RIVAL: 'Rival',
+  LORD_VASSAL: 'Lord/Vassal',
+  INFLUENCE: 'Influence',
 };
 
 const RELATION_TYPE_COLORS: Record<string, string> = {
@@ -30,9 +30,9 @@ const RELATION_TYPE_COLORS: Record<string, string> = {
 };
 
 const NODE_TYPE_LABELS: Record<string, string> = {
-  ARTIFACT: '유물',
-  MEDIA: '미디어',
-  EVENT: '사건',
+  ARTIFACT: 'Artifact',
+  MEDIA: 'Media',
+  EVENT: 'Event',
 };
 
 const NODE_TYPE_COLORS: Record<string, string> = {
@@ -55,10 +55,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson(params.slug);
   if (!person) return {};
   return {
-    title: `${person.name_ko} - 실록`,
-    description: person.description?.slice(0, 160) ?? `${person.name_ko} 인물 정보`,
+    title: `${person.name_ko} - Sillok`,
+    description: person.description?.slice(0, 160) ?? `About ${person.name_ko}`,
     openGraph: {
-      title: `${person.name_ko} - 실록`,
+      title: `${person.name_ko} - Sillok`,
       images: person.thumbnail ? [person.thumbnail] : [],
     },
   };
@@ -145,9 +145,9 @@ export default async function PersonDetailPage({ params }: Props) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      {/* 메인 */}
+      {/* Main */}
       <div className="space-y-6">
-        {/* 프로필 카드 */}
+        {/* Profile Card */}
         <div className="card-flat overflow-hidden">
           <div className="h-32 bg-gradient-to-r from-brand-500 to-brand-700" />
           <div className="px-6 pb-6">
@@ -173,7 +173,7 @@ export default async function PersonDetailPage({ params }: Props) {
               </div>
             </div>
 
-            {/* 태그 & 메타 */}
+            {/* Tags & Meta */}
             <div className="mt-4 flex flex-wrap gap-1.5">
               {(person.birth_year || person.death_year) && (
                 <span className="badge-gray">
@@ -195,7 +195,7 @@ export default async function PersonDetailPage({ params }: Props) {
                 <span className="font-semibold text-gray-900">
                   {(person.view_count ?? 0).toLocaleString()}
                 </span>
-                <span className="ml-1 text-gray-500">조회</span>
+                <span className="ml-1 text-gray-500">views</span>
               </div>
               <FollowButton
                 targetType="person"
@@ -207,11 +207,11 @@ export default async function PersonDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* 설명 */}
+        {/* Description */}
         {person.description && (
           <div className="card-flat p-5">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-              소개
+              About
             </h2>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
               {person.description}
@@ -219,11 +219,11 @@ export default async function PersonDetailPage({ params }: Props) {
           </div>
         )}
 
-        {/* 인물 관계 */}
+        {/* Person Relations */}
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-              인물 관계
+              Relations
             </h2>
             <RelationSuggestForm
               personId={person.id}
@@ -292,17 +292,17 @@ export default async function PersonDetailPage({ params }: Props) {
           ) : (
             <div className="card-flat py-8 text-center">
               <p className="text-sm text-gray-400">
-                아직 등록된 관계가 없습니다
+                No relations registered yet
               </p>
             </div>
           )}
         </div>
 
-        {/* 연결된 노드 (유물/미디어/사건) */}
+        {/* Linked Nodes (Artifacts/Media/Events) */}
         {(nodeLinks ?? []).length > 0 && (
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-              관련 유물 · 미디어 · 사건
+              Related Artifacts · Media · Events
             </h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {(nodeLinks ?? []).map((link: Record<string, unknown>) => {
@@ -351,11 +351,11 @@ export default async function PersonDetailPage({ params }: Props) {
           </div>
         )}
 
-        {/* 스레드 */}
+        {/* Threads */}
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-              스레드
+              Threads
             </h2>
             <Link
               href={`/threads/new?person_id=${person.id}`}
@@ -374,7 +374,7 @@ export default async function PersonDetailPage({ params }: Props) {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              글쓰기
+              Write
             </Link>
           </div>
           <div className="card-flat divide-y divide-gray-100">
@@ -393,36 +393,36 @@ export default async function PersonDetailPage({ params }: Props) {
                     {thread.title as string}
                   </p>
                   <div className="mt-1 flex gap-3 text-xs text-gray-400">
-                    <span>{(profile?.nickname as string) ?? '익명'}</span>
-                    <span>좋아요 {thread.like_count as number}</span>
-                    <span>댓글 {thread.reply_count as number}</span>
+                    <span>{(profile?.nickname as string) ?? 'Anonymous'}</span>
+                    <span>Likes {thread.like_count as number}</span>
+                    <span>Replies {thread.reply_count as number}</span>
                   </div>
                 </Link>
               );
             })}
             {(threads ?? []).length === 0 && (
               <p className="py-8 text-center text-sm text-gray-400">
-                아직 스레드가 없습니다
+                No threads yet
               </p>
             )}
           </div>
         </div>
       </div>
 
-      {/* 사이드바 */}
+      {/* Sidebar */}
       <aside className="space-y-6">
-        {/* 타임라인 */}
+        {/* Timeline */}
         {timeline && timeline.length > 0 && (
           <div className="card-flat p-4">
             <h2 className="mb-4 text-sm font-semibold text-gray-900">
-              생애 타임라인
+              Life Timeline
             </h2>
             <div className="relative space-y-4 pl-5 before:absolute before:left-[7px] before:top-1 before:h-[calc(100%-8px)] before:w-0.5 before:bg-brand-100">
               {timeline.map((event) => (
                 <div key={event.id} className="relative">
                   <div className="absolute -left-5 top-1 h-2.5 w-2.5 rounded-full border-2 border-brand-400 bg-white" />
                   <p className="text-xs font-semibold text-brand-600">
-                    {event.year}년
+                    {event.year}
                   </p>
                   <p className="text-sm font-medium text-gray-800">
                     {event.title}
@@ -438,13 +438,13 @@ export default async function PersonDetailPage({ params }: Props) {
           </div>
         )}
 
-        {/* 인물 추가 요청 */}
+        {/* Request Person */}
         <div className="card-flat p-4">
           <h2 className="mb-2 text-sm font-semibold text-gray-900">
-            인물이 없나요?
+            Missing a figure?
           </h2>
           <p className="mb-3 text-xs text-gray-500">
-            찾는 인물이 실록에 등록되어 있지 않다면 추가를 요청해주세요.
+            If you can't find someone, request them to be added.
           </p>
           <PersonRequestButton />
         </div>

@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── POST /api/threads/:id/like — 좋아요 토글 [USER] ───
+// ─── POST /api/threads/:id/like — Toggle like [USER] ───
 
 export async function POST(
   request: Request,
@@ -10,9 +10,9 @@ export async function POST(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
-  // 스레드 존재 확인
+  // Check thread exists
   const { data: thread } = await supabaseAdmin
     .from('threads')
     .select('id, like_count')
@@ -21,9 +21,9 @@ export async function POST(
     .single();
 
   if (!thread)
-    return apiError('THREAD_NOT_FOUND', '스레드를 찾을 수 없습니다.', 404);
+    return apiError('THREAD_NOT_FOUND', 'Thread not found.', 404);
 
-  // 기존 좋아요 확인
+  // Check existing like
   const { data: existing } = await supabaseAdmin
     .from('likes')
     .select('id')
@@ -33,7 +33,7 @@ export async function POST(
     .maybeSingle();
 
   if (existing) {
-    // 좋아요 취소
+    // Remove like
     await supabaseAdmin.from('likes').delete().eq('id', existing.id);
 
     return apiSuccess({
@@ -41,7 +41,7 @@ export async function POST(
       like_count: Math.max((thread.like_count ?? 0) - 1, 0),
     });
   } else {
-    // 좋아요 추가
+    // Add like
     await supabaseAdmin.from('likes').insert({
       user_id: user.id,
       target_type: 'thread',

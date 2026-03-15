@@ -47,39 +47,39 @@ export default async function HomePage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-      {/* 메인 피드 */}
+      {/* Main Feed */}
       <div className="space-y-6">
         {/* Hero Card */}
         <div className="card-flat overflow-hidden">
           <div className="bg-gradient-to-br from-brand-600 to-brand-800 px-6 py-10 text-center text-white">
             <h1 className="text-3xl font-bold tracking-tight">
-              한국 인물 아카이브
+              Korean Historical Figures Archive
             </h1>
             <p className="mt-2 text-brand-200">
-              단군부터 현재까지, 한국의 이름있는 인물을 하나의 노드로 연결합니다
+              Connecting notable Korean figures from Dangun to the present as interconnected nodes
             </p>
             <div className="mt-5 flex justify-center gap-8">
               <div>
                 <p className="text-2xl font-bold">{stats.persons.toLocaleString()}</p>
-                <p className="text-xs text-brand-200">등록 인물</p>
+                <p className="text-xs text-brand-200">Figures</p>
               </div>
               <div className="h-10 w-px bg-white/20" />
               <div>
                 <p className="text-2xl font-bold">{stats.threads.toLocaleString()}</p>
-                <p className="text-xs text-brand-200">스레드</p>
+                <p className="text-xs text-brand-200">Threads</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 최근 스레드 피드 */}
+        {/* Recent Threads Feed */}
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
-              최근 스레드
+              Recent Threads
             </h2>
             <Link href="/threads/new" className="btn-primary text-xs">
-              글쓰기
+              Write
             </Link>
           </div>
           <div className="card-flat divide-y divide-gray-100">
@@ -99,7 +99,7 @@ export default async function HomePage() {
                       {thread.title as string}
                     </p>
                     <div className="mt-0.5 flex items-center gap-3 text-xs text-gray-400">
-                      <span>{(profile?.nickname as string) ?? '익명'}</span>
+                      <span>{(profile?.nickname as string) ?? 'Anonymous'}</span>
                       <span className="flex items-center gap-0.5">
                         <HeartIcon />
                         {thread.like_count as number}
@@ -119,25 +119,25 @@ export default async function HomePage() {
             {recentThreads.length === 0 && (
               <div className="flex flex-col items-center py-12 text-gray-400">
                 <ChatBubbleIcon />
-                <p className="mt-2 text-sm">아직 스레드가 없습니다</p>
-                <p className="text-xs">첫 스레드를 작성해보세요!</p>
+                <p className="mt-2 text-sm">No threads yet</p>
+                <p className="text-xs">Be the first to start a thread!</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* 사이드바 */}
+      {/* Sidebar */}
       <aside className="space-y-6">
-        {/* 최근 등록 인물 */}
+        {/* Recently Added Figures */}
         <div className="card-flat p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">최근 등록 인물</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Recently Added</h2>
             <Link
               href="/persons"
               className="text-xs text-brand-600 hover:text-brand-700"
             >
-              전체 보기 &rarr;
+              View All &rarr;
             </Link>
           </div>
           <div className="space-y-2">
@@ -172,35 +172,35 @@ export default async function HomePage() {
             ))}
             {newPersons.length === 0 && (
               <p className="py-4 text-center text-xs text-gray-400">
-                등록된 인물이 없습니다
+                No figures registered yet
               </p>
             )}
           </div>
         </div>
 
-        {/* 실록 소개 */}
+        {/* About Sillok */}
         <div className="card-flat p-4">
-          <h2 className="text-sm font-semibold text-gray-900">실록에 대해</h2>
+          <h2 className="text-sm font-semibold text-gray-900">About Sillok</h2>
           <p className="mt-2 text-xs leading-relaxed text-gray-500">
-            실록은 한국 역사 인물을 탐색하고 토론하는 커뮤니티 아카이브입니다.
-            인물 간 관계를 그래프로 연결하고, 스레드에서 자유롭게 의견을 나눌 수 있습니다.
+            Sillok is a community archive for exploring and discussing Korean historical figures.
+            Connect figures through relationship graphs and share your thoughts in threads.
           </p>
           <div className="mt-3 flex gap-2">
             <Link href="/persons" className="btn-primary text-xs">
-              인물 탐색
+              Explore
             </Link>
             <Link href="/search" className="btn-secondary text-xs">
-              검색하기
+              Search
             </Link>
           </div>
         </div>
 
         {/* Footer */}
         <div className="px-2 text-xs text-gray-400">
-          <p>&copy; 2026 실록. 한국 인물 아카이브.</p>
+          <p>&copy; 2026 Sillok. Korean Historical Figures Archive.</p>
           <div className="mt-1 flex gap-3">
-            <span className="cursor-pointer hover:text-gray-600">이용약관</span>
-            <span className="cursor-pointer hover:text-gray-600">개인정보처리방침</span>
+            <span className="cursor-pointer hover:text-gray-600">Terms of Service</span>
+            <span className="cursor-pointer hover:text-gray-600">Privacy Policy</span>
           </div>
         </div>
       </aside>
@@ -211,13 +211,13 @@ export default async function HomePage() {
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return '방금';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
+  if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d}일 전`;
-  return new Date(dateStr).toLocaleDateString('ko-KR');
+  if (d < 30) return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US');
 }
 
 function HeartIcon() {

@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── PUT /api/replies/:id — 댓글 수정 [OWNER] ───
+// ─── PUT /api/replies/:id — Update reply [OWNER] ───
 
 const UpdateReplySchema = z.object({
   content: z.string().min(1).max(5000),
@@ -15,7 +15,7 @@ export async function PUT(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: reply } = await supabaseAdmin
     .from('thread_replies')
@@ -25,20 +25,20 @@ export async function PUT(
     .single();
 
   if (!reply)
-    return apiError('THREAD_NOT_FOUND', '댓글을 찾을 수 없습니다.', 404);
+    return apiError('THREAD_NOT_FOUND', 'Reply not found.', 404);
   if (reply.author_id !== user.id)
-    return apiError('FORBIDDEN', '수정 권한이 없습니다.', 403);
+    return apiError('FORBIDDEN', 'No permission to edit.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = UpdateReplySchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data: updated, error } = await supabaseAdmin
     .from('thread_replies')
@@ -48,12 +48,12 @@ export async function PUT(
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(updated);
 }
 
-// ─── DELETE /api/replies/:id — 댓글 soft delete [OWNER|ADMIN] ───
+// ─── DELETE /api/replies/:id — Soft delete reply [OWNER|ADMIN] ───
 
 export async function DELETE(
   request: Request,
@@ -61,7 +61,7 @@ export async function DELETE(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: reply } = await supabaseAdmin
     .from('thread_replies')
@@ -71,7 +71,7 @@ export async function DELETE(
     .single();
 
   if (!reply)
-    return apiError('THREAD_NOT_FOUND', '댓글을 찾을 수 없습니다.', 404);
+    return apiError('THREAD_NOT_FOUND', 'Reply not found.', 404);
 
   if (reply.author_id !== user.id) {
     const { data: profile } = await supabaseAdmin
@@ -81,7 +81,7 @@ export async function DELETE(
       .single();
 
     if (profile?.role !== 'ADMIN')
-      return apiError('FORBIDDEN', '삭제 권한이 없습니다.', 403);
+      return apiError('FORBIDDEN', 'No permission to delete.', 403);
   }
 
   const { error } = await supabaseAdmin
@@ -90,7 +90,7 @@ export async function DELETE(
     .eq('id', params.id);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ deleted: true });
 }

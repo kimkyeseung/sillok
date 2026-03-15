@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── POST /api/comments/:id/like — 노드 댓글 좋아요 토글 [USER] ───
+// ─── POST /api/comments/:id/like — Toggle node comment like [USER] ───
 
 export async function POST(
   request: Request,
@@ -10,7 +10,7 @@ export async function POST(
 ) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { data: comment } = await supabaseAdmin
     .from('node_comments')
@@ -20,7 +20,7 @@ export async function POST(
     .single();
 
   if (!comment)
-    return apiError('NODE_NOT_FOUND', '댓글을 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Reply not found.', 404);
 
   const { data: existing } = await supabaseAdmin
     .from('likes')

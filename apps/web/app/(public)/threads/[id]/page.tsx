@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!thread) return {};
 
   return {
-    title: `${thread.title} - 실록`,
+    title: `${thread.title} - Sillok`,
     description: thread.content?.slice(0, 160),
   };
 }
@@ -35,13 +35,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return '방금';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
+  if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d}일 전`;
-  return new Date(dateStr).toLocaleDateString('ko-KR');
+  if (d < 30) return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US');
 }
 
 export default async function ThreadDetailPage({ params }: Props) {
@@ -62,13 +62,13 @@ export default async function ThreadDetailPage({ params }: Props) {
   const person = thread.persons as Record<string, unknown> | null;
   const author = thread.profiles as Record<string, unknown>;
   const images = (thread.thread_images ?? []) as Array<Record<string, unknown>>;
-  const authorName = (author?.nickname as string) ?? '익명';
+  const authorName = (author?.nickname as string) ?? 'Anonymous';
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      {/* 스레드 본문 카드 */}
+      {/* Thread Content Card */}
       <article className="card-flat overflow-hidden">
-        {/* 인물 태그 바 */}
+        {/* Person Tag Bar */}
         {person && (
           <div className="border-b border-gray-100 bg-gray-50/50 px-5 py-2.5">
             <Link
@@ -84,7 +84,7 @@ export default async function ThreadDetailPage({ params }: Props) {
         )}
 
         <div className="p-5">
-          {/* 작성자 정보 */}
+          {/* Author Info */}
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700">
               {authorName.charAt(0)}
@@ -95,7 +95,7 @@ export default async function ThreadDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* 제목 & 본문 */}
+          {/* Title & Body */}
           <h1 className="mt-4 text-xl font-bold text-gray-900">
             {thread.title}
           </h1>
@@ -103,7 +103,7 @@ export default async function ThreadDetailPage({ params }: Props) {
             {thread.content}
           </div>
 
-          {/* 이미지 */}
+          {/* Images */}
           {images.length > 0 && (
             <div className="mt-4 flex gap-2 overflow-x-auto">
               {images.map((img) => (
@@ -117,7 +117,7 @@ export default async function ThreadDetailPage({ params }: Props) {
             </div>
           )}
 
-          {/* 영상 링크 */}
+          {/* Video Link */}
           {thread.video_url && (
             <a
               href={thread.video_url}
@@ -129,11 +129,11 @@ export default async function ThreadDetailPage({ params }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              영상 보기
+              Watch Video
             </a>
           )}
 
-          {/* 인터랙션 바 */}
+          {/* Interaction Bar */}
           <ThreadActions
             threadId={thread.id}
             likeCount={thread.like_count}
@@ -143,11 +143,11 @@ export default async function ThreadDetailPage({ params }: Props) {
         </div>
       </article>
 
-      {/* 댓글 섹션 */}
+      {/* Comments Section */}
       <div className="card-flat">
         <div className="border-b border-gray-100 px-5 py-3">
           <h2 className="text-sm font-semibold text-gray-900">
-            댓글 {thread.reply_count}개
+            Comments {thread.reply_count}
           </h2>
         </div>
 
@@ -155,7 +155,7 @@ export default async function ThreadDetailPage({ params }: Props) {
           {(replies ?? []).map((reply: Record<string, unknown>) => {
             const replyAuthor = reply.profiles as Record<string, unknown> | null;
             const depth = Math.min((reply.depth as number) ?? 0, 3);
-            const replyName = (replyAuthor?.nickname as string) ?? '익명';
+            const replyName = (replyAuthor?.nickname as string) ?? 'Anonymous';
             return (
               <div
                 key={reply.id as string}
@@ -185,13 +185,13 @@ export default async function ThreadDetailPage({ params }: Props) {
               <svg className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <p className="mt-2 text-sm">아직 댓글이 없습니다</p>
-              <p className="text-xs">첫 댓글을 남겨보세요!</p>
+              <p className="mt-2 text-sm">No comments yet</p>
+              <p className="text-xs">Be the first to comment!</p>
             </div>
           )}
         </div>
 
-        {/* 댓글 작성 폼 */}
+        {/* Comment Form */}
         <ReplyFormWrapper threadId={params.id} />
       </div>
     </div>

@@ -31,11 +31,11 @@ export default function ReplyForm({ threadId, parentId, onSuccess }: ReplyFormPr
         }),
       });
       setContent('');
-      toast('댓글이 작성되었습니다');
+      toast('Comment posted');
       onSuccess?.();
       router.refresh();
     } catch {
-      toast('로그인이 필요합니다', 'error');
+      toast('Login required', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -47,7 +47,7 @@ export default function ReplyForm({ threadId, parentId, onSuccess }: ReplyFormPr
         type="text"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder={parentId ? '답글을 입력하세요...' : '댓글을 입력하세요...'}
+        placeholder={parentId ? 'Write a reply...' : 'Write a comment...'}
         maxLength={2000}
         className="input flex-1"
       />
@@ -56,7 +56,7 @@ export default function ReplyForm({ threadId, parentId, onSuccess }: ReplyFormPr
         disabled={submitting || !content.trim()}
         className="btn-primary shrink-0 disabled:opacity-50"
       >
-        {submitting ? '...' : '등록'}
+        {submitting ? '...' : Post}
       </button>
     </form>
   );

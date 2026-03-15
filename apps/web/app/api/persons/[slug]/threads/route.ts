@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/persons/:slug/threads — 인물별 스레드 목록 (공개) ───
+// ─── GET /api/persons/:slug/threads — Person threads (public) ───
 
 const QuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -16,7 +16,7 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const parsed = QuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { limit, cursor } = parsed.data;
 
@@ -28,7 +28,7 @@ export async function GET(
     .single();
 
   if (!person)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
   let query = supabaseAdmin
     .from('threads')
@@ -55,7 +55,7 @@ export async function GET(
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);

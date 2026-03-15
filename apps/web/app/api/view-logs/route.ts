@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── POST /api/view-logs — 조회 로그 기록 (공개, IP 기반 중복 방지) ───
+// ─── POST /api/view-logs — Log view (public, IP dedup) ───
 
 const ViewLogSchema = z.object({
   target_type: z.enum(['PERSON', 'NODE', 'THREAD']),
@@ -14,18 +14,18 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = ViewLogSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { target_type, target_id } = result.data;
   const viewerIp =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 
-  // 24시간 내 동일 IP 중복 방지
+  // Prevent duplicate from same IP within 24 hours
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: existing } = await supabaseAdmin
     .from('view_logs')

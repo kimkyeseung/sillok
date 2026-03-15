@@ -1,7 +1,7 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/persons/:slug/timeline — 인물 타임라인 (공개) ───
+// ─── GET /api/persons/:slug/timeline — Person timeline (public) ───
 
 export async function GET(
   _request: Request,
@@ -15,7 +15,7 @@ export async function GET(
     .single();
 
   if (!person)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
   const { data, error } = await supabaseAdmin
     .from('person_timeline')
@@ -25,7 +25,7 @@ export async function GET(
     .order('sort_order', { ascending: true });
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(data);
 }

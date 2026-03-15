@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── POST /api/admin/persons/bulk — 인물 대량 등록 [ADMIN] ───
+// ─── POST /api/admin/persons/bulk — Bulk register persons [ADMIN] ───
 
 const TimelineItemSchema = z.object({
   year: z.number().int(),
@@ -16,7 +16,7 @@ const BulkPersonSchema = z.object({
     .string()
     .min(1)
     .max(200)
-    .regex(/^[a-z0-9-]+$/, '영문 소문자, 숫자, 하이픈만 허용'),
+    .regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens allowed'),
   name_ko: z.string().min(1).max(100),
   name_hanja: z.string().max(100).optional(),
   name_en: z.string().max(200).optional(),
@@ -52,18 +52,18 @@ interface BulkResult {
 export async function POST(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const parsed = BulkUploadSchema.safeParse(body);
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422, parsed.error.issues);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, parsed.error.issues);
 
   const persons = parsed.data;
   const results: BulkResult[] = [];
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const { tag_names, timeline, ...personData } = person;
 
     try {
-      // 1. 인물 등록
+      // 1. Register person
       const { data: created, error: insertError } = await supabaseAdmin
         .from('persons')
         .insert(personData)
@@ -82,13 +82,13 @@ export async function POST(request: Request) {
       if (insertError) {
         const msg =
           insertError.code === '23505'
-            ? '이미 존재하는 slug입니다.'
+            ? 'Slug already exists.'
             : insertError.message;
         results.push({ slug: person.slug, name_ko: person.name_ko, success: false, error: msg });
         continue;
       }
 
-      // 2. 태그 연결 (tag_names → tag_id 조회 후 연결)
+      // 2. Link tags (lookup tag_id from tag_names)
       if (tag_names && tag_names.length > 0) {
         const { data: tags } = await supabaseAdmin
           .from('tags')
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // 3. 타임라인 등록
+      // 3. Register timeline
       if (timeline && timeline.length > 0) {
         const timelineRows = timeline.map((item, idx) => ({
           person_id: created.id,
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
       results.push({ slug: person.slug, name_ko: person.name_ko, success: true });
     } catch {
-      results.push({ slug: person.slug, name_ko: person.name_ko, success: false, error: '알 수 없는 오류' });
+      results.push({ slug: person.slug, name_ko: person.name_ko, success: false, error: 'Unknown error' });
     }
   }
 

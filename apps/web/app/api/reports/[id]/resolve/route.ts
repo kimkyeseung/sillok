@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── PUT /api/reports/:id/resolve — 신고 처리 [ADMIN] ───
+// ─── PUT /api/reports/:id/resolve — Resolve report [ADMIN] ───
 
 const ResolveSchema = z.object({
   action: z.enum(['warn', 'delete', 'ban']),
@@ -16,18 +16,18 @@ export async function PUT(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = ResolveSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data: report, error: fetchError } = await supabaseAdmin
     .from('reports')
@@ -37,11 +37,11 @@ export async function PUT(
     .single();
 
   if (fetchError || !report)
-    return apiError('NODE_NOT_FOUND', '신고를 찾을 수 없습니다.', 404);
+    return apiError('NODE_NOT_FOUND', 'Report not found.', 404);
 
   const { action, ban_duration } = result.data;
 
-  // 신고 대상 콘텐츠 soft delete
+  // Soft delete reported content
   if (action === 'delete' || action === 'ban') {
     const tableMap: Record<string, string> = {
       thread: 'threads',
@@ -57,14 +57,14 @@ export async function PUT(
     }
   }
 
-  // 신고 상태 업데이트
+  // Update report status
   const { error: updateError } = await supabaseAdmin
     .from('reports')
     .update({ status: 'RESOLVED', resolved_action: action })
     .eq('id', params.id);
 
   if (updateError)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ resolved: true, action });
 }

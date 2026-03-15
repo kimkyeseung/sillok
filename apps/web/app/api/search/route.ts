@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { searchLimiter } from '@/lib/rate-limit';
 
-// ─── GET /api/search — 통합 검색 (공개) ───
+// ─── GET /api/search — Unified search (public) ───
 
 const SearchQuerySchema = z.object({
   q: z.string().min(1).max(200),
@@ -16,12 +16,12 @@ export async function GET(request: Request) {
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const { success } = await searchLimiter.check(ip);
   if (!success)
-    return apiError('RATE_LIMIT_EXCEEDED', '요청이 너무 많습니다.', 429);
+    return apiError('RATE_LIMIT_EXCEEDED', 'Too many requests.', 429);
 
   const { searchParams } = new URL(request.url);
   const parsed = SearchQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { q, type, limit } = parsed.data;
   const results: Record<string, unknown[]> = {};

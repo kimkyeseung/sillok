@@ -1,16 +1,16 @@
 /**
  * In-memory Rate Limiter (MVP)
- * Milestone 2에서 Upstash Redis로 전환 예정
+ * Will migrate to Upstash Redis in Milestone 2
  *
- * 사용법:
+ * Usage:
  *   const limiter = rateLimit({ interval: 60_000, limit: 100 });
  *   const { success } = await limiter.check(identifier);
  */
 
 interface RateLimitOptions {
-  /** 시간 창 (ms) */
+  /** Time window (ms) */
   interval: number;
-  /** 최대 요청 수 */
+  /** Max requests */
   limit: number;
 }
 
@@ -22,7 +22,7 @@ interface RateLimitEntry {
 export function rateLimit({ interval, limit }: RateLimitOptions) {
   const store = new Map<string, RateLimitEntry>();
 
-  // 오래된 항목 정리 (5분마다)
+  // Clean up stale entries (every 5 minutes)
   setInterval(() => {
     const now = Date.now();
     store.forEach((entry, key) => {
@@ -61,7 +61,7 @@ export function rateLimit({ interval, limit }: RateLimitOptions) {
   };
 }
 
-// 사전 정의된 Rate Limiter 인스턴스 (CLAUDE.md 규격)
+// Pre-defined Rate Limiter instances (per CLAUDE.md spec)
 export const generalLimiter = rateLimit({ interval: 60_000, limit: 100 });
 export const searchLimiter = rateLimit({ interval: 60_000, limit: 30 });
 export const threadCreateLimiter = rateLimit({

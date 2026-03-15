@@ -27,9 +27,9 @@ interface SearchResult {
 }
 
 const nodeTypeLabel: Record<string, string> = {
-  ARTIFACT: '유물',
-  MEDIA: '미디어',
-  EVENT: '사건',
+  ARTIFACT: 'Artifact',
+  MEDIA: 'Media',
+  EVENT: 'Event',
 };
 
 export default function SearchClient() {
@@ -54,9 +54,9 @@ export default function SearchClient() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">통합 검색</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Search</h1>
         <p className="mt-1 text-sm text-gray-500">
-          인물, 유물, 스레드를 한 번에 검색하세요
+          Search figures, artifacts, and threads all at once
         </p>
       </div>
 
@@ -75,19 +75,19 @@ export default function SearchClient() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="인물, 유물, 스레드 검색..."
+            placeholder="Search figures, artifacts, threads..."
             className="input pl-10"
           />
         </div>
         <button type="submit" className="btn-primary">
-          검색
+          Search
         </button>
       </form>
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
-          <span className="ml-2 text-sm text-gray-400">검색 중...</span>
+          <span className="ml-2 text-sm text-gray-400">Searching...</span>
         </div>
       )}
 
@@ -96,7 +96,7 @@ export default function SearchClient() {
           {data.persons && data.persons.length > 0 && (
             <section>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                인물
+                Figures
               </h2>
               <div className="card-flat divide-y divide-gray-100">
                 {data.persons.map((p) => (
@@ -133,7 +133,7 @@ export default function SearchClient() {
           {data.nodes && data.nodes.length > 0 && (
             <section>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                유물/미디어/사건
+                Artifacts / Media / Events
               </h2>
               <div className="card-flat divide-y divide-gray-100">
                 {data.nodes.map((n) => (
@@ -159,7 +159,7 @@ export default function SearchClient() {
           {data.threads && data.threads.length > 0 && (
             <section>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                스레드
+                Threads
               </h2>
               <div className="card-flat divide-y divide-gray-100">
                 {data.threads.map((t) => (
@@ -172,7 +172,7 @@ export default function SearchClient() {
                       {t.title}
                     </p>
                     <p className="mt-0.5 text-xs text-gray-400">
-                      {new Date(t.created_at).toLocaleDateString('ko-KR')}
+                      {new Date(t.created_at).toLocaleDateString('en-US')}
                     </p>
                   </Link>
                 ))}
@@ -188,9 +188,9 @@ export default function SearchClient() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <p className="mt-3 text-sm font-medium text-gray-500">
-            &ldquo;{submitted}&rdquo; 검색 결과가 없습니다
+            No results found for &ldquo;{submitted}&rdquo;
           </p>
-          <p className="text-xs text-gray-400">다른 검색어를 입력해보세요</p>
+          <p className="text-xs text-gray-400">Try a different search term</p>
         </div>
       )}
 
@@ -199,7 +199,7 @@ export default function SearchClient() {
           <svg className="h-16 w-16 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <p className="mt-3 text-sm">검색어를 입력하면 결과가 나타납니다</p>
+          <p className="mt-3 text-sm">Enter a search term to see results</p>
         </div>
       )}
     </div>

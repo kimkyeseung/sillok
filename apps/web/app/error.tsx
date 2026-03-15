@@ -25,16 +25,16 @@ export default function Error({
           </svg>
         </div>
         <h1 className="mt-6 text-2xl font-bold text-gray-900">
-          오류가 발생했습니다
+          Something went wrong
         </h1>
         <p className="mt-2 text-sm text-gray-500">
-          잠시 후 다시 시도해주세요
+          Please try again later
         </p>
         <button
           onClick={reset}
           className="mt-6 inline-block rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700"
         >
-          다시 시도
+          Try Again
         </button>
       </div>
     </div>

@@ -44,7 +44,7 @@ export default function LikeButton({
         setLiked(res.liked);
         setCount((prev) => (res.liked ? prev + 1 : prev - 1));
       } catch {
-        toast('로그인이 필요합니다', 'error');
+        toast('Login required', 'error');
       }
     });
   };

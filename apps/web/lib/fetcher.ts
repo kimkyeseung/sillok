@@ -1,6 +1,6 @@
 /**
- * SWR / fetch 공용 fetcher
- * API 응답은 { success, data, error } 형식
+ * Shared fetcher for SWR / fetch
+ * API responses follow { success, data, error } format
  */
 
 export class ApiError extends Error {
@@ -21,7 +21,7 @@ export async function fetcher<T = unknown>(url: string): Promise<T> {
   if (!json.success) {
     throw new ApiError(
       json.error?.code ?? 'UNKNOWN',
-      json.error?.message ?? '오류가 발생했습니다.',
+      json.error?.message ?? 'An error occurred.',
       res.status
     );
   }
@@ -42,7 +42,7 @@ export async function apiFetch<T = unknown>(
   if (!json.success) {
     throw new ApiError(
       json.error?.code ?? 'UNKNOWN',
-      json.error?.message ?? '오류가 발생했습니다.',
+      json.error?.message ?? 'An error occurred.',
       res.status
     );
   }

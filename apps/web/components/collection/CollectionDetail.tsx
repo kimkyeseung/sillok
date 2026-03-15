@@ -36,7 +36,7 @@ export default function CollectionDetail({
     return (
       <div className="flex items-center gap-2 py-12 text-gray-400">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-        <span className="text-sm">로딩 중...</span>
+        <span className="text-sm">Loading...</span>
       </div>
     );
   }
@@ -44,7 +44,7 @@ export default function CollectionDetail({
   if (!data) {
     return (
       <div className="py-12 text-center text-sm text-gray-400">
-        컬렉션을 찾을 수 없습니다
+        Collection not found
       </div>
     );
   }
@@ -53,7 +53,7 @@ export default function CollectionDetail({
     <div>
       <div className="mb-6">
         <Link href="/collections" className="text-xs text-brand-600 hover:text-brand-700">
-          &larr; 컬렉션 목록
+          &larr; Collections
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-gray-900">{data.name}</h1>
         {data.description && (
@@ -96,8 +96,8 @@ export default function CollectionDetail({
 
       {(data.items ?? []).length === 0 && (
         <div className="card-flat flex flex-col items-center py-16">
-          <p className="text-sm text-gray-500">아직 인물이 없습니다</p>
-          <p className="text-xs text-gray-400">인물 상세에서 컬렉션에 추가해보세요</p>
+          <p className="text-sm text-gray-500">No figures in this collection yet</p>
+          <p className="text-xs text-gray-400">Add figures from their detail pages</p>
         </div>
       )}
     </div>

@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article) return {};
 
   return {
-    title: `${article.title} - 실록`,
+    title: `${article.title} - Sillok`,
     description: article.summary?.slice(0, 160),
   };
 }
@@ -46,7 +46,7 @@ export default async function ArticleDetailPage({ params }: Props) {
           <div className="flex items-center gap-1.5">
             {article.is_notice && (
               <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                공지
+                Notice
               </span>
             )}
             <span className="badge-gray text-[10px]">
@@ -59,7 +59,7 @@ export default async function ArticleDetailPage({ params }: Props) {
           </h1>
 
           <p className="mt-2 text-sm text-gray-400">
-            {new Date(article.created_at).toLocaleDateString('ko-KR', {
+            {new Date(article.created_at).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
               day: 'numeric',
@@ -74,7 +74,7 @@ export default async function ArticleDetailPage({ params }: Props) {
 
       <div className="mt-4 flex justify-center">
         <Link href="/articles" className="btn-secondary text-xs">
-          목록으로 돌아가기
+          Back to List
         </Link>
       </div>
     </div>

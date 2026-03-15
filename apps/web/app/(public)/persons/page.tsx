@@ -30,29 +30,29 @@ export default async function PersonsPage({
 
   return (
     <div>
-      {/* 상단 */}
+      {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">인물</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Figures</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            한국 역사 속 인물을 탐색하세요
+            Explore Korean historical figures
           </p>
         </div>
         <form className="flex gap-2">
           <input
             name="q"
             type="text"
-            placeholder="인물 이름 검색..."
+            placeholder="Search by name..."
             defaultValue={searchParams.q}
             className="input max-w-xs"
           />
           <button type="submit" className="btn-primary">
-            검색
+            Search
           </button>
         </form>
       </div>
 
-      {/* 그리드 */}
+      {/* Grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {(persons ?? []).map((person) => (
           <Link
@@ -93,11 +93,11 @@ export default async function PersonsPage({
           </svg>
           <p className="mt-3 text-sm font-medium text-gray-500">
             {searchParams.q
-              ? `"${searchParams.q}" 검색 결과가 없습니다`
-              : '등록된 인물이 없습니다'}
+              ? `No results found for "${searchParams.q}"`
+              : 'No figures registered yet'}
           </p>
           <p className="text-xs text-gray-400">
-            {searchParams.q ? '다른 검색어를 입력해보세요' : '곧 인물이 등록될 예정입니다'}
+            {searchParams.q ? 'Try a different search term' : 'Figures will be added soon'}
           </p>
         </div>
       )}

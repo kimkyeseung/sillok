@@ -34,11 +34,11 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
-      toast('제목과 내용을 입력해주세요', 'error');
+      toast('Please enter a title and content', 'error');
       return;
     }
     if (videoUrl && !isValidVideoUrl(videoUrl)) {
-      toast('YouTube 또는 네이버TV URL만 허용됩니다', 'error');
+      toast('Only YouTube or Naver TV URLs are allowed', 'error');
       return;
     }
 
@@ -54,10 +54,10 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
           ...(imageIds.length > 0 ? { image_ids: imageIds } : {}),
         }),
       });
-      toast('스레드가 작성되었습니다');
+      toast('Thread has been posted');
       router.push(`/threads/${res.id}`);
     } catch {
-      toast('작성에 실패했습니다. 로그인이 필요합니다.', 'error');
+      toast('Failed to post. Login required.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -71,7 +71,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
             {personName.charAt(0)}
           </span>
           <span className="font-medium">{personName}</span>
-          <span className="text-gray-400">에 대한 글</span>
+          <span className="text-gray-400">— Thread</span>
         </div>
       )}
 
@@ -79,7 +79,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="제목을 입력하세요"
+        placeholder="Enter a title"
         maxLength={200}
         className="input text-base font-semibold"
       />
@@ -87,7 +87,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="생각을 자유롭게 적어주세요..."
+        placeholder="Share your thoughts..."
         rows={8}
         maxLength={10000}
         className="input resize-none"
@@ -96,13 +96,13 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label className="mb-1 block text-xs text-gray-500">
-            영상 URL (선택)
+            Video URL (Optional)
           </label>
           <input
             type="url"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="YouTube 또는 네이버TV URL"
+            placeholder="YouTube or Naver TV URL"
             className="input text-xs"
           />
         </div>
@@ -123,7 +123,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
           disabled={submitting || !title.trim() || !content.trim()}
           className="btn-primary disabled:opacity-50"
         >
-          {submitting ? '작성 중...' : '스레드 작성'}
+          {submitting ? 'Posting...' : 'Post Thread'}
         </button>
       </div>
     </form>

@@ -16,7 +16,7 @@ function validateVideoUrl(url: string): boolean {
   }
 }
 
-// ─── GET /api/threads — 전체 스레드 피드 (공개) ───
+// ─── GET /api/threads — Thread feed (public) ───
 
 const FeedQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = FeedQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { limit, cursor, person_id } = parsed.data;
 
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
   });
 }
 
-// ─── POST /api/threads — 스레드 작성 [USER] ───
+// ─── POST /api/threads — Create thread [USER] ───
 
 const CreateThreadSchema = z.object({
   person_id: z.string().uuid(),
@@ -81,31 +81,31 @@ const CreateThreadSchema = z.object({
 export async function POST(request: Request) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = CreateThreadSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422, result.error.issues);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, result.error.issues);
 
   const { image_ids, ...threadData } = result.data;
 
-  // video_url 유효성 검증
+  // Validate video_url
   if (threadData.video_url && !validateVideoUrl(threadData.video_url)) {
     return apiError(
       'VALIDATION_ERROR',
-      'YouTube 또는 네이버TV URL만 허용됩니다.',
+      'Only YouTube or Naver TV URLs are allowed.',
       422
     );
   }
 
-  // 인물 존재 확인
+  // Check person exists
   const { data: person } = await supabaseAdmin
     .from('persons')
     .select('id')
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     .single();
 
   if (!person)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
   const { data: thread, error } = await supabaseAdmin
     .from('threads')
@@ -123,9 +123,9 @@ export async function POST(request: Request) {
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  // 이미지 연결
+  // Link images
   if (image_ids && image_ids.length > 0) {
     await supabaseAdmin
       .from('thread_images')

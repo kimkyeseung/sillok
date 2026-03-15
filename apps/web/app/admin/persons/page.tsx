@@ -36,13 +36,13 @@ export default function AdminPersonsPage() {
   const { data, isLoading, mutate } = useSWR<PersonsResponse>(url, fetcher);
 
   const handleDelete = async (slug: string, nameKo: string) => {
-    if (!confirm(`"${nameKo}"을(를) 삭제하시겠습니까?`)) return;
+    if (!confirm(`Are you sure you want to delete "${nameKo}"?`)) return;
     try {
       await apiFetch(`/api/persons/${slug}`, { method: 'DELETE' });
-      toast('삭제되었습니다');
+      toast('Deleted successfully');
       mutate();
     } catch {
-      toast('삭제에 실패했습니다', 'error');
+      toast('Failed to delete', 'error');
     }
   };
 
@@ -50,9 +50,9 @@ export default function AdminPersonsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">인물 관리</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Person Management</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            인물 목록을 관리합니다
+            Manage the list of persons
           </p>
         </div>
         <Link href="/admin/persons/new" className="btn-primary text-sm">
@@ -69,11 +69,11 @@ export default function AdminPersonsPage() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          인물 등록
+          Register Person
         </Link>
       </div>
 
-      {/* 검색 */}
+      {/* Search */}
       <div className="relative">
         <svg
           className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
@@ -90,7 +90,7 @@ export default function AdminPersonsPage() {
         </svg>
         <input
           type="text"
-          placeholder="인물 이름으로 검색..."
+          placeholder="Search by person name..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -100,23 +100,23 @@ export default function AdminPersonsPage() {
         />
       </div>
 
-      {/* 테이블 */}
+      {/* Table */}
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">로딩 중...</span>
+          <span className="text-sm">Loading...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">인물</th>
-                <th className="px-4 py-3">생몰년</th>
-                <th className="px-4 py-3 text-center">상태</th>
-                <th className="px-4 py-3 text-right">조회</th>
-                <th className="px-4 py-3 text-right">팔로우</th>
-                <th className="px-4 py-3 text-right">관리</th>
+                <th className="px-4 py-3">Person</th>
+                <th className="px-4 py-3">Birth-Death</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-right">Views</th>
+                <th className="px-4 py-3 text-right">Follows</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -162,11 +162,11 @@ export default function AdminPersonsPage() {
                             : 'bg-gray-100 text-gray-500'
                         }`}
                       >
-                        {person.is_published ? '공개' : '비공개'}
+                        {person.is_published ? 'Public' : 'Private'}
                       </span>
                       {person.is_controversial && (
                         <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                          논란
+                          Controversial
                         </span>
                       )}
                     </div>
@@ -227,7 +227,7 @@ export default function AdminPersonsPage() {
                     colSpan={6}
                     className="px-4 py-12 text-center text-gray-400"
                   >
-                    등록된 인물이 없습니다
+                    No persons registered
                   </td>
                 </tr>
               )}
@@ -236,14 +236,14 @@ export default function AdminPersonsPage() {
         </div>
       )}
 
-      {/* 페이지네이션 */}
+      {/* Pagination */}
       {data?.has_next && (
         <div className="flex justify-center">
           <button
             onClick={() => setCursor(data.next_cursor)}
             className="btn-ghost text-sm"
           >
-            더 보기
+            Load More
           </button>
         </div>
       )}

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/persons/:slug/relations — 인물 관계 목록 (공개) ───
+// ─── GET /api/persons/:slug/relations — Person relations (public) ───
 
 const QuerySchema = z.object({
   relation_type: z
@@ -17,7 +17,7 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const parsed = QuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data: person } = await supabaseAdmin
     .from('persons')
@@ -27,26 +27,26 @@ export async function GET(
     .single();
 
   if (!person)
-    return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
+    return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
-  // get_person_relations DB 함수 호출
+  // Call get_person_relations DB function
   const { data, error } = await supabaseAdmin.rpc('get_person_relations', {
     p_id: person.id,
   });
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   let relations = data ?? [];
 
-  // relation_type 필터
+  // Filter by relation_type
   if (parsed.data.relation_type) {
     relations = relations.filter(
       (r: { rel_type: string }) => r.rel_type === parsed.data.relation_type
     );
   }
 
-  // 관련 인물 정보 조회
+  // Fetch related person info
   const otherIds = relations.map(
     (r: { other_person_id: string }) => r.other_person_id
   );

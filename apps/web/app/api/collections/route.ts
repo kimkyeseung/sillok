@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/collections — 공개 컬렉션 목록 (공개) ───
+// ─── GET /api/collections — Public collection list (public) ───
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = ListQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { limit, cursor } = parsed.data;
 
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await query;
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   const hasNext = (data?.length ?? 0) > limit;
   const items = hasNext ? data!.slice(0, limit) : (data ?? []);
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   });
 }
 
-// ─── POST /api/collections — 컬렉션 생성 [USER] ───
+// ─── POST /api/collections — Create collection [USER] ───
 
 const CreateSchema = z.object({
   title: z.string().min(1).max(100),
@@ -59,18 +59,18 @@ const CreateSchema = z.object({
 export async function POST(request: Request) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = CreateSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { data, error } = await supabaseAdmin
     .from('collections')
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(data);
 }

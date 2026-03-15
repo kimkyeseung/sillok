@@ -4,7 +4,7 @@ import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { reportLimiter } from '@/lib/rate-limit';
 
-// ─── POST /api/reports — 신고 [USER] ───
+// ─── POST /api/reports — Submit report [USER] ───
 
 const ReportSchema = z.object({
   target_type: z.enum(['thread', 'reply', 'node_comment']),
@@ -23,26 +23,26 @@ const ReportSchema = z.object({
 export async function POST(request: Request) {
   const user = await requireUser(request);
   if (!user)
-    return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+    return apiError('UNAUTHORIZED', 'Login required.', 401);
 
   const { success } = await reportLimiter.check(user.id);
   if (!success)
-    return apiError('RATE_LIMIT_EXCEEDED', '요청이 너무 많습니다.', 429);
+    return apiError('RATE_LIMIT_EXCEEDED', 'Too many requests.', 429);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = ReportSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
   const { target_type, target_id, reason, detail } = result.data;
 
-  // 중복 신고 확인
+  // Check duplicate report
   const { data: existing } = await supabaseAdmin
     .from('reports')
     .select('id')
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (existing)
-    return apiError('ALREADY_REPORTED', '이미 신고한 항목입니다.', 409);
+    return apiError('ALREADY_REPORTED', 'Already reported.', 409);
 
   const { data, error } = await supabaseAdmin
     .from('reports')
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess(data);
 }

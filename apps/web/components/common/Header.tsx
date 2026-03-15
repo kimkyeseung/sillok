@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
 
 const NAV_ITEMS = [
-  { href: '/', label: '홈' },
-  { href: '/persons', label: '인물' },
-  { href: '/search', label: '검색' },
-  { href: '/articles', label: '아티클' },
+  { href: '/', label: 'Home' },
+  { href: '/persons', label: 'Figures' },
+  { href: '/search', label: 'Search' },
+  { href: '/articles', label: 'Articles' },
 ];
 
 export default function Header() {
@@ -21,7 +21,7 @@ export default function Header() {
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-8 px-4">
         {/* Logo */}
         <Link href="/" className="shrink-0">
-          <Image src="/logo.png" alt="실록" width={80} height={30} priority />
+          <Image src="/logo.png" alt="Sillok" width={80} height={30} priority />
         </Link>
 
         {/* Nav */}
@@ -57,7 +57,7 @@ export default function Header() {
           ) : user ? (
             <>
               <Link href="/collections" className="btn-ghost">
-                컬렉션
+                Collections
               </Link>
               <Link
                 href="/notifications"
@@ -68,7 +68,7 @@ export default function Header() {
                 </svg>
               </Link>
               <button onClick={signOut} className="btn-ghost">
-                로그아웃
+                Log Out
               </button>
               <Link
                 href="/profile"
@@ -79,7 +79,7 @@ export default function Header() {
             </>
           ) : (
             <Link href="/login" className="btn-primary">
-              로그인
+              Log In
             </Link>
           )}
         </div>

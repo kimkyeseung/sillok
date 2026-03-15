@@ -12,8 +12,8 @@ interface AdminUser extends AuthUser {
 }
 
 /**
- * API Route에서 JWT 검증 후 유저 반환
- * 실패 시 null 반환 — 호출부에서 apiError 처리
+ * Verify JWT in API Route and return user
+ * Returns null on failure — caller handles apiError
  */
 export async function requireUser(
   request: Request
@@ -31,7 +31,7 @@ export async function requireUser(
     return { id: user.id, email: user.email ?? '' };
   }
 
-  // Cookie 기반 인증 (SSR 페이지에서 API 호출 시)
+  // Cookie-based auth (for API calls from SSR pages)
   const cookieStore = cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,7 +53,7 @@ export async function requireUser(
               cookieStore.set(name, value, options)
             );
           } catch {
-            // 무시
+            // ignore
           }
         },
       },
@@ -70,9 +70,9 @@ export async function requireUser(
 }
 
 /**
- * API Route에서 JWT + ADMIN 권한 검증
- * profiles.role === 'ADMIN' 확인
- * 실패 시 null 반환
+ * Verify JWT + ADMIN role in API Route
+ * Checks profiles.role === 'ADMIN'
+ * Returns null on failure
  */
 export async function requireAdmin(
   request: Request

@@ -6,12 +6,12 @@ import { useToast } from '@/components/common/Toast';
 import Modal from '@/components/common/Modal';
 
 const RELATION_TYPES = [
-  { value: 'FAMILY', label: '가족' },
-  { value: 'TEACHER', label: '스승/제자' },
-  { value: 'ALLY', label: '동맹' },
-  { value: 'RIVAL', label: '라이벌' },
-  { value: 'LORD_VASSAL', label: '군신' },
-  { value: 'INFLUENCE', label: '영향' },
+  { value: 'FAMILY', label: 'Family' },
+  { value: 'TEACHER', label: 'Teacher/Student' },
+  { value: 'ALLY', label: 'Ally' },
+  { value: 'RIVAL', label: 'Rival' },
+  { value: 'LORD_VASSAL', label: 'Lord/Vassal' },
+  { value: 'INFLUENCE', label: 'Influence' },
 ] as const;
 
 interface RelationSuggestFormProps {
@@ -72,12 +72,12 @@ export default function RelationSuggestForm({
           description: description.trim() || undefined,
         }),
       });
-      toast('관계 제안이 접수되었습니다');
+      toast('Relation suggestion has been submitted');
       setOpen(false);
       resetForm();
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : '오류가 발생했습니다';
+        err instanceof Error ? err.message : 'An error occurred';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -111,7 +111,7 @@ export default function RelationSuggestForm({
             d="M12 4v16m8-8H4"
           />
         </svg>
-        관계 제안
+        Suggest Relation
       </button>
 
       <Modal
@@ -120,18 +120,18 @@ export default function RelationSuggestForm({
           setOpen(false);
           resetForm();
         }}
-        title="인물 관계 제안"
+        title="Suggest Person Relation"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            <span className="font-medium text-gray-900">{personName}</span>
-            과(와) 관련된 인물을 제안해주세요.
+            Suggest a person related to{' '}
+            <span className="font-medium text-gray-900">{personName}</span>.
           </p>
 
-          {/* 인물 검색 */}
+          {/* Search person */}
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              관련 인물 검색
+              Search Related Person
             </label>
             {selectedPerson ? (
               <div className="flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2">
@@ -166,7 +166,7 @@ export default function RelationSuggestForm({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
-                  placeholder="인물 이름을 검색하세요"
+                  placeholder="Search by person name"
                   className="input"
                 />
                 {searching && (
@@ -198,10 +198,10 @@ export default function RelationSuggestForm({
             )}
           </div>
 
-          {/* 관계 유형 */}
+          {/* Relation type */}
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              관계 유형
+              Relation Type
             </label>
             <div className="flex flex-wrap gap-2">
               {RELATION_TYPES.map((t) => (
@@ -220,15 +220,15 @@ export default function RelationSuggestForm({
             </div>
           </div>
 
-          {/* 설명 */}
+          {/* Description */}
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              설명 (선택)
+              Description (Optional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="관계에 대한 설명을 적어주세요"
+              placeholder="Describe the relationship"
               maxLength={500}
               rows={2}
               className="input resize-none"
@@ -240,7 +240,7 @@ export default function RelationSuggestForm({
             disabled={saving || !selectedPerson}
             className="btn-primary w-full disabled:opacity-50"
           >
-            {saving ? '제출 중...' : '관계 제안하기'}
+            {saving ? 'Submitting...' : 'Submit Suggestion'}
           </button>
         </div>
       </Modal>

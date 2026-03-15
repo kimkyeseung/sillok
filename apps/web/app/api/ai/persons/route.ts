@@ -2,9 +2,9 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── POST /api/ai/persons — AI 인물 자동 추가 (시크릿 키 인증) ───
-// 단건: { slug, name_ko, ... }
-// 복수: [{ slug, name_ko, ... }, { slug, name_ko, ... }]  (최대 50건)
+// ─── POST /api/ai/persons — AI auto person creation (secret key auth) ───
+// Single: { slug, name_ko, ... }
+// Bulk: [{ slug, name_ko, ... }, { slug, name_ko, ... }]  (max 50)
 
 const TimelineItemSchema = z.object({
   year: z.number().int(),
@@ -19,7 +19,7 @@ const AiCreatePersonSchema = z.object({
     .string()
     .min(1)
     .max(200)
-    .regex(/^[a-z0-9-]+$/, '영문 소문자, 숫자, 하이픈만 허용'),
+    .regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens allowed'),
   name_ko: z.string().min(1).max(100),
   name_hanja: z.string().max(100).optional(),
   name_en: z.string().max(200).optional(),
@@ -69,12 +69,12 @@ async function createPerson(input: PersonInput): Promise<{
 
   if (error) {
     if (error.code === '23505') {
-      return { success: false, slug: input.slug, error: '이미 존재하는 slug입니다.' };
+      return { success: false, slug: input.slug, error: 'Slug already exists.' };
     }
-    return { success: false, slug: input.slug, error: '처리 중 오류가 발생했습니다.' };
+    return { success: false, slug: input.slug, error: 'An error occurred while processing.' };
   }
 
-  // tag_names → tags 조회 → person_tags insert
+  // tag_names → lookup tags → person_tags insert
   if (tag_names && tag_names.length > 0) {
     const { data: tags } = await supabaseAdmin
       .from('tags')
@@ -107,38 +107,38 @@ async function createPerson(input: PersonInput): Promise<{
 }
 
 export async function POST(request: Request) {
-  // 1. 시크릿 키 인증
+  // 1. Secret key authentication
   const apiKey = request.headers.get('X-API-Key');
   const secretKey = process.env.AI_API_SECRET_KEY;
 
   if (!secretKey || !apiKey || apiKey !== secretKey) {
-    return apiError('UNAUTHORIZED', 'API 키가 유효하지 않습니다.', 401);
+    return apiError('UNAUTHORIZED', 'Invalid API key.', 401);
   }
 
-  // 2. 입력 검증
+  // 2. Input validation
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', '유효한 JSON이 아닙니다.', 422);
+    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
   }
 
   const result = AiCreatePersonsSchema.safeParse(body);
   if (!result.success) {
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422, result.error.issues);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, result.error.issues);
   }
 
   const items = Array.isArray(result.data) ? result.data : [result.data];
   const isBulk = Array.isArray(body);
 
-  // 3. 인물 생성 (순차 처리 — 개별 에러 추적)
+  // 3. Create persons (sequential — track individual errors)
   const results = await Promise.all(items.map(createPerson));
 
-  // 4. 응답
+  // 4. Response
   if (!isBulk) {
     const r = results[0];
     if (!r.success) {
-      const status = r.error === '이미 존재하는 slug입니다.' ? 409 : 500;
+      const status = r.error === 'Slug already exists.' ? 409 : 500;
       return apiError('VALIDATION_ERROR', r.error, status);
     }
     return apiSuccess(r.person);
