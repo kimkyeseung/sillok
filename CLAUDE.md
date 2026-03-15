@@ -161,7 +161,7 @@ if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니�
 
 | # | 테이블 | 설명 |
 |---|--------|------|
-| 1 | `persons` | 인물 (핵심) |
+| 1 | `persons` | 인물 (핵심) — summary, birth_place 영문 직접 저장 |
 | 2 | `tags` | 시대/분야 태그 |
 | 3 | `person_tags` | 인물-태그 연결 |
 | 4 | `nodes` | 유물/미디어/사건 (ARTIFACT·MEDIA·EVENT) |
@@ -172,7 +172,7 @@ if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니�
 | 9 | `thread_images` | 스레드 이미지 첨부 (스레드당 최대 3장) |
 | 10 | `node_comments` | 노드 댓글 |
 | 11 | `view_logs` | 조회 로그 (race condition 방지용) |
-| 12 | `person_timeline` | 인물 생애 타임라인 |
+| 12 | `person_timeline` | 인물 생애 타임라인 — title, description 영문 직접 저장 |
 | 13 | `person_requests` | 인물 추가 요청 |
 | 14 | `reports` | 신고 |
 | 15 | `collections` | 유저 컬렉션 |
@@ -182,14 +182,12 @@ if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니�
 | 19 | `warning_logs` | 경고 이력 |
 | 20 | `articles` | 운영진 아티클/공지 |
 | 21 | `person_of_day_votes` | 오늘의 인물 투표 |
-| 22 | `person_translations` | 인물 번역 (en·ja) |
-| 23 | `node_translations` | 노드 번역 |
-| 24 | `person_timeline_translations` | 타임라인 번역 |
-| 25 | `subscriptions` | Sillok Plus 구독 |
-| 26 | `awards` | 어워드 (좋아요 배지 결제) |
-| 27 | `likes` | 좋아요 통합 (thread·reply·node_comment) |
-| 28 | `follows` | 팔로우 (person·node 대상만) |
-| 29 | `curator_roles` | 자원봉사 큐레이터 |
+| 22 | `node_translations` | 노드 번역 |
+| 23 | `subscriptions` | Sillok Plus 구독 |
+| 24 | `awards` | 어워드 (좋아요 배지 결제) |
+| 25 | `likes` | 좋아요 통합 (thread·reply·node_comment) |
+| 26 | `follows` | 팔로우 (person·node 대상만) |
+| 27 | `curator_roles` | 자원봉사 큐레이터 |
 
 ### 주요 관계
 

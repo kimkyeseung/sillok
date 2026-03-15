@@ -1,8 +1,17 @@
 # Sillok — 한국 인물 아카이브 플랫폼 SPEC
 
-> **버전:** 1.9 (기술 스택 변경 — NestJS+Railway → Next.js API Routes+OCI)
+> **버전:** 2.0 (영문화 — 번역 테이블 제거, persons/timeline 직접 영문 저장)
 > **작성 목적:** Claude Code 기반 자동 개발을 위한 전체 명세서
 > **기술 스택:** Next.js (API Routes 포함) + Supabase + OCI (배치)
+
+### v1.9 → v2.0 변경 사항
+- **영문화 전환**
+  - `person_translations`, `person_timeline_translations` 테이블 삭제
+  - `persons.summary`, `persons.birth_place`, `person_timeline.title/description` 직접 영문 저장
+  - Public 페이지/API에서 `name_ko` → `name_en` 표시로 전환
+  - 검색은 `name_en` + `name_ko` 동시 지원
+  - i18n 전략 변경: locale 라우팅 제거, 영문 단일 사이트로 운영
+  - SEO 구현: robots.txt, sitemap.xml, JSON-LD, OG/Twitter 메타태그
 
 ### v1.8 → v1.9 변경 사항
 - **기술 스택 전면 변경**
@@ -65,8 +74,8 @@
 - 광고 슬롯 표 업데이트 (7-8)
 
 ### v1.3 → v1.4 변경 사항
-- i18n 전략 확정 (3-7 신규): Reddit 방식 — 커뮤니티 다국어 혼용, 정적 콘텐츠만 번역
-- `person_translations` / `node_translations` / `article_translations` 테이블 추가
+- i18n 전략 확정 (3-7 신규): Reddit 방식 → v2.0에서 영문 직접 저장 방식으로 변경
+- `node_translations` 테이블 추가 (person_translations, person_timeline_translations는 v2.0에서 삭제)
 - 커뮤니티(스레드/댓글) 번역: DB 저장 없이 클라이언트 실시간 번역 버튼만 제공
 - 메인 페이지 `최근 스레드` → **전체 스레드 무한스크롤 피드**로 교체
 - `/threads/feed` API 추가 (cursor 기반 무한스크롤, 언어 필터)
@@ -434,69 +443,34 @@ ALTER TABLE persons ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
 ALTER TABLE nodes ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
 ```
 
-### 3-7. 국제화 (i18n) 전략
+### 3-7. 영문화 전략
 
-#### 기본 방향 — Reddit 모델
-- **커뮤니티(스레드/댓글)**: 다국어 혼용 허용, 번역 저장 없음
-  - 번역 버튼 제공 → 클라이언트에서 실시간 API 호출 후 표시만 함 (DB 저장 X)
-  - 한국어/영어/일본어 등 언어가 섞여도 그대로 노출
-- **정적 콘텐츠(인물 기본정보, 타임라인, 노드 설명)**: AI 자동번역 후 DB 저장
-  - 번역 품질 플래그(`is_ai_translated: true`) — 어드민에서 미검수 표시
-  - 초기에는 영어(en)만 지원, 이후 일본어(ja) 확장
+#### 기본 방향 — 영문 단일 사이트
+- **사이트 기본 언어**: 영어 (locale 라우팅 없음, 단일 URL 구조)
+- **정적 콘텐츠(인물, 타임라인)**: `persons`, `person_timeline` 테이블에 직접 영문 저장
+  - `persons.summary`, `persons.birth_place` — 영문
+  - `person_timeline.title`, `person_timeline.description` — 영문
+  - `persons.name_en` — Public 페이지에서 표시하는 이름
+  - `persons.name_ko`, `persons.name_hanja` — DB 보존 (어드민/검색용)
+- **커뮤니티(스레드/댓글)**: 다국어 혼용 허용, 별도 번역 없음
+- **검색**: `name_en` + `name_ko` + `name_hanja` 동시 검색 지원
 
-#### Next.js 라우팅
-
-```typescript
-// next.config.ts
-// 단일 도메인 + locale prefix 방식
-module.exports = {
-  i18n: {
-    locales: ['ko', 'en'],
-    defaultLocale: 'ko',
-    localeDetection: true,   // Accept-Language 헤더 자동 감지
-  },
-};
-
-// URL 구조
-// 한국어 (기본): /인물/sejong-daewang
-// 영어:          /en/person/sejong-daewang
-//                          ↑ 영어권에서는 '인물' 대신 'person' 라우팅 폴더 사용
-```
-
-#### 번역 데이터 적용 방식
+#### Public 페이지 데이터 흐름
 
 ```typescript
-// 인물 상세 페이지
-// locale === 'ko': 원본 데이터 그대로
-// locale === 'en': person_translations 테이블에서 en 데이터 우선
-//                  번역 없으면 한국어 원본 fallback
+// Public 페이지: name_en 직접 사용 (번역 테이블 조회 없음)
+const { data: person } = await supabaseAdmin
+  .from('persons')
+  .select('*')  // name_en, summary(영문), birth_place(영문) 포함
+  .eq('slug', slug)
+  .single();
 
-async function getPersonWithLocale(slug: string, locale: string) {
-  const person = await getPerson(slug);
-  if (locale === 'ko') return person;
-
-  const translation = await getTranslation('person', person.id, locale);
-  return {
-    ...person,
-    summary: translation?.summary ?? person.summary,
-    // name_ko, name_hanja는 번역 안 함 (고유명사)
-    // birth_place는 번역 제공 (ex: "한성부" → "Hanseong")
-    birth_place: translation?.birth_place ?? person.birth_place,
-  };
-}
+// 표시: person.name_en
+// 검색: name_en.ilike + name_ko.ilike 병행
 ```
 
-#### 커뮤니티 번역 버튼
-
-```typescript
-// 스레드/댓글 카드에 번역 버튼 표시 조건:
-// - 게시물 언어 != 현재 locale (자동 감지: langdetect 또는 franc 라이브러리)
-// - 번역 버튼 클릭 시: POST /translate { text, target_locale }
-// - 결과는 useState로 관리, 새로고침 시 원문 복귀 (DB 저장 없음)
-// - 번역 API: OpenAI GPT-4o mini (비용 최소화)
-
-// Rate limit: 번역 API 10 req / 1분 / USER (어뷰징 방지)
-```
+#### 어드민 페이지
+- 어드민 페이지는 `name_ko` 유지 (한국어 어드민 인터페이스)
 
 ---
 
@@ -935,26 +909,7 @@ CREATE TABLE person_of_day_votes (
 CREATE INDEX person_of_day_votes_date_idx ON person_of_day_votes (vote_date, person_id);
 ```
 
-### 4-19. 인물 번역 (person_translations)
-
-```sql
--- 정적 콘텐츠 AI 번역 저장 (커뮤니티 제외)
-CREATE TABLE person_translations (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  person_id        UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  locale           TEXT NOT NULL CHECK (locale IN ('en', 'ja')),
-  summary          TEXT,
-  birth_place      TEXT,
-  is_ai_translated BOOLEAN DEFAULT TRUE,    -- FALSE면 수동 검수 완료
-  created_at       TIMESTAMPTZ DEFAULT NOW(),
-  updated_at       TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (person_id, locale)
-);
-
-CREATE INDEX person_translations_idx ON person_translations (person_id, locale);
-```
-
-### 4-20. 노드 번역 (node_translations)
+### 4-19. 노드 번역 (node_translations)
 
 ```sql
 CREATE TABLE node_translations (
@@ -970,21 +925,7 @@ CREATE TABLE node_translations (
 );
 ```
 
-### 4-21. 타임라인 번역 (person_timeline_translations)
-
-```sql
-CREATE TABLE person_timeline_translations (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timeline_id      UUID NOT NULL REFERENCES person_timeline(id) ON DELETE CASCADE,
-  locale           TEXT NOT NULL CHECK (locale IN ('en', 'ja')),
-  title            TEXT,
-  description      TEXT,
-  is_ai_translated BOOLEAN DEFAULT TRUE,
-  UNIQUE (timeline_id, locale)
-);
-```
-
-### 4-25. 좋아요 (likes)
+### 4-20. 좋아요 (likes)
 
 ```sql
 -- 스레드 + 댓글 통합 좋아요 테이블
@@ -1334,7 +1275,7 @@ GET    /threads/feed              전체 스레드 무한스크롤 피드
   반환: CursorPaginationResponse<ThreadFeedItem>
   ThreadFeedItem: {
     id, title, content_preview(100자),
-    person: { slug, name_ko, name_en, thumbnail },
+    person: { slug, name_en, thumbnail },
     author: { nickname, avatar_url },
     reply_count, created_at,
     detected_lang: 'ko' | 'en' | 'ja' | 'other'  -- 자동 감지
@@ -1902,19 +1843,19 @@ CREATE POLICY "Users can update own profile"
 ### PostgreSQL 전문 검색
 
 ```sql
--- 인물 검색 (한글/한자 동시, cursor 페이지네이션)
-SELECT id, slug, name_ko, name_hanja, birth_year, death_year
+-- 인물 검색 (영문/한글/한자 동시, cursor 페이지네이션)
+SELECT id, slug, name_en, name_hanja, birth_year, death_year
 FROM persons
 WHERE
   is_deleted = FALSE AND is_published = TRUE
   AND (
-    name_ko % $1
-    OR name_hanja % $1
+    name_en ILIKE '%' || $1 || '%'
     OR name_ko ILIKE '%' || $1 || '%'
+    OR name_hanja % $1
   )
   AND ($cursor IS NULL OR created_at < $cursor)  -- cursor
 ORDER BY
-  similarity(name_ko, $1) DESC,
+  similarity(name_en, $1) DESC,
   view_count DESC
 LIMIT $limit + 1;  -- has_next 판단
 ```
@@ -2004,8 +1945,8 @@ export const revalidate = 86400; // 24시간 ISR
 {
   '@context': 'https://schema.org',
   '@type': 'Person',
-  name: person.name_ko,
-  alternateName: [person.name_hanja, person.name_en].filter(Boolean),
+  name: person.name_en,
+  alternateName: [person.name_hanja].filter(Boolean),
   birthDate: person.birth_year,
   deathDate: person.death_year,
   birthPlace: { '@type': 'Place', name: person.birth_place },
@@ -2086,9 +2027,8 @@ Sillok Plus: 월 구독자 50명 → 월 245,000원
 - [ ] 유물/K-콘텐츠/사건 노드 상세 페이지 완성
 - [ ] 유저 컬렉션 + 공개 컬렉션 탐색
 - [ ] 오늘의 인물 생일/기일 자동 선정 크론 완성
-- [ ] 국제화 (i18n) — Next.js locale 라우팅, person_translations AI 자동번역 파이프라인
-- [ ] `/translate` API — GPT-4o mini 커뮤니티 번역 버튼
-- [ ] 메인 피드 언어 필터 탭 (한국어 / 영어 / 전체)
+- [x] 영문화 — persons/timeline 직접 영문 저장 완료, Public 페이지 name_en 표시
+- [ ] `/translate` API — GPT-4o mini 커뮤니티 번역 버튼 (선택)
 - [ ] 인물 랭킹 고도화 (주간/월간 시각화)
 - [ ] 기여 배지 시스템 v1 (스레드 수, 고증 인정 수신 누적)
 
