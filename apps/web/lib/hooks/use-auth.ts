@@ -24,16 +24,23 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
-  const signInWithKakao = useCallback(async () => {
+  const signInWithGoogle = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
-      provider: 'kakao',
+      provider: 'google',
       options: { redirectTo: `${window.location.origin}/callback` },
     });
   }, [supabase.auth]);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithDiscord = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: 'discord',
+      options: { redirectTo: `${window.location.origin}/callback` },
+    });
+  }, [supabase.auth]);
+
+  const signInWithTwitter = useCallback(async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'twitter',
       options: { redirectTo: `${window.location.origin}/callback` },
     });
   }, [supabase.auth]);
@@ -73,8 +80,9 @@ export function useAuth() {
   return {
     user,
     loading,
-    signInWithKakao,
     signInWithGoogle,
+    signInWithDiscord,
+    signInWithTwitter,
     signUpWithEmail,
     signInWithEmail,
     signOut,

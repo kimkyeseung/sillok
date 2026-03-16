@@ -20,7 +20,7 @@ const signupSchema = loginSchema.extend({
 });
 
 function LoginContent() {
-  const { signInWithKakao, signInWithGoogle, signInWithEmail, signUpWithEmail } =
+  const { signInWithGoogle, signInWithDiscord, signInWithTwitter, signInWithEmail, signUpWithEmail } =
     useAuth();
   const searchParams = useSearchParams();
   const urlError = searchParams.get('error');
@@ -120,19 +120,6 @@ function LoginContent() {
           {/* Social Login */}
           <div className="mt-6 space-y-3">
             <button
-              onClick={signInWithKakao}
-              className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-[#FEE500] px-4 py-3 text-sm font-medium text-[#191919] transition-colors hover:bg-[#FDD835]"
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18">
-                <path
-                  fill="#191919"
-                  d="M9 1C4.58 1 1 3.79 1 7.24c0 2.2 1.46 4.13 3.66 5.23l-.93 3.43c-.08.3.26.54.52.37l4.1-2.72c.22.02.43.03.65.03 4.42 0 8-2.79 8-6.24S13.42 1 9 1z"
-                />
-              </svg>
-              Continue with Kakao
-            </button>
-
-            <button
               onClick={signInWithGoogle}
               className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
@@ -155,6 +142,32 @@ function LoginContent() {
                 />
               </svg>
               Continue with Google
+            </button>
+
+            <button
+              onClick={signInWithDiscord}
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-[#5865F2] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#4752C4]"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18">
+                <path
+                  fill="#fff"
+                  d="M14.82 3.76a13.07 13.07 0 0 0-3.28-1.03.05.05 0 0 0-.05.02c-.14.25-.3.58-.41.84a12.1 12.1 0 0 0-3.66 0 8.48 8.48 0 0 0-.42-.84.05.05 0 0 0-.05-.02c-1.15.2-2.24.54-3.28 1.03a.04.04 0 0 0-.02.02C1.76 6.57 1.22 9.28 1.49 11.96a.05.05 0 0 0 .02.04 13.2 13.2 0 0 0 4 2.04.05.05 0 0 0 .06-.02c.31-.42.58-.87.82-1.34a.05.05 0 0 0-.03-.07 8.7 8.7 0 0 1-1.25-.6.05.05 0 0 1 0-.09c.08-.06.17-.13.25-.19a.05.05 0 0 1 .05-.01c2.63 1.21 5.47 1.21 8.07 0a.05.05 0 0 1 .05 0c.08.07.17.13.25.2a.05.05 0 0 1 0 .08c-.4.23-.81.43-1.25.6a.05.05 0 0 0-.03.07c.24.47.52.92.82 1.34a.05.05 0 0 0 .05.02 13.16 13.16 0 0 0 4.01-2.04.05.05 0 0 0 .02-.04c.32-3.34-.54-6.03-2.26-8.18a.04.04 0 0 0-.02-.02zM6.68 10.35c-.7 0-1.28-.65-1.28-1.45s.57-1.45 1.28-1.45c.72 0 1.29.66 1.28 1.45 0 .8-.57 1.45-1.28 1.45zm4.73 0c-.7 0-1.28-.65-1.28-1.45s.56-1.45 1.28-1.45c.72 0 1.29.66 1.28 1.45 0 .8-.56 1.45-1.28 1.45z"
+                />
+              </svg>
+              Continue with Discord
+            </button>
+
+            <button
+              onClick={signInWithTwitter}
+              className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-900"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18">
+                <path
+                  fill="#fff"
+                  d="M10.53 7.87 16.2 1.5h-1.35l-4.93 5.54L5.76 1.5H1.18l5.95 8.37L1.18 16.5h1.35l5.2-5.84 4.15 5.84h4.58l-6.17-8.67.24.04zm-1.84 2.07-.6-.83L3.2 2.5h2.07l3.87 5.35.6.83 5.03 6.95h-2.07l-4.1-5.69z"
+                />
+              </svg>
+              Continue with X
             </button>
           </div>
 
