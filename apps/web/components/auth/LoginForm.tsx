@@ -20,7 +20,7 @@ const signupSchema = loginSchema.extend({
 });
 
 function LoginContent() {
-  const { signInWithGoogle, signInWithDiscord, signInWithTwitter, signInWithEmail, signUpWithEmail } =
+  const { signInWithGoogle, signInWithDiscord, signInWithEmail, signUpWithEmail } =
     useAuth();
   const searchParams = useSearchParams();
   const urlError = searchParams.get('error');
@@ -157,18 +157,6 @@ function LoginContent() {
               Continue with Discord
             </button>
 
-            <button
-              onClick={signInWithTwitter}
-              className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-black px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-900"
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18">
-                <path
-                  fill="#fff"
-                  d="M10.53 7.87 16.2 1.5h-1.35l-4.93 5.54L5.76 1.5H1.18l5.95 8.37L1.18 16.5h1.35l5.2-5.84 4.15 5.84h4.58l-6.17-8.67.24.04zm-1.84 2.07-.6-.83L3.2 2.5h2.07l3.87 5.35.6.83 5.03 6.95h-2.07l-4.1-5.69z"
-                />
-              </svg>
-              Continue with X
-            </button>
           </div>
 
           {/* Divider */}

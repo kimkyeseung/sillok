@@ -38,13 +38,6 @@ export function useAuth() {
     });
   }, [supabase.auth]);
 
-  const signInWithTwitter = useCallback(async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'x',
-      options: { redirectTo: `${window.location.origin}/callback` },
-    });
-  }, [supabase.auth]);
-
   const signUpWithEmail = useCallback(
     async (email: string, password: string, nickname: string) => {
       const { data, error } = await supabase.auth.signUp({
@@ -82,7 +75,6 @@ export function useAuth() {
     loading,
     signInWithGoogle,
     signInWithDiscord,
-    signInWithTwitter,
     signUpWithEmail,
     signInWithEmail,
     signOut,

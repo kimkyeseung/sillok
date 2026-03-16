@@ -87,7 +87,7 @@ db/
 - **모든 목록 API**는 Cursor 기반 페이지네이션 사용 (`limit+1` 조회 → `has_next` 판단)
 - **모든 읽기 쿼리**는 `WHERE is_deleted = FALSE` 포함할 것
 - **slug**는 항상 영문 (`sejong-daewang` 방식)
-- **소셜 로그인**: Google, Discord, Twitter(X)만. 직접 구현 금지 — Supabase Auth 사용
+- **소셜 로그인**: Google, Discord만. 직접 구현 금지 — Supabase Auth 사용
 
 ### 절대 하면 안 되는 것
 
@@ -342,9 +342,6 @@ SUPABASE_SERVICE_ROLE_KEY=           # 서버 전용 — 절대 클라이언트 
 # 소셜 로그인
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-TWITTER_CLIENT_ID=
-TWITTER_CLIENT_SECRET=
-
 # 번역 API (Milestone 2)
 OPENAI_API_KEY=                      # GPT-4o mini 커뮤니티 번역
 
