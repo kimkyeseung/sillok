@@ -40,7 +40,7 @@ export function useAuth() {
 
   const signInWithTwitter = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
-      provider: 'twitter',
+      provider: 'x',
       options: { redirectTo: `${window.location.origin}/callback` },
     });
   }, [supabase.auth]);
