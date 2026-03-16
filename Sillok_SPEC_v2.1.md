@@ -1,8 +1,21 @@
 # Sillok — 한국 인물 아카이브 플랫폼 SPEC
 
-> **버전:** 2.0 (영문화 — 번역 테이블 제거, persons/timeline 직접 영문 저장)
+> **버전:** 2.1 (URL 영문화, 태그/에러메시지 영문화, 글로벌 피벗 반영, 마일스톤 재조정)
 > **작성 목적:** Claude Code 기반 자동 개발을 위한 전체 명세서
 > **기술 스택:** Next.js (API Routes 포함) + Supabase + OCI (배치)
+
+### v2.0 → v2.1 변경 사항
+- **URL 경로 영문화**: /인물/ → /person/, /유물/ → /artifact/, /미디어/ → /media/, /사건/ → /event/, /검색 → /search, /컬렉션 → /collection, /아티클 → /article
+- **태그 값 영문화**: ERA·FIELD 태그 한국어 → 영문 slug
+- **articles.tag 영문화**: 기획→editorial, 특집→special 등
+- **에러 메시지 영문화**: API 응답 메시지 전체 영문 전환
+- **관계도 레이블 영문화**: 가족/혈연 → Family 등
+- **논란 인물 배너 영문화**
+- **메인 히어로 카피 영문화**
+- **person_requests에 name_en 필드 추가** (글로벌 유저 요청 대응)
+- **소셜 로그인**: 카카오 제거, Google/Apple/Discord/Twitter(X) + 이메일
+- **video_url 허용 도메인**: 네이버TV → Vimeo 교체
+- **마일스톤 재조정**: M1 배포 완료 반영, 글로벌 피벗 기준 수익/목표 재설정
 
 ### v1.9 → v2.0 변경 사항
 - **영문화 전환**
@@ -208,14 +221,14 @@ sillok/
 │       ├── app/
 │       │   ├── (public)/
 │       │   │   ├── page.tsx        # 메인 홈
-│       │   │   ├── 인물/
-│       │   │   │   ├── page.tsx    # 인물 목록
+│       │   │   ├── person/
+│       │   │   │   ├── page.tsx    # person list
 │       │   │   │   └── [slug]/
 │       │   │   │       └── page.tsx # 인물 상세 (SSG)
-│       │   │   ├── 유물/[slug]/page.tsx
-│       │   │   ├── 미디어/[slug]/page.tsx
-│       │   │   ├── 사건/[slug]/page.tsx
-│       │   │   ├── 검색/page.tsx
+│       │   │   ├── artifact/[slug]/page.tsx
+│       │   │   ├── media/[slug]/page.tsx
+│       │   │   ├── event/[slug]/page.tsx
+│       │   │   ├── search/page.tsx
 │       │   │   └── relations/page.tsx
 │       │   ├── (auth)/
 │       │   │   ├── login/page.tsx
@@ -275,10 +288,10 @@ sillok/
 // SEO는 영문 slug + 한국어 메타데이터로 충분히 커버 가능
 
 // 예시
-// ✅ /인물/sejong-daewang
-// ✅ /유물/hunminjeongeum
-// ✅ /미디어/myeongryang-2014
-// ❌ /인물/세종대왕  (공유 시 URL 깨짐 위험)
+// ✅ /person/sejong-daewang
+// ✅ /artifact/hunminjeongeum
+// ✅ /media/myeongryang-2014
+// ❌ /인물/세종대왕  (한글 경로 사용 금지)
 
 // slug 생성 규칙
 // 1. 이름 한글 → 로마자 변환 (romanization: 국립국어원 표준)
@@ -327,7 +340,7 @@ interface ErrorResponse {
   success: false;
   error: {
     code: string;       // ex: "PERSON_NOT_FOUND", "UNAUTHORIZED", "RATE_LIMIT_EXCEEDED"
-    message: string;    // 사람이 읽을 수 있는 메시지 (한국어)
+    message: string;    // Human-readable message (English)
     details?: unknown;  // 추가 정보 (validation 에러 배열 등)
   };
   timestamp: string;    // ISO 8601
@@ -523,8 +536,9 @@ CREATE TABLE tags (
   id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name  TEXT UNIQUE NOT NULL,
   type  TEXT NOT NULL CHECK (type IN ('ERA', 'FIELD', 'CUSTOM'))
-  -- ERA: 고대, 삼국, 고려, 조선, 근현대
-  -- FIELD: 왕, 장군, 예술가, 독립운동가, 학자, 정치인, 스포츠, 문화/예능, 기업인, 종교인
+  -- ERA:   ancient | three-kingdoms | goryeo | joseon | modern
+  -- FIELD: king | general | artist | independence-activist | scholar
+  --        politician | sports | entertainer | entrepreneur | religious
 );
 
 CREATE TABLE person_tags (
@@ -648,7 +662,7 @@ CREATE TABLE threads (
   author_id   UUID REFERENCES auth.users(id),
   title       TEXT NOT NULL,
   content     TEXT NOT NULL,
-  video_url   TEXT,                    -- YouTube/네이버TV URL (선택)
+  video_url   TEXT,                    -- YouTube/Vimeo URL (선택)
   is_pinned   BOOLEAN DEFAULT FALSE,
   is_deleted  BOOLEAN DEFAULT FALSE,
   view_count  INTEGER DEFAULT 0,       -- view_logs 배치 집계로 갱신
@@ -748,7 +762,8 @@ CREATE INDEX person_timeline_person_id_idx ON person_timeline (person_id);
 CREATE TABLE person_requests (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_id    UUID REFERENCES auth.users(id),
-  name_ko         TEXT NOT NULL,
+  name_en         TEXT NOT NULL,       -- 영문 이름 (필수 — 글로벌 유저 대응)
+  name_ko         TEXT,                -- 한글 이름 (선택)
   birth_year      INTEGER,
   death_year      INTEGER,
   reason          TEXT NOT NULL,       -- 등록 이유 (필수)
@@ -882,7 +897,7 @@ CREATE TABLE articles (
   body         TEXT NOT NULL,              -- 마크다운
   summary      TEXT,                       -- 목록 미리보기용 요약
   thumbnail    TEXT,                       -- Supabase Storage URL 또는 이모지
-  tag          TEXT NOT NULL CHECK (tag IN ('기획', '특집', '인물탐구', '현대', '공지', '안내')),
+  tag          TEXT NOT NULL CHECK (tag IN ('editorial', 'special', 'spotlight', 'modern', 'notice', 'guide')),
   is_notice    BOOLEAN DEFAULT FALSE,      -- TRUE면 공지사항 섹션에 표시
   is_published BOOLEAN DEFAULT FALSE,
   author_id    UUID REFERENCES auth.users(id),
@@ -948,13 +963,13 @@ CREATE INDEX likes_user_idx   ON likes (user_id, created_at DESC);
 ```sql
 -- threads, replies, node_comments 에 컬럼 추가
 ALTER TABLE threads       ADD COLUMN like_count INTEGER DEFAULT 0;
-ALTER TABLE replies       ADD COLUMN like_count INTEGER DEFAULT 0;
+ALTER TABLE thread_replies ADD COLUMN like_count INTEGER DEFAULT 0;
 ALTER TABLE node_comments ADD COLUMN like_count INTEGER DEFAULT 0;
 ```
 
 ---
 
-### 4-26. 팔로우 (follows)
+### 4-21. 팔로우 (follows)
 
 ```sql
 -- 인물(PERSON) + 노드(ARTIFACT|MEDIA|EVENT) 팔로우 통합
@@ -981,7 +996,7 @@ ALTER TABLE nodes   ADD COLUMN follow_count INTEGER DEFAULT 0;
 
 ---
 
-### 4-27. 스레드 이미지 (thread_images)
+### 4-22. 스레드 이미지 (thread_images)
 
 ```sql
 -- 스레드당 최대 3장, 순서 보장
@@ -1116,10 +1131,10 @@ POST   /replies/:id/like          댓글 좋아요 토글 [USER]
 **video_url 유효성 검증 규칙**
 
 ```typescript
-// 허용 도메인: YouTube, 네이버TV
+// 허용 도메인: YouTube, Vimeo (글로벌 기준)
 const ALLOWED_VIDEO_HOSTS = [
   'youtube.com', 'youtu.be',
-  'tv.naver.com',
+  'vimeo.com',
 ];
 
 function validateVideoUrl(url: string): boolean {
@@ -1131,7 +1146,7 @@ function validateVideoUrl(url: string): boolean {
 
 // 프리뷰 썸네일 추출
 // YouTube: https://img.youtube.com/vi/{VIDEO_ID}/mqdefault.jpg
-// 네이버TV: OEmbed API 활용
+// Vimeo: https://vimeo.com/api/oembed.json?url={URL}
 ```
 
 ### 5-5. 노드 댓글 (Node Comments)
@@ -1187,7 +1202,7 @@ GET    /search/suggest
 
 ```
 POST   /person-requests           요청 제출 [USER]
-  body: { name_ko, birth_year?, death_year?, reason, source_url }
+  body: { name_en, name_ko?, birth_year?, death_year?, reason, source_url }
 
 GET    /person-requests           요청 목록 [ADMIN]
   Query: status(PENDING|APPROVED|REJECTED), limit, cursor
@@ -1317,7 +1332,9 @@ PUT    /articles/:id              아티클 수정 [ADMIN]
 DELETE /articles/:id              아티클 soft delete [ADMIN]
 ```
 
-### 5-14. 어드민 통계```
+### 5-14. 어드민 통계
+
+```
 GET    /admin/stats
   반환:
     today_views: number
@@ -1335,7 +1352,7 @@ PUT    /admin/members/:id/warn    경고 [ADMIN]
   body: { reason: string, target_type?, target_id? }
 ```
 
-### 5-13. CSV 벌크 업로드 상세
+### 5-15. CSV 벌크 업로드 상세
 
 ```
 POST   /persons/bulk  [ADMIN]
@@ -1370,19 +1387,19 @@ CSV 형식:
 
 | 경로 | 설명 | 렌더링 |
 |------|------|--------|
-| `/` | 메인 홈 (오늘의 인물, 인기 스레드, 최근 등록) | SSR |
-| `/인물` | 인물 목록 (필터/정렬) | SSR |
-| `/인물/[slug]` | 인물 상세 | SSG + ISR(24h) |
-| `/유물/[slug]` | 유물 상세 | SSG + ISR(24h) |
-| `/미디어/[slug]` | 미디어 상세 | SSG + ISR(24h) |
-| `/사건/[slug]` | 사건 상세 | SSG + ISR(24h) |
-| `/검색` | 통합 검색 결과 | SSR |
-| `/relations` | 전체 관계도 탐색 | CSR |
-| `/login` | 로그인 | CSR |
-| `/signup` | 회원가입 | CSR |
-| `/컬렉션/[id]` | 공개 컬렉션 상세 | SSR |
-| `/아티클` | 운영진 아티클 목록 | SSR |
-| `/아티클/[slug]` | 아티클 상세 | SSG + ISR(1h) |
+| `/` | Main home (Today's Person, hot threads, recent) | SSR |
+| `/person` | Person list (filter/sort) | SSR |
+| `/person/[slug]` | Person detail | SSG + ISR(24h) |
+| `/artifact/[slug]` | Artifact detail | SSG + ISR(24h) |
+| `/media/[slug]` | Media detail | SSG + ISR(24h) |
+| `/event/[slug]` | Event detail | SSG + ISR(24h) |
+| `/search` | Unified search results | SSR |
+| `/relations` | Full relation graph explorer | CSR |
+| `/login` | Login | CSR |
+| `/signup` | Sign up | CSR |
+| `/collection/[id]` | Public collection detail | SSR |
+| `/article` | Editorial article list | SSR |
+| `/article/[slug]` | Article detail | SSG + ISR(1h) |
 
 ### 6-2. 어드민 페이지 (CSR, Admin Guard 적용)
 
@@ -1465,12 +1482,12 @@ function renderReply(reply: Reply, visualDepth: number) {
 ```typescript
 // 관계 유형별 시각화
 const RELATION_STYLE = {
-  FAMILY:      { color: '#22c55e', dash: null,  label: '가족/혈연' },
-  TEACHER:     { color: '#f97316', dash: null,  label: '스승/제자' },
-  ALLY:        { color: '#3b82f6', dash: null,  label: '협력자/동지' },
-  RIVAL:       { color: '#ef4444', dash: null,  label: '대립/적대' },
-  LORD_VASSAL: { color: '#a855f7', dash: null,  label: '군신 관계' },
-  INFLUENCE:   { color: '#94a3b8', dash: '5,5', label: '영향' },
+  FAMILY:      { color: '#22c55e', dash: null,  label: 'Family' },
+  TEACHER:     { color: '#f97316', dash: null,  label: 'Teacher/Student' },
+  ALLY:        { color: '#3b82f6', dash: null,  label: 'Ally' },
+  RIVAL:       { color: '#ef4444', dash: null,  label: 'Rival' },
+  LORD_VASSAL: { color: '#a855f7', dash: null,  label: 'Lord/Vassal' },
+  INFLUENCE:   { color: '#94a3b8', dash: '5,5', label: 'Influence' },
 };
 
 // 미니 관계도 (인물 페이지 내)
@@ -1529,27 +1546,28 @@ CREATE INDEX person_of_day_votes_date_idx ON person_of_day_votes (vote_date, per
 // 인물 상세 페이지
 if (person.is_controversial) {
   // 1. 페이지 최상단 배너
-  // "⚠️ 이 인물은 역사적으로 논란이 있습니다. Sillok은 기본 정보만을 제공합니다."
+  // "⚠️ This figure is considered historically controversial.
+  //  Sillok provides factual information only."
 
   // 2. summary 필드 비워둠 — 기본 정보만 표시 (이름, 생몰년, 출생지, 태그)
 
-  // 3. 스레드 게시판 상단 중립 기술 원칙 안내
-  // "이 인물에 대한 게시물은 중립적 시각으로 작성해주세요.
-  //  출처 없는 주장은 운영진에 의해 삭제될 수 있습니다."
+  // 3. 스레드 게시판 상단 안내
+  // "Posts about this figure must be written from a neutral perspective.
+  //  Claims without citations may be removed by moderators."
 }
 ```
 
 ### 7-6. OG 이미지 자동 생성
 
 ```typescript
-// app/인물/[slug]/opengraph-image.tsx
+// app/person/[slug]/opengraph-image.tsx
 // Next.js ImageResponse 활용
 // 인물 이름 + 대표 이미지 + 생몰년 카드 형식
 // → 카카오톡/SNS 공유 시 썸네일 자동 생성
 // 크기: 1200 x 630
 
-// app/유물/[slug]/opengraph-image.tsx
-// app/미디어/[slug]/opengraph-image.tsx
+// app/artifact/[slug]/opengraph-image.tsx
+// app/media/[slug]/opengraph-image.tsx
 // 동일 방식 적용
 ```
 
@@ -1560,8 +1578,8 @@ if (person.is_controversial) {
 │  NAV: SILLOK | [검색창] | 인물 유물 미디어 사건 관계도 | 로그인 가입  │
 ├──────────────────────────────────────────────────────────────────┤
 │  슬림 히어로 스트립 (1줄)                                           │
-│  "단군부터 현재까지, 이름있는 모든 인물"                              │
-│  [👤 1,240 인물]  [🏺 384 유물]  [🎬 218 미디어]  [📌 156 사건]     │
+│  "Discover the people who shaped Korea"                          │
+│  [👤 1,240 Persons]  [🏺 384 Artifacts]  [🎬 218 Media]  [📌 156 Events] │
 ├──────────────────────────────────────────────────────────────────┤
 │  ████████████████████ 광고 ① 레더보드 (728×90) ██████████████████ │
 ├────────────────────────────────────┬─────────────────────────────┤
@@ -1751,13 +1769,11 @@ export function AdSlot({ slot, format = 'auto', style }: AdSlotProps) {
 
 ## 9. 인증 및 권한
 
-## 9. 인증 및 권한
-
 ### Supabase Auth
 
 ```typescript
-// 소셜 로그인: 카카오, 구글
-// 이메일 인증 가입
+// 소셜 로그인: Google (메인), Apple, Discord, Twitter(X) + 이메일 인증
+// → 글로벌 유저 대상, Supabase Auth OAuth 사용
 
 // middleware.ts — 라우트 보호 (Next.js App Router)
 export function middleware(request: NextRequest) {
@@ -1799,13 +1815,13 @@ export async function requireAdmin(request: Request) {
 // app/api/persons/route.ts 예시
 export async function POST(request: Request) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
   // ...
 }
 
 export async function PUT(request: Request) {
   const user = await requireUser(request);
-  if (!user) return apiError('UNAUTHORIZED', '로그인이 필요합니다.', 401);
+  if (!user) return apiError('UNAUTHORIZED', 'Login required.', 401);
   // owner 체크: resource.author_id === user.id
 }
 ```
@@ -1863,8 +1879,8 @@ LIMIT $limit + 1;  -- has_next 판단
 ### 필터 파라미터
 
 ```
-era:   고대 | 삼국 | 고려 | 조선 | 근현대
-field: 왕 | 장군 | 예술가 | 독립운동가 | 학자 | 종교인 | 기업인 | 정치인 | 스포츠 | 문화/예능
+era:   ancient | three-kingdoms | goryeo | joseon | modern
+field: king | general | artist | independence-activist | scholar | religious | entrepreneur | politician | sports | entertainer
 type:  ALL | PERSON | ARTIFACT | MEDIA | EVENT
 sort:  relevance | name_asc | popular | recent
 ```
@@ -1888,7 +1904,7 @@ const CreateThreadSchema = z.object({
 export async function POST(request: Request) {
   const body = await request.json();
   const result = CreateThreadSchema.safeParse(body);
-  if (!result.success) return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+  if (!result.success) return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
   // ...
 }
 
@@ -1924,7 +1940,7 @@ Supabase Storage RLS로 경로별 접근 제어
 ### 정적 생성 (SSG + ISR)
 
 ```typescript
-// app/인물/[slug]/page.tsx
+// app/person/[slug]/page.tsx
 export async function generateStaticParams() {
   // 빌드 타임: Supabase 직접 쿼리 (NestJS API 미사용)
   const persons = await supabaseAdmin
@@ -1962,7 +1978,7 @@ export const revalidate = 86400; // 24시간 ISR
 
 ```typescript
 // app/sitemap.ts — 전체 인물/노드 slug 기반 동적 사이트맵
-// 우선순위: 인물(0.8) > 유물/미디어/사건(0.6) > 목록 페이지(0.5)
+// priority: person(0.8) > artifact/media/event(0.6) > list pages(0.5)
 // changeFrequency: 인물(weekly), 노드(monthly)
 ```
 
@@ -1970,169 +1986,150 @@ export const revalidate = 86400; // 24시간 ISR
 
 ## 13. 마일스톤 로드맵
 
-> 체크리스트가 아닌 **목표 중심 마일스톤** 구조. 각 마일스톤은 이전 마일스톤 완료를 전제로 하며, 타임라인은 1인 개발 기준 추정치.
+> 목표 중심 마일스톤. 1인 개발 기준 추정치.
+> **현재 상태**: 서비스 배포 완료 (sillok.net + sillok.kr), M1 핵심 개발 완료.
+> **글로벌 피벗**: 주 타겟은 한국에 관심 있는 글로벌 유저. 어드민만 한국어, Public 전체 영어.
 
 ---
 
-### Milestone 1 — 씨앗 심기 (MVP)
-**목표:** 서비스의 핵심 가치 검증 + 첫 유저 커뮤니티 형성
-**기간:** 약 3개월
-**목표 지표:** DAU 200+, 등록 인물 500명+, 스레드 1,000개+
+### Milestone 1 — 씨앗 심기 ✅ 완료
+**목표:** 서비스 런칭 + 첫 글로벌 유저 유입
+**기간:** 완료
+**달성 지표:** 서비스 배포, sillok.net + sillok.kr 도메인 연결
 
-#### 핵심 개발
-- [ ] DB 스키마 전체 마이그레이션 (subscriptions, awards, curator_roles 포함)
-- [ ] pg_cron 설정 (view_count 배치 집계, 정지 해제 자동화)
-- [ ] Next.js API Routes 공통 인프라 (apiError/apiSuccess 헬퍼, requireUser/requireAdmin, zod 검증)
-- [ ] 인물 CRUD API + CSV 벌크 업로드 (부분 성공 방식)
-- [ ] 노드 CRUD API (ARTIFACT, MEDIA, EVENT)
-- [ ] 스레드 + Reddit식 댓글 API (depth 자동 계산)
-- [ ] 스레드/댓글/노드댓글 좋아요 토글 API (`POST /threads/:id/like` 등)
-- [ ] 인물/노드 팔로우 토글 API (`POST /follows`)
-- [ ] 팔로우 피드 API (`GET /follows/me/feed`)
-- [ ] 통합 검색 API (드롭다운 + 결과 페이지, pg_trgm)
-- [ ] 회원가입/로그인 (이메일 + 카카오 + 구글)
-- [ ] Next.js 메인 페이지 (Reddit 스타일 피드 + sticky 사이드바)
-- [ ] Next.js 인물 목록/상세 페이지 (SSG + ISR)
-- [ ] 어드민 패널 (인물 관리, 요청 큐, 신고 처리, 회원 관리)
-- [ ] 논란 인물 배너, OG 이미지, Sitemap, Schema.org
-- [ ] 알림 시스템 기본 (요청 승인/반려, 답글)
+#### 핵심 개발 (완료)
+- [x] DB 스키마 전체 마이그레이션
+- [x] pg_cron 설정 (view_count 배치 집계, 정지 해제 자동화)
+- [x] Next.js API Routes 공통 인프라 (apiError/apiSuccess, requireUser/requireAdmin, zod)
+- [x] 인물 CRUD API + CSV 벌크 업로드
+- [x] 노드 CRUD API (ARTIFACT, MEDIA, EVENT)
+- [x] 스레드 + Reddit식 댓글 API
+- [x] 좋아요 / 팔로우 토글 API
+- [x] 통합 검색 API (pg_trgm)
+- [x] 회원가입/로그인 (이메일 + 구글)
+- [x] Next.js 메인 페이지 + 인물 목록/상세 페이지 (SSG + ISR)
+- [x] 어드민 패널
+- [x] OG 이미지, Sitemap, Schema.org, robots.txt
+- [x] 영문화 전환 (Public 전체 영어, URL /person/ 등)
 
-#### 비즈니스 모델 (MVP 즉시 적용)
-- [ ] **Sillok Plus 구독** — 월 4,900원, Stripe/토스페이먼츠 연동
-  - 광고 제거, 인물 즐겨찾기 무제한, 스레드 북마크 폴더
-- [ ] **어워드 시스템** — 500원 단위 소액 결제
-  - `고증 인정 🏅` `명문장 ✍️` `소름 😮` 등 배지 5종
-  - 수령자에게 알림 + 프로필 누적 표시
-- [ ] **자원봉사 큐레이터 제도** 설계
-  - 어드민에서 시대/분야별 큐레이터 지정 기능
-  - 큐레이터 배지 + 인물 페이지 편집 권한 부여
-
-#### 수익 목표
-```
-Sillok Plus: 월 구독자 50명 → 월 245,000원
-어워드: 월 거래 200건 → 월 100,000원
-합계 목표: 월 ~350,000원 (서버비 자급자족 목표)
-```
+#### 남은 작업 (M1.5 — 런칭 직후)
+- [ ] **인물 데이터 최소 100명 입력** (교과서 인물 우선 — King Sejong, Yi Sun-sin 등)
+- [ ] Google Search Console 등록 + Sitemap 제출
+- [ ] Vercel Analytics 활성화
+- [ ] 소셜 채널 개설 (Reddit r/korea, r/AsianHistory 홍보 준비)
 
 ---
 
-### Milestone 2 — 뿌리 내리기 (차별화)
-**목표:** 다른 한국사 사이트와 명확히 차별화되는 핵심 기능 완성 + 광고 수익 시작
-**기간:** MVP 이후 약 3개월 (누적 6개월)
-**목표 지표:** DAU 2,000+, 월 수익 200만원+
+### Milestone 2 — 뿌리 내리기 (트래픽 + 차별화)
+**목표:** 글로벌 SEO 트래픽 확보 + 핵심 차별화 기능 완성
+**기간:** M1 이후 약 3개월
+**목표 지표:** DAU 500+, 등록 인물 500명+, 구글 검색 유입 시작
 
 #### 핵심 개발
-- [ ] 관계도 시각화 (D3.js 미니 + vis-network 전체 탐색, lazy expand)
-- [ ] 생애 타임라인 시각화
+- [ ] **관계도 시각화** (D3.js 미니 + vis-network 전체 탐색, lazy expand) — 가장 강력한 차별점
+- [ ] **생애 타임라인 시각화** — 다른 사이트에 없는 기능
 - [ ] 유물/K-콘텐츠/사건 노드 상세 페이지 완성
 - [ ] 유저 컬렉션 + 공개 컬렉션 탐색
-- [ ] 오늘의 인물 생일/기일 자동 선정 크론 완성
-- [x] 영문화 — persons/timeline 직접 영문 저장 완료, Public 페이지 name_en 표시
-- [ ] `/translate` API — GPT-4o mini 커뮤니티 번역 버튼 (선택)
+- [ ] 오늘의 인물 생일/기일 자동 선정 cron
+- [ ] **Twitter/X 자동 포스팅** — 오늘의 인물 생일/기일 매일 자동 트윗 (영어)
+- [ ] `/translate` API — GPT-4o mini 커뮤니티 번역 버튼 (한국어 스레드 → 영어)
 - [ ] 인물 랭킹 고도화 (주간/월간 시각화)
-- [ ] 기여 배지 시스템 v1 (스레드 수, 고증 인정 수신 누적)
+- [ ] 기여 배지 시스템 v1
 
 #### 비즈니스 모델
-- [ ] **Google AdSense 심사 신청** + AdSlot 컴포넌트 활성화 (메인 ×3, 인물 ×3)
-- [ ] **Sillok Plus 혜택 확장** — 관계도 full view, 타임라인 export
-- [ ] **큐레이터 생태계 고도화** — 큐레이터 월간 리포트, 활동 Top3 공개
-- [ ] **운영진 후원 페이지** — "Sillok을 응원해요" 1회성 후원 (Buy Me a Coffee 연동)
+- [ ] **Google AdSense 심사 신청** (트래픽 확보 후 신청, 메인 ×3, 인물 ×3)
+- [ ] **Sillok Plus 출시** — $3.99/월 · $35.99/년 (Stripe 단일 결제, 한국 유저용 토스 추가)
+  - 광고 제거, 컬렉션 무제한, 관계도 full view
+- [ ] 운영진 후원 페이지 (Buy Me a Coffee / Ko-fi)
 
-#### 수익 목표
+#### 목표 수익
 ```
-광고:        월 ~500,000원 (DAU 2,000 기준 CPM 추정)
-Sillok Plus: 월 구독자 200명 → 월 980,000원
-어워드:      월 ~200,000원
-후원:        월 ~100,000원
-합계 목표:   월 ~1,780,000원
+AdSense:      ~$200/월  (DAU 500 기준)
+Sillok Plus:  구독자 30명 → ~$120/월
+합계 목표:    ~$320/월 (서버비 자급자족)
 ```
 
 ---
 
-### Milestone 3 — 가지 뻗기 (수익화)
-**목표:** 광고 외 수익원 다변화 + 글로벌 유저 유입 + B2B 첫 계약
-**기간:** M2 이후 약 6개월 (누적 12개월)
-**목표 지표:** DAU 10,000+, 월 수익 1,000만원+, 해외 유저 비율 20%+
+### Milestone 3 — 가지 뻗기 (글로벌 확장)
+**목표:** 글로벌 K-culture 커뮤니티로 자리잡기 + 수익 다변화
+**기간:** M2 이후 약 6개월 (누적 ~12개월)
+**목표 지표:** DAU 5,000+, 글로벌 유저 비율 60%+, 월 수익 $2,000+
 
 #### 핵심 개발
 - [ ] **공개 API v1 출시** — 인물 기본정보, 관계 데이터 JSON 제공
-  - 무료 티어: 1,000 req/일
-  - 유료 티어: 월 9,900원 ~ 49,000원 (호출량 기준)
-- [ ] PWA 설정 (오프라인 캐시, 홈 화면 추가)
-- [ ] Redis 캐싱 레이어 도입 (인물 상세, 랭킹)
-- [ ] 고급 검색 필터 (시대 + 분야 + 관계 조합)
-- [ ] 인물 간 관계 추천 AI (연결되지 않은 관계 자동 제안)
+  - Free: 1,000 req/일 / Starter: $9/월 / Pro: $49/월
+- [ ] PWA (오프라인 캐시, 홈 화면 추가)
+- [ ] Upstash Redis 캐싱 (인물 상세, 랭킹)
+- [ ] 고급 검색 필터 (era + field + relation 조합)
 - [ ] 모바일 UX 고도화
+- [ ] **Reddit / Twitter 커뮤니티 활성화** — r/korea, r/kdrama, r/AsianHistory 타겟
 
 #### 비즈니스 모델
-- [ ] **기관 스폰서십 첫 계약 시도**
-  - 독립기념관, 국가보훈부, 한국관광공사 등 제안서 발송
-  - 인물 카테고리 스폰서: 해당 카테고리 페이지 상단 로고 노출
-  - 예상 단가: 카테고리당 월 30~100만원
-- [ ] **공개 API 유료화** — 개발자, 교육 앱, 역사 게임사 타겟
-- [ ] **Sillok Plus 연간 구독** 출시 — 월 환산 3,900원 (2개월 할인)
-- [ ] **어워드 번들** — 10개 묶음 할인 패키지
+- [ ] **공개 API 유료화** — K-pop 앱, 역사 게임사, 교육 앱 타겟
+- [ ] **글로벌 기관 스폰서십**
+  - Korea Foundation, Korean Cultural Centre (런던/뉴욕/시드니)
+  - KTO (Korea Tourism Organization) — 해외 관광객 타겟
+  - 예상 단가: 카테고리당 월 $300~$1,000
+- [ ] **Sillok Plus 연간 구독** 출시 — $35.99/년 (3개월 할인)
+- [ ] **어워드 시스템** — $0.50~$2.00 소액 결제 (Stripe)
 
-#### 수익 목표
+#### 목표 수익
 ```
-광고:          월 ~2,500,000원
-Sillok Plus:   월 구독자 800명 → 월 3,120,000원
-어워드:        월 ~500,000원
-공개 API:      월 ~500,000원
-기관 스폰서십: 월 ~1,000,000원 (1~2건)
-합계 목표:     월 ~7,620,000원
+AdSense:          ~$1,500/월
+Sillok Plus:      구독자 200명 → ~$800/월
+공개 API:         ~$300/월
+기관 스폰서십:    ~$500/월 (1~2건)
+합계 목표:        ~$3,100/월
 ```
 
 ---
 
 ### Milestone 4 — 숲이 되기 (플랫폼화)
-**목표:** 한국어 역사 도메인 데이터 자산화 + 지속 가능한 사업 구조 확립
-**기간:** M3 이후 약 12개월 (누적 24개월~)
-**목표 지표:** DAU 50,000+, 월 수익 5,000만원+
+**목표:** 한국 역사 영문 데이터의 글로벌 레퍼런스 플랫폼
+**기간:** M3 이후 약 12개월 (누적 ~24개월)
+**목표 지표:** DAU 30,000+, 월 수익 $30,000+
 
 #### 핵심 개발
-- [ ] **React Native 앱** 출시 (iOS + Android)
+- [ ] **React Native 앱** (iOS + Android)
 - [ ] **AI 인물 요약** — 스레드/댓글 자동 요약, 논점 정리 카드
-- [ ] **교육 모드** — 학교/학원 계정, 퀴즈, 학습 진도 추적
-- [ ] **인물 비교** 기능 — 두 인물의 시대, 업적, 관계 나란히 보기
+- [ ] **교육 모드** — 글로벌 학교/학원 계정, 퀴즈, 학습 진도
+- [ ] **인물 비교** 기능
 - [ ] **데이터 Export** — 연구자용 CSV/JSON 대용량 다운로드
 
 #### 비즈니스 모델
 - [ ] **AI 데이터 라이선싱**
-  - 한국어 역사 도메인 특화 데이터셋으로 네이버/카카오/스타트업 제안
-  - 스레드, 댓글, 인물 정보 정제 데이터 패키지 구성
-  - 목표 계약: 연 1억원 이상
-- [ ] **교육기관 B2B 구독**
-  - 학교/학원 단위: 월 50,000~200,000원
-  - 교육부 에듀넷 등 플랫폼 입점 검토
-- [ ] **광고 프리미엄화** — AdSense → 직접 판매 광고로 단가 상승
-- [ ] **Sillok API 엔터프라이즈** — 게임사, 출판사, 방송사 대상 맞춤 계약
+  - 한국 역사 영문 커뮤니티 데이터 (스레드/댓글 + 인물 정보)
+  - 잠재 고객: 글로벌 AI 회사 (역사/문화 도메인 RAG), K-content 플랫폼, 게임사
+  - 국내: 네이버 HyperCLOVA X, 카카오 KoGPT
+  - 목표: 연 $100,000+ 계약
+- [ ] **교육기관 B2B** — 미국/영국/호주 한국어/한국문화 학과 타겟
+- [ ] **광고 프리미엄화** — AdSense → 직접 판매로 단가 상승
+- [ ] **Sillok API Enterprise** — 게임사, 출판사, 방송사 맞춤 계약
 
-#### 수익 목표
+#### 목표 수익
 ```
-광고:             월 ~10,000,000원
-Sillok Plus:      월 구독자 5,000명 → 월 19,500,000원
-공개 API + 라이선싱: 월 ~10,000,000원
-교육 B2B:         월 ~5,000,000원
-기관 스폰서십:    월 ~3,000,000원
-어워드:           월 ~1,500,000원
-합계 목표:        월 ~49,000,000원
+AdSense + 직판 광고: ~$8,000/월
+Sillok Plus:         구독자 3,000명 → ~$12,000/월
+공개 API + 라이선싱: ~$6,000/월
+교육 B2B:            ~$3,000/월
+기관 스폰서십:       ~$2,000/월
+합계 목표:           ~$31,000/월
 ```
 
 ---
 
-### 전체 타임라인 요약
+### 전체 타임라인
 
 ```
-M0          M3          M6                    M12                         M24~
-│           │           │                     │                           │
-●───────────●───────────●─────────────────────●───────────────────────────●
-│           │           │                     │                           │
-Milestone 1  Milestone 2  Milestone 3           Milestone 4
-씨앗 심기    뿌리 내리기   가지 뻗기              숲이 되기
-MVP 런칭     차별화 완성   수익화 본격화           플랫폼화
-DAU 200     DAU 2,000   DAU 10,000            DAU 50,000
-월 35만원    월 178만원   월 762만원             월 5,000만원
+완료         현재 진행       ~3개월           ~9개월             ~21개월
+│            │               │                │                  │
+●────────────●───────────────●────────────────●──────────────────●
+│            │               │                │                  │
+M1 완료       M1.5            M2               M3                 M4
+런칭·배포     데이터·SEO준비   트래픽 확보       글로벌 확장         플랫폼화
+DAU ?         인물 100명+     DAU 500+         DAU 5,000+         DAU 30,000+
+$0            $0              ~$320/월         ~$3,100/월         ~$31,000/월
 ```
 
 
@@ -2148,9 +2145,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=          # 서버/빌드 전용 (노출 금지)
 
 # 소셜 로그인
-KAKAO_CLIENT_ID=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+APPLE_CLIENT_ID=
+APPLE_CLIENT_SECRET=
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+TWITTER_CLIENT_ID=
+TWITTER_CLIENT_SECRET=
 
 # 파일 업로드
 MAX_FILE_SIZE_MB=5
@@ -2159,22 +2161,22 @@ MAX_FILE_SIZE_MB=5
 NEXT_PUBLIC_ADSENSE_CLIENT=
 
 # 번역 API (Milestone 2)
-OPENAI_API_KEY=                      # GPT-4o mini 커뮤니티 번역용
+OPENAI_API_KEY=                      # GPT-4o mini 커뮤니티 번역
 
 # Rate Limit (Milestone 2 — Upstash Redis)
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
-# OCI 배치 서버 (배치 작업 트리거용 — Milestone 1)
+# OCI 배치 서버
 OCI_BATCH_SERVER_URL=                # http://{OCI_IP}:3100
-OCI_BATCH_SECRET=                    # 내부 통신 시크릿 키
+OCI_BATCH_SECRET=
 
-# 결제 (Milestone 1)
+# 결제 — Stripe 메인 (글로벌), 토스 선택 (한국)
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-TOSS_SECRET_KEY=
+TOSS_SECRET_KEY=                     # 선택
 
-# 앱 설정
+# 앱
 NEXT_PUBLIC_APP_URL=https://sillok.net
 ```
 
@@ -2187,13 +2189,13 @@ NEXT_PUBLIC_APP_URL=https://sillok.net
 | 수익원 | 적용 시점 | 설명 |
 |--------|----------|------|
 | Google AdSense | Milestone 2 | 메인 ×3, 인물 ×3 슬롯 |
-| Sillok Plus 구독 | **Milestone 1** | 월 4,900원 / 연 46,800원 |
-| 어워드 시스템 | **Milestone 1** | 500원 단위 소액 결제 |
-| 운영진 후원 | Milestone 2 | 1회성 후원 (Buy Me a Coffee) |
-| 기관 스폰서십 | Milestone 3 | 카테고리 스폰서, 공공기관 대상 |
+| Sillok Plus 구독 | **Milestone 2** | $3.99/월 · $35.99/년 (Stripe 메인) |
+| 운영진 후원 | Milestone 2 | 1회성 후원 (Ko-fi / Buy Me a Coffee) |
+| 어워드 시스템 | Milestone 3 | $0.50~$2.00 소액 결제 (Stripe) |
 | 공개 API 유료화 | Milestone 3 | 개발자/교육 앱/게임사 대상 |
-| 교육기관 B2B | Milestone 4 | 학교/학원 단위 구독 |
-| AI 데이터 라이선싱 | Milestone 4 | 한국어 역사 도메인 데이터셋 |
+| 글로벌 기관 스폰서십 | Milestone 3 | Korea Foundation, KTO 등 해외 기관 |
+| 교육기관 B2B | Milestone 4 | 글로벌 한국어·한국문화 학과 타겟 |
+| AI 데이터 라이선싱 | Milestone 4 | 글로벌 AI 회사 + 국내 네이버/카카오 |
 
 ---
 
@@ -2203,8 +2205,8 @@ NEXT_PUBLIC_APP_URL=https://sillok.net
 
 | 플랜 | 금액 | 결제 주기 |
 |------|------|----------|
-| Monthly | 4,900원 | 매월 자동결제 |
-| Yearly | 46,800원 (월 3,900원) | 연 1회 — 2개월 무료 |
+| Monthly | $3.99 (약 5,500원) | 매월 자동결제 |
+| Yearly | $35.99 (약 49,500원, 월 환산 $2.99) | 연 1회 — 2개월 무료 |
 
 #### 혜택
 
@@ -2255,11 +2257,11 @@ CREATE INDEX subscriptions_status_idx ON subscriptions (status, current_period_e
 
 | 이름 | 아이콘 | 가격 | 설명 |
 |------|--------|------|------|
-| 고증 인정 | 🏅 | 500원 | 역사적 사실에 근거한 훌륭한 댓글 |
-| 명문장 | ✍️ | 500원 | 문장력이 뛰어난 스레드/댓글 |
-| 소름 | 😮 | 500원 | 몰랐던 사실, 충격적 관점 |
-| 논쟁 촉발 | 🔥 | 1,000원 | 건전한 토론을 이끌어낸 글 |
-| 삿갓의 선택 | 🎩 | 2,000원 | 이 플랫폼에서 가장 가치있는 기여 |
+| Verified Fact | 🏅 | $0.50 | Well-researched, historically accurate post |
+| Great Writing | ✍️ | $0.50 | Exceptionally well-written thread or comment |
+| Mind Blown | 😮 | $0.50 | Surprising insight or unknown fact |
+| Debate Starter | 🔥 | $1.00 | Sparked meaningful discussion |
+| Sillok's Choice | 🎩 | $2.00 | Most valuable contribution on the platform |
 
 #### 수익 구조
 
@@ -2280,7 +2282,7 @@ CREATE TABLE awards (
   target_type TEXT NOT NULL CHECK (target_type IN ('thread', 'comment')),
   target_id   UUID NOT NULL,
   award_type  TEXT NOT NULL CHECK (award_type IN ('certification','prose','wow','debate','sillok')),
-  amount_krw  INTEGER NOT NULL,  -- 결제 금액 (원)
+  amount_usd  NUMERIC(6,2) NOT NULL,  -- 결제 금액 (USD)
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -2298,9 +2300,9 @@ Reddit의 모더레이터 시스템을 Sillok에 맞게 변형. 콘텐츠 품질
 
 | 역할 | 권한 | 배지 |
 |------|------|------|
-| 시대 큐레이터 | 해당 시대 인물 편집 요청 승인/반려 | 🏛️ 고려 큐레이터 |
-| 분야 큐레이터 | 해당 분야 태그 관리, 부적절 스레드 숨김 | ⚔️ 군사 큐레이터 |
-| 글로벌 큐레이터 | 영문 번역 검수, 해외 유저 스레드 모더레이션 | 🌐 EN 큐레이터 |
+| Era Curator | 해당 시대 인물 편집 요청 승인/반려 | 🏛️ Goryeo Curator |
+| Field Curator | 해당 분야 태그 관리, 부적절 스레드 숨김 | ⚔️ Military Curator |
+| Global Curator | 영문 콘텐츠 검수, 해외 유저 스레드 모더레이션 | 🌐 EN Curator |
 
 ```sql
 -- curator_roles 테이블 (4-24)
@@ -2308,7 +2310,7 @@ CREATE TABLE curator_roles (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role_type   TEXT NOT NULL CHECK (role_type IN ('era', 'field', 'global')),
-  role_value  TEXT NOT NULL,  -- ex: '조선', '독립운동가', 'en'
+  role_value  TEXT NOT NULL,  -- ex: 'joseon', 'independence-activist', 'en'
   granted_by  UUID REFERENCES auth.users(id),  -- 어드민 ID
   granted_at  TIMESTAMPTZ DEFAULT NOW(),
   is_active   BOOLEAN DEFAULT TRUE,
@@ -2333,9 +2335,9 @@ CREATE TABLE curator_roles (
 
 | 티어 | 월 요금 | 일 요청 한도 | 대상 |
 |------|--------|------------|------|
-| Free | 0원 | 1,000건 | 개인 개발자, 학생 |
-| Starter | 9,900원 | 10,000건 | 스타트업, 소규모 앱 |
-| Pro | 49,000원 | 100,000건 | 교육 앱, 역사 게임사 |
+| Free | $0 | 1,000건 | 개인 개발자, 학생 |
+| Starter | $9/월 | 10,000건 | 스타트업, 소규모 앱 |
+| Pro | $49/월 | 100,000건 | 교육 앱, 역사 게임사 |
 | Enterprise | 협의 | 무제한 | 방송사, 출판사, 연구기관 |
 
 제공 데이터: 인물 기본정보, 관계 그래프, 타임라인, 노드 연결 정보
@@ -2344,18 +2346,19 @@ CREATE TABLE curator_roles (
 
 ```
 카테고리 스폰서십:
-  - 해당 카테고리 (예: "독립운동가") 목록/상세 페이지 상단 로고 노출
-  - 월 50만~100만원, 3개월 최소 계약
-  - 대상: 독립기념관, 국가보훈부, 각 지자체 문화재단
+  - 해당 카테고리 (예: "Independence Activists") 목록/상세 페이지 상단 로고 노출
+  - $300~$1,000/월, 3개월 최소 계약
+  - 타겟: Korea Foundation (뉴욕/런던), KTO (Korea Tourism Organization),
+           Korean Cultural Centre (해외 지부), 각국 주한대사관 문화부
 
 오늘의 인물 스폰서십:
   - SLOT 2 (운영진 선정 슬롯)를 스폰서 인물로 지정
-  - 기념일, 드라마 방영 시즌 등 연계 가능
-  - 월 30만~80만원
+  - K-drama 방영 시즌, 기념일 등 연계 가능
+  - $200~$600/월
 
 아티클 스폰서십:
-  - 운영진 아티클 하단 "이 콘텐츠는 OO의 후원으로 제작되었습니다" 표시
-  - 건당 50만~200만원
+  - 운영진 아티클 하단 "This content is supported by OO" 표시
+  - $300~$1,500/건
 ```
 
 #### AI 데이터 라이선싱 전략 (Milestone 4)
@@ -2367,10 +2370,10 @@ CREATE TABLE curator_roles (
   - 다국어 번역 데이터 (한/영/일)
 
 잠재 고객:
-  - 네이버 HyperCLOVA X (한국어 LLM 파인튜닝)
-  - 카카오 KoGPT
-  - 한국어 특화 AI 스타트업
-  - 역사/교육 도메인 RAG 시스템 구축사
+  - 글로벌 AI 회사 (역사/문화 도메인 RAG 시스템 구축사)
+  - K-content 플랫폼 (Webtoon, Kakao Entertainment 글로벌)
+  - 역사 교육 에듀테크 스타트업 (미국/영국/호주)
+  - 국내: 네이버 HyperCLOVA X, 카카오 KoGPT (한국어 파인튜닝)
 
 준비 사항 (지금부터):
   - DB 스키마를 처음부터 라이선싱 염두에 두고 설계 (완료)
