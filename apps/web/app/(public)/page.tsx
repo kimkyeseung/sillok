@@ -13,6 +13,7 @@ async function getHomeData() {
   const [
     { data: newPersons },
     { data: recentThreads },
+    { data: latestArticles },
     { count: personCount },
     { count: threadCount },
   ] = await Promise.all([
@@ -32,6 +33,13 @@ async function getHomeData() {
       .order('created_at', { ascending: false })
       .limit(10),
     supabaseAdmin
+      .from('articles')
+      .select('id, slug, title, summary, thumbnail, tag, is_notice, created_at')
+      .eq('is_deleted', false)
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+      .limit(3),
+    supabaseAdmin
       .from('persons')
       .select('*', { count: 'exact', head: true })
       .eq('is_deleted', false),
@@ -44,12 +52,13 @@ async function getHomeData() {
   return {
     newPersons: newPersons ?? [],
     recentThreads: recentThreads ?? [],
+    latestArticles: latestArticles ?? [],
     stats: { persons: personCount ?? 0, threads: threadCount ?? 0 },
   };
 }
 
 export default async function HomePage() {
-  const { newPersons, recentThreads, stats } = await getHomeData();
+  const { newPersons, recentThreads, latestArticles, stats } = await getHomeData();
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -81,6 +90,110 @@ export default async function HomePage() {
             </div>
           </div>
         </div>
+
+        {/* Latest Articles */}
+        {latestArticles.length > 0 && (
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+                Latest Articles
+              </h2>
+              <Link
+                href="/articles"
+                className="text-xs text-brand-600 hover:text-brand-700"
+              >
+                View All &rarr;
+              </Link>
+            </div>
+
+            {/* Featured Article (latest 1) */}
+            <Link
+              href={`/articles/${latestArticles[0].slug}`}
+              className="card group block overflow-hidden"
+            >
+              {latestArticles[0].thumbnail ? (
+                <div className="relative h-40 w-full overflow-hidden sm:h-48">
+                  <img
+                    src={latestArticles[0].thumbnail}
+                    alt={latestArticles[0].title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute left-3 top-3 flex items-center gap-1.5">
+                    {latestArticles[0].is_notice && (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                        Notice
+                      </span>
+                    )}
+                    <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-gray-600 backdrop-blur-sm">
+                      {latestArticles[0].tag}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-32 w-full items-center justify-center bg-gradient-to-br from-brand-50 to-brand-100">
+                  <DocumentIcon />
+                </div>
+              )}
+              <div className="p-4">
+                <h3 className="text-base font-bold text-gray-900 transition-colors group-hover:text-brand-600 line-clamp-2">
+                  {latestArticles[0].title}
+                </h3>
+                {latestArticles[0].summary && (
+                  <p className="mt-1.5 text-xs leading-relaxed text-gray-500 line-clamp-2">
+                    {latestArticles[0].summary}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-gray-400">
+                  {timeAgo(latestArticles[0].created_at)}
+                </p>
+              </div>
+            </Link>
+
+            {/* Rest Articles (compact 2-col grid) */}
+            {latestArticles.length > 1 && (
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {latestArticles.slice(1, 3).map((article) => (
+                  <Link
+                    key={article.id}
+                    href={`/articles/${article.slug}`}
+                    className="card group flex gap-3 p-3"
+                  >
+                    {article.thumbnail ? (
+                      <img
+                        src={article.thumbnail}
+                        alt={article.title}
+                        className="h-16 w-20 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                        <DocumentIcon />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        {article.is_notice && (
+                          <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600">
+                            Notice
+                          </span>
+                        )}
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[9px] font-medium text-gray-600">
+                          {article.tag}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs font-semibold text-gray-900 transition-colors group-hover:text-brand-600 line-clamp-2">
+                        {article.title}
+                      </p>
+                      <p className="mt-1 text-[10px] text-gray-400">
+                        {timeAgo(article.created_at)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Recent Threads Feed */}
         <div>
@@ -242,6 +355,14 @@ function ChatIcon() {
   return (
     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  );
+}
+
+function DocumentIcon() {
+  return (
+    <svg className="h-8 w-8 text-brand-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
     </svg>
   );
 }
