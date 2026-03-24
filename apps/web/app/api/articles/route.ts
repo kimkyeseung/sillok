@@ -3,13 +3,14 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── GET /api/articles — Article list (public) ───
+// ─── GET /api/articles — Article list (public / admin) ───
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),
   tag: z.string().optional(),
   is_notice: z.coerce.boolean().optional(),
+  include_unpublished: z.coerce.boolean().optional(),
 });
 
 export async function GET(request: Request) {
@@ -18,17 +19,24 @@ export async function GET(request: Request) {
   if (!parsed.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { limit, cursor, tag, is_notice } = parsed.data;
+  const { limit, cursor, tag, is_notice, include_unpublished } = parsed.data;
+
+  // 비공개 포함 요청 시 어드민 인증 필요
+  let showAll = false;
+  if (include_unpublished) {
+    const admin = await requireAdmin(request);
+    if (admin) showAll = true;
+  }
 
   let query = supabaseAdmin
     .from('articles')
     .select(
-      'id, slug, title, summary, thumbnail, tag, is_notice, view_count, created_at'
+      'id, slug, title, summary, thumbnail, tag, is_notice, is_published, view_count, created_at'
     )
     .eq('is_deleted', false)
-    .eq('is_published', true)
     .order('created_at', { ascending: false });
 
+  if (!showAll) query = query.eq('is_published', true);
   if (tag) query = query.eq('tag', tag);
   if (is_notice !== undefined) query = query.eq('is_notice', is_notice);
   if (cursor) query = query.lt('created_at', cursor);

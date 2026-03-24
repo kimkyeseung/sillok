@@ -36,7 +36,7 @@ export default function AdminArticlesPage() {
   const [cursor, setCursor] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const url = `/api/articles?limit=20${cursor ? `&cursor=${cursor}` : ''}`;
+  const url = `/api/articles?limit=20&include_unpublished=true${cursor ? `&cursor=${cursor}` : ''}`;
   const { data, isLoading, mutate } = useSWR<ArticlesResponse>(url, fetcher);
 
   const handleDelete = async (slug: string, title: string) => {
