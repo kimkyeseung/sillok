@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { fetcher, apiFetch } from '@/lib/fetcher';
@@ -15,6 +15,12 @@ interface Article {
   is_published: boolean;
   view_count: number;
   created_at: string;
+}
+
+interface ArticleDetail extends Article {
+  body: string;
+  summary: string | null;
+  thumbnail: string | null;
 }
 
 interface ArticlesResponse {
@@ -32,8 +38,131 @@ const TAG_COLORS: Record<string, string> = {
   안내: 'bg-gray-100 text-gray-600',
 };
 
+function PreviewDialog({
+  slug,
+  onClose,
+}: {
+  slug: string;
+  onClose: () => void;
+}) {
+  const [article, setArticle] = useState<ArticleDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await apiFetch<ArticleDetail>(`/api/articles/${slug}`);
+        setArticle(data);
+      } catch {
+        setArticle(null);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [slug]);
+
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) onClose();
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12 backdrop-blur-sm"
+      onClick={handleBackdropClick}
+    >
+      <div className="relative w-full max-w-3xl rounded-xl bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl border-b border-gray-100 bg-white/95 px-6 py-3 backdrop-blur">
+          <span className="text-xs font-medium text-gray-400">
+            미리보기
+          </span>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          </div>
+        ) : !article ? (
+          <div className="py-20 text-center text-gray-400">
+            아티클을 불러올 수 없습니다
+          </div>
+        ) : (
+          <div>
+            {article.thumbnail && (
+              <img
+                src={article.thumbnail}
+                alt={article.title}
+                className="h-64 w-full object-cover sm:h-80"
+              />
+            )}
+            <div className="p-6">
+              <div className="flex items-center gap-1.5">
+                {article.is_notice && (
+                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                    Notice
+                  </span>
+                )}
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                  {article.tag}
+                </span>
+                {!article.is_published && (
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+                    비공개
+                  </span>
+                )}
+              </div>
+              <h1 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">
+                {article.title}
+              </h1>
+              <p className="mt-2 text-sm text-gray-400">
+                {new Date(article.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+              <div className="mt-8 whitespace-pre-wrap text-sm leading-[1.8] text-gray-700">
+                {article.body}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminArticlesPage() {
   const [cursor, setCursor] = useState<string | null>(null);
+  const [previewSlug, setPreviewSlug] = useState<string | null>(null);
   const { toast } = useToast();
 
   const url = `/api/articles?limit=20&include_unpublished=true${cursor ? `&cursor=${cursor}` : ''}`;
@@ -137,6 +266,30 @@ export default function AdminArticlesPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => setPreviewSlug(article.slug)}
+                        title="미리보기"
+                        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      </button>
                       <Link
                         href={`/admin/articles/${article.slug}/edit`}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
@@ -192,6 +345,13 @@ export default function AdminArticlesPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {previewSlug && (
+        <PreviewDialog
+          slug={previewSlug}
+          onClose={() => setPreviewSlug(null)}
+        />
       )}
 
       {data?.has_next && (

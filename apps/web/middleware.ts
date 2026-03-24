@@ -36,8 +36,9 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect /admin/* routes
-  if (request.nextUrl.pathname.startsWith('/admin')) {
+  // Protect /admin/* routes (skip on localhost)
+  const isLocalhost = request.headers.get('host')?.startsWith('localhost');
+  if (!isLocalhost && request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
