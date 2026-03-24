@@ -27,34 +27,34 @@ cd batch && npx ts-node bulk-upload.ts
 ## Architecture
 
 ```
-apps/web/
-├── app/
-│   ├── (public)/           정적 SSG + ISR 페이지 (인물, 노드, 메인)
-│   ├── (auth)/             로그인/회원가입 페이지
-│   ├── admin/              어드민 SSR 페이지 (로그인 필수)
-│   └── api/                API Routes — 인증/쓰기 전용
-│       ├── persons/
-│       ├── threads/
-│       ├── replies/
-│       ├── nodes/
-│       ├── relations/
-│       ├── search/
-│       ├── follows/
-│       ├── notifications/
-│       ├── upload/
-│       └── admin/
-├── components/
-│   ├── person/
-│   ├── thread/
-│   ├── relation-graph/
-│   ├── search/
-│   └── admin/
-└── lib/
-    ├── supabase-admin.ts   서버 전용 (SUPABASE_SERVICE_ROLE_KEY)
-    ├── supabase-server.ts  SSR 서버 컴포넌트 전용
-    ├── auth.ts             requireUser / requireAdmin 헬퍼
-    ├── api-helpers.ts      apiError / apiSuccess 헬퍼
-    └── rate-limit.ts       Rate limit 헬퍼
+app/
+├── (public)/           정적 SSG + ISR 페이지 (인물, 노드, 메인)
+├── (auth)/             로그인/회원가입 페이지
+├── admin/              어드민 SSR 페이지 (로그인 필수)
+└── api/                API Routes — 인증/쓰기 전용
+    ├── persons/
+    ├── threads/
+    ├── replies/
+    ├── nodes/
+    ├── relations/
+    ├── search/
+    ├── follows/
+    ├── notifications/
+    ├── upload/
+    └── admin/
+components/
+├── person/
+├── thread/
+├── relation-graph/
+├── search/
+└── admin/
+lib/
+├── supabase-admin.ts   서버 전용 (SUPABASE_SERVICE_ROLE_KEY)
+├── supabase-server.ts  SSR 서버 컴포넌트 전용
+├── auth.ts             requireUser / requireAdmin 헬퍼
+├── api-helpers.ts      apiError / apiSuccess 헬퍼
+├── types.ts            공유 타입 (NodeType, RelationType 등)
+└── rate-limit.ts       Rate limit 헬퍼
 
 batch/                      OCI 배치 서버 (무거운 작업 전용)
 ├── bulk-upload.ts
