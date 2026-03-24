@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { articleJsonLd } from '@/lib/jsonld';
+import ArticleBody from '@/components/article/ArticleBody';
 
 interface Props {
   params: { slug: string };
@@ -80,9 +81,7 @@ export default async function ArticleDetailPage({ params }: Props) {
             })}
           </p>
 
-          <div className="mt-8 whitespace-pre-wrap text-sm leading-[1.8] text-gray-700">
-            {article.body}
-          </div>
+          <ArticleBody content={article.body} />
         </div>
       </article>
 

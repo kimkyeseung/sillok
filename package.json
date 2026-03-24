@@ -14,5 +14,11 @@
     "type-check": "npm run type-check --workspace=apps/web",
     "db:generate": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > packages/types/src/database.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19"
+  }
 }
