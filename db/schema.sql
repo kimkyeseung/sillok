@@ -458,6 +458,7 @@ CREATE TABLE articles (
   is_published BOOLEAN DEFAULT FALSE,
   author_id    UUID REFERENCES auth.users(id),
   view_count   INTEGER DEFAULT 0,
+  like_count   INTEGER DEFAULT 0,
   created_at   TIMESTAMPTZ DEFAULT NOW(),
   updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
@@ -546,7 +547,7 @@ CREATE TABLE person_timeline_translations (
 CREATE TABLE likes (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_type TEXT NOT NULL CHECK (target_type IN ('thread', 'reply', 'node_comment')),
+  target_type TEXT NOT NULL CHECK (target_type IN ('thread', 'reply', 'node_comment', 'article')),
   target_id   UUID NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (user_id, target_type, target_id)

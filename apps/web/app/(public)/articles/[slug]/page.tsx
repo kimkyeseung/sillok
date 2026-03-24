@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { articleJsonLd } from '@/lib/jsonld';
 import ArticleBody from '@/components/article/ArticleBody';
+import LikeButton from '@/components/thread/LikeButton';
 
 interface Props {
   params: { slug: string };
@@ -82,6 +83,15 @@ export default async function ArticleDetailPage({ params }: Props) {
           </p>
 
           <ArticleBody content={article.body} />
+
+          <div className="mt-8 flex items-center border-t pt-4">
+            <LikeButton
+              targetType="article"
+              targetId={article.slug}
+              initialCount={article.like_count ?? 0}
+              size="md"
+            />
+          </div>
         </div>
       </article>
 

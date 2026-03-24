@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { apiFetch } from '@/lib/fetcher';
+import { useRouter } from 'next/navigation';
+import { apiFetch, ApiError } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 
 interface LikeButtonProps {
-  targetType: 'thread' | 'reply' | 'node_comment';
+  targetType: 'thread' | 'reply' | 'node_comment' | 'article';
   targetId: string;
   initialCount: number;
   size?: 'sm' | 'md';
@@ -19,6 +20,8 @@ function getLikeUrl(type: string, id: string) {
       return `/api/replies/${id}/like`;
     case 'node_comment':
       return `/api/comments/${id}/like`;
+    case 'article':
+      return `/api/articles/${id}/like`;
     default:
       return '';
   }
@@ -34,6 +37,7 @@ export default function LikeButton({
   const [liked, setLiked] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleClick = () => {
     startTransition(async () => {
@@ -43,7 +47,11 @@ export default function LikeButton({
         });
         setLiked(res.liked);
         setCount((prev) => (res.liked ? prev + 1 : prev - 1));
-      } catch {
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          router.push('/login');
+          return;
+        }
         toast('Login required', 'error');
       }
     });
