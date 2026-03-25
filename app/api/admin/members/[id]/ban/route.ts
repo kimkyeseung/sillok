@@ -37,7 +37,7 @@ export async function PUT(
 
   const { error: updateError } = await supabaseAdmin
     .from('profiles')
-    .update({ is_banned: true, banned_until: bannedUntil })
+    .update({ is_banned: true, ban_until: bannedUntil })
     .eq('id', params.id);
 
   if (updateError)
@@ -47,12 +47,8 @@ export async function PUT(
   await supabaseAdmin.from('warning_logs').insert({
     user_id: params.id,
     admin_id: admin.id,
-    action: 'BAN',
-    reason,
-    detail: bannedUntil
-      ? `Suspended for ${duration_hours} hours`
-      : 'Permanently suspended',
+    reason: `[BAN] ${reason}`,
   });
 
-  return apiSuccess({ banned: true, banned_until: bannedUntil });
+  return apiSuccess({ banned: true, ban_until: bannedUntil });
 }

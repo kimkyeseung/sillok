@@ -25,7 +25,7 @@ export async function PUT(
 
   // Notify the requester
   await supabaseAdmin.from('notifications').insert({
-    user_id: data.requested_by,
+    user_id: data.requester_id,
     type: 'REQUEST_APPROVED',
     title: 'Your person addition request has been approved',
     body: `"${data.name_ko}" will be registered soon.`,

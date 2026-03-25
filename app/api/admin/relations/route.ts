@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   let query = supabaseAdmin
     .from('person_relations')
     .select(
-      `id, person_a_id, person_b_id, relation_type, description, is_approved, created_at, suggested_by`
+      `id, from_person_id, to_person_id, relation_type, description, is_approved, created_at, suggested_by`
     )
     .order('created_at', { ascending: false });
 
@@ -46,8 +46,8 @@ export async function GET(request: Request) {
   // Enrich with person names
   const personIds = new Set<string>();
   items.forEach((r) => {
-    personIds.add(r.person_a_id);
-    personIds.add(r.person_b_id);
+    personIds.add(r.from_person_id);
+    personIds.add(r.to_person_id);
   });
 
   let personMap: Record<string, { name_ko: string; slug: string }> = {};
@@ -64,8 +64,8 @@ export async function GET(request: Request) {
 
   const enriched = items.map((r) => ({
     ...r,
-    person_a: personMap[r.person_a_id] ?? null,
-    person_b: personMap[r.person_b_id] ?? null,
+    from_person: personMap[r.from_person_id] ?? null,
+    to_person: personMap[r.to_person_id] ?? null,
   }));
 
   const lastItem = items[items.length - 1];

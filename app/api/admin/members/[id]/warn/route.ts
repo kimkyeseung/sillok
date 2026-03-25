@@ -35,7 +35,6 @@ export async function PUT(
     .insert({
       user_id: params.id,
       admin_id: admin.id,
-      action: 'WARN',
       reason: result.data.reason,
       target_type: result.data.target_type,
       target_id: result.data.target_id,

@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     .from('person_requests')
     .insert({
       ...result.data,
-      requested_by: user.id,
+      requester_id: user.id,
       status: 'PENDING',
     })
     .select()
@@ -73,8 +73,8 @@ export async function GET(request: Request) {
     .select(
       `
       id, name_ko, name_hanja, reason, status, created_at,
-      requested_by,
-      profiles!person_requests_requested_by_fkey ( nickname, avatar_url )
+      requester_id,
+      profiles!person_requests_requester_id_fkey ( nickname, avatar_url )
     `
     )
     .order('created_at', { ascending: false });

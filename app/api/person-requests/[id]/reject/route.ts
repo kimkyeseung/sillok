@@ -42,7 +42,7 @@ export async function PUT(
     return apiError('NODE_NOT_FOUND', 'Request not found.', 404);
 
   await supabaseAdmin.from('notifications').insert({
-    user_id: data.requested_by,
+    user_id: data.requester_id,
     type: 'REQUEST_REJECTED',
     title: 'Your person addition request has been rejected',
     body: adminNote || `Your request for "${data.name_ko}" has been rejected.`,

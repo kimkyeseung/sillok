@@ -14,7 +14,7 @@ export async function PUT(
 
   const { error } = await supabaseAdmin
     .from('profiles')
-    .update({ is_banned: false, banned_until: null })
+    .update({ is_banned: false, ban_until: null })
     .eq('id', params.id);
 
   if (error)
@@ -23,8 +23,7 @@ export async function PUT(
   await supabaseAdmin.from('warning_logs').insert({
     user_id: params.id,
     admin_id: admin.id,
-    action: 'UNBAN',
-    reason: 'Ban lifted',
+    reason: '[UNBAN] Ban lifted',
   });
 
   return apiSuccess({ unbanned: true });

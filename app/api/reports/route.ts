@@ -7,7 +7,7 @@ import { reportLimiter } from '@/lib/rate-limit';
 // ─── POST /api/reports — Submit report [USER] ───
 
 const ReportSchema = z.object({
-  target_type: z.enum(['thread', 'reply', 'node_comment']),
+  target_type: z.enum(['THREAD', 'THREAD_REPLY', 'NODE_COMMENT']),
   target_id: z.string().uuid(),
   reason: z.enum([
     'SPAM',
@@ -17,7 +17,6 @@ const ReportSchema = z.object({
     'OFF_TOPIC',
     'OTHER',
   ]),
-  detail: z.string().max(1000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
   if (!result.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { target_type, target_id, reason, detail } = result.data;
+  const { target_type, target_id, reason } = result.data;
 
   // Check duplicate report
   const { data: existing } = await supabaseAdmin
@@ -61,7 +60,6 @@ export async function POST(request: Request) {
       target_type,
       target_id,
       reason,
-      detail,
       status: 'PENDING',
     })
     .select()

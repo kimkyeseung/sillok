@@ -7,8 +7,8 @@ import { relationSuggestLimiter } from '@/lib/rate-limit';
 // ─── POST /api/relations/suggest — Suggest relation [USER] ───
 
 const SuggestRelationSchema = z.object({
-  person_a_id: z.string().uuid(),
-  person_b_id: z.string().uuid(),
+  from_person_id: z.string().uuid(),
+  to_person_id: z.string().uuid(),
   relation_type: z.enum([
     'FAMILY',
     'TEACHER',
@@ -40,9 +40,9 @@ export async function POST(request: Request) {
   if (!result.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { person_a_id, person_b_id, relation_type, description } = result.data;
+  const { from_person_id, to_person_id, relation_type, description } = result.data;
 
-  if (person_a_id === person_b_id)
+  if (from_person_id === to_person_id)
     return apiError('VALIDATION_ERROR', 'Cannot specify the same person.', 422);
 
   // Check duplicate relation
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     .from('person_relations')
     .select('id')
     .or(
-      `and(person_a_id.eq.${person_a_id},person_b_id.eq.${person_b_id}),and(person_a_id.eq.${person_b_id},person_b_id.eq.${person_a_id})`
+      `and(from_person_id.eq.${from_person_id},to_person_id.eq.${to_person_id}),and(from_person_id.eq.${to_person_id},to_person_id.eq.${from_person_id})`
     )
     .eq('relation_type', relation_type)
     .maybeSingle();
@@ -61,8 +61,8 @@ export async function POST(request: Request) {
   const { data, error } = await supabaseAdmin
     .from('person_relations')
     .insert({
-      person_a_id,
-      person_b_id,
+      from_person_id,
+      to_person_id,
       relation_type,
       description,
       is_approved: false,

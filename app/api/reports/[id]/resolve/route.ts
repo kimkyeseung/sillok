@@ -44,9 +44,9 @@ export async function PUT(
   // Soft delete reported content
   if (action === 'delete' || action === 'ban') {
     const tableMap: Record<string, string> = {
-      thread: 'threads',
-      reply: 'thread_replies',
-      node_comment: 'node_comments',
+      THREAD: 'threads',
+      THREAD_REPLY: 'thread_replies',
+      NODE_COMMENT: 'node_comments',
     };
     const table = tableMap[report.target_type];
     if (table) {
@@ -60,7 +60,7 @@ export async function PUT(
   // Update report status
   const { error: updateError } = await supabaseAdmin
     .from('reports')
-    .update({ status: 'RESOLVED', resolved_action: action })
+    .update({ status: 'RESOLVED', resolved_by: admin.id })
     .eq('id', params.id);
 
   if (updateError)
