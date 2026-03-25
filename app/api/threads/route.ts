@@ -122,8 +122,10 @@ export async function POST(request: Request) {
     .select()
     .single();
 
-  if (error)
+  if (error) {
+    console.error('[POST /api/threads] insert error:', error);
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  }
 
   // Link images
   if (image_ids && image_ids.length > 0) {
