@@ -29,7 +29,8 @@ async function getHomeData() {
       .select(
         `id, title, like_count, reply_count, created_at,
          profiles!threads_author_id_fkey ( nickname ),
-         persons!threads_person_id_fkey ( slug, name_en )`
+         persons!threads_person_id_fkey ( slug, name_en ),
+         thread_images ( url, sort_order )`
       )
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
@@ -215,39 +216,62 @@ export default async function HomePage() {
             {recentThreads.map((thread: Record<string, unknown>) => {
               const profile = thread.profiles as Record<string, unknown> | null;
               const person = thread.persons as Record<string, unknown> | null;
+              const images = (thread.thread_images ?? []) as Array<Record<string, unknown>>;
+              const firstImage = images.sort(
+                (a, b) => (a.sort_order as number) - (b.sort_order as number)
+              )[0];
+
               return (
                 <Link
                   key={thread.id as string}
                   href={`/threads/${thread.id}`}
-                  className="flex gap-3 px-4 py-3.5 transition-colors hover:bg-gray-50"
+                  className={`block transition-colors hover:bg-gray-50 ${firstImage ? 'px-4 py-4' : 'flex gap-3 px-4 py-3.5'}`}
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600">
-                    {((profile?.nickname as string) ?? '?').charAt(0)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      {person && (
-                        <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
-                          {person.name_en as string}
-                        </span>
-                      )}
-                      <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                        {thread.title as string}
-                      </p>
+                  {firstImage && (
+                    <div className="mb-3 overflow-hidden rounded-lg">
+                      <img
+                        src={firstImage.url as string}
+                        alt=""
+                        className="h-40 w-full object-cover"
+                      />
                     </div>
-                    <div className="mt-0.5 flex items-center gap-3 text-xs text-gray-400">
-                      <span>{(profile?.nickname as string) ?? 'Anonymous'}</span>
-                      <span className="flex items-center gap-0.5">
-                        <HeartIcon />
-                        {thread.like_count as number}
-                      </span>
-                      <span className="flex items-center gap-0.5">
-                        <ChatIcon />
-                        {thread.reply_count as number}
-                      </span>
-                      <span>
-                        {timeAgo(thread.created_at as string)}
-                      </span>
+                  )}
+                  <div className={firstImage ? '' : 'flex gap-3'}>
+                    {!firstImage && (
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600">
+                        {((profile?.nickname as string) ?? '?').charAt(0)}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        {person && (
+                          <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
+                            {person.name_en as string}
+                          </span>
+                        )}
+                        <p className={`font-medium text-gray-900 line-clamp-1 ${firstImage ? 'text-base' : 'text-sm'}`}>
+                          {thread.title as string}
+                        </p>
+                      </div>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                        {firstImage && (
+                          <div className="mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[9px] font-bold text-brand-600">
+                            {((profile?.nickname as string) ?? '?').charAt(0)}
+                          </div>
+                        )}
+                        <span>{(profile?.nickname as string) ?? 'Anonymous'}</span>
+                        <span className="flex items-center gap-0.5">
+                          <HeartIcon />
+                          {thread.like_count as number}
+                        </span>
+                        <span className="flex items-center gap-0.5">
+                          <ChatIcon />
+                          {thread.reply_count as number}
+                        </span>
+                        <span>
+                          {timeAgo(thread.created_at as string)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </Link>
