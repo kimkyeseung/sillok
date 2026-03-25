@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -68,9 +69,11 @@ export default async function PersonsPage({
             className="card group p-4 text-center"
           >
             {person.thumbnail ? (
-              <img
+              <Image
                 src={person.thumbnail}
                 alt={person.name_en}
+                width={80}
+                height={80}
                 className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-gray-100 transition-all group-hover:ring-brand-200"
               />
             ) : (

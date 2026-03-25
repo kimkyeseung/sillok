@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import FollowButton from '@/components/person/FollowButton';
 import VoteTodayButton from '@/components/person/VoteTodayButton';
@@ -170,9 +171,11 @@ export default async function PersonDetailPage({ params }: Props) {
           <div className="px-6 pb-6">
             <div className="-mt-12 flex items-end gap-5">
               {person.thumbnail ? (
-                <img
+                <Image
                   src={person.thumbnail}
                   alt={person.name_en}
+                  width={96}
+                  height={96}
                   className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-md"
                 />
               ) : (
@@ -259,9 +262,11 @@ export default async function PersonDetailPage({ params }: Props) {
                     className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50"
                   >
                     {other.thumbnail ? (
-                      <img
+                      <Image
                         src={other.thumbnail}
                         alt={other.name_en}
+                        width={40}
+                        height={40}
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (
@@ -332,9 +337,11 @@ export default async function PersonDetailPage({ params }: Props) {
                     className="card-flat flex items-center gap-3 p-3 transition-colors hover:bg-gray-50"
                   >
                     {node.thumbnail ? (
-                      <img
+                      <Image
                         src={node.thumbnail as string}
                         alt={node.title as string}
+                        width={48}
+                        height={48}
                         className="h-12 w-12 rounded-lg object-cover"
                       />
                     ) : (

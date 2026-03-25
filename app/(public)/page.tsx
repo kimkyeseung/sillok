@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { websiteJsonLd } from '@/lib/jsonld';
 
@@ -271,9 +272,11 @@ export default async function HomePage() {
                 className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-50"
               >
                 {person.thumbnail ? (
-                  <img
+                  <Image
                     src={person.thumbnail}
                     alt={person.name_en}
+                    width={40}
+                    height={40}
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
