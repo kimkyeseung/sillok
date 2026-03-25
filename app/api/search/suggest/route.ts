@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     .from('persons')
     .select('id, slug, name_en, thumbnail')
     .eq('is_deleted', false)
+    .eq('is_published', true)
     .or(`name_en.ilike.%${q}%,name_ko.ilike.%${q}%`)
     .limit(limit);
 

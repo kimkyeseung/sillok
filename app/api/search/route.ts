@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       .from('persons')
       .select('id, slug, name_en, name_hanja, birth_year, death_year, thumbnail')
       .eq('is_deleted', false)
+      .eq('is_published', true)
       .or(`name_en.ilike.%${q}%,name_ko.ilike.%${q}%,name_hanja.ilike.%${q}%`)
       .limit(limit);
     results.persons = data ?? [];

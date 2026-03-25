@@ -32,6 +32,7 @@ export async function GET(
     `
     )
     .eq('thread_id', params.id)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: true });
 
   if (cursor) query = query.gt('created_at', cursor);

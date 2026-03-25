@@ -456,6 +456,7 @@ CREATE TABLE articles (
   tag          TEXT NOT NULL CHECK (tag IN ('기획', '특집', '인물탐구', '현대', '공지', '안내')),
   is_notice    BOOLEAN DEFAULT FALSE,
   is_published BOOLEAN DEFAULT FALSE,
+  is_deleted   BOOLEAN DEFAULT FALSE,
   author_id    UUID REFERENCES auth.users(id),
   view_count   INTEGER DEFAULT 0,
   like_count   INTEGER DEFAULT 0,
