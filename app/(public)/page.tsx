@@ -28,7 +28,8 @@ async function getHomeData() {
       .from('threads')
       .select(
         `id, title, like_count, reply_count, created_at,
-         profiles!threads_author_id_fkey ( nickname )`
+         profiles!threads_author_id_fkey ( nickname ),
+         persons!threads_person_id_fkey ( slug, name_en )`
       )
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
@@ -213,6 +214,7 @@ export default async function HomePage() {
           <div className="card-flat divide-y divide-gray-100">
             {recentThreads.map((thread: Record<string, unknown>) => {
               const profile = thread.profiles as Record<string, unknown> | null;
+              const person = thread.persons as Record<string, unknown> | null;
               return (
                 <Link
                   key={thread.id as string}
@@ -223,9 +225,16 @@ export default async function HomePage() {
                     {((profile?.nickname as string) ?? '?').charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 line-clamp-1">
-                      {thread.title as string}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      {person && (
+                        <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
+                          {person.name_en as string}
+                        </span>
+                      )}
+                      <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                        {thread.title as string}
+                      </p>
+                    </div>
                     <div className="mt-0.5 flex items-center gap-3 text-xs text-gray-400">
                       <span>{(profile?.nickname as string) ?? 'Anonymous'}</span>
                       <span className="flex items-center gap-0.5">
