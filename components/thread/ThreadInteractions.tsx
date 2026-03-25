@@ -1,11 +1,16 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/use-auth';
+import { apiFetch } from '@/lib/fetcher';
 import LikeButton from '@/components/thread/LikeButton';
 import ReportButton from '@/components/thread/ReportButton';
 import ReplyForm from '@/components/thread/ReplyForm';
 
 interface ThreadActionsProps {
   threadId: string;
+  authorId: string;
   likeCount: number;
   replyCount: number;
   viewCount: number;
@@ -13,10 +18,28 @@ interface ThreadActionsProps {
 
 export function ThreadActions({
   threadId,
+  authorId,
   likeCount,
   replyCount,
   viewCount,
 }: ThreadActionsProps) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  const isOwner = user?.id === authorId;
+
+  const handleDelete = async () => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    setDeleting(true);
+    try {
+      await apiFetch(`/api/threads/${threadId}`, { method: 'DELETE' });
+      router.push('/');
+    } catch {
+      alert('삭제에 실패했습니다.');
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="mt-5 flex items-center gap-3 border-t border-gray-100 pt-4">
       <LikeButton targetType="thread" targetId={threadId} initialCount={likeCount} size="md" />
@@ -34,6 +57,15 @@ export function ThreadActions({
         {viewCount}
       </span>
       <div className="flex-1" />
+      {isOwner && (
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
+        >
+          {deleting ? '삭제 중...' : '삭제'}
+        </button>
+      )}
       <ReportButton targetType="thread" targetId={threadId} />
     </div>
   );

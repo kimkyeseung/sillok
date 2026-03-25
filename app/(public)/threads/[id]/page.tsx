@@ -144,6 +144,7 @@ export default async function ThreadDetailPage({ params }: Props) {
           {/* Interaction Bar */}
           <ThreadActions
             threadId={thread.id}
+            authorId={thread.author_id}
             likeCount={thread.like_count}
             replyCount={thread.reply_count}
             viewCount={thread.view_count}
