@@ -42,17 +42,17 @@ export async function POST(request: Request) {
   let path: string;
   switch (bucket) {
     case 'avatars':
-      path = `avatars/${user.id}/${fileId}.${ext}`;
+      path = `${user.id}/${fileId}.${ext}`;
       break;
     case 'threads':
       if (!thread_id)
         return apiError('VALIDATION_ERROR', 'thread_id is required.', 422);
-      path = `threads/${user.id}/${thread_id}/${fileId}.${ext}`;
+      path = `${user.id}/${thread_id}/${fileId}.${ext}`;
       break;
     case 'persons':
       if (!person_id)
         return apiError('VALIDATION_ERROR', 'person_id is required.', 422);
-      path = `persons/${person_id}/${fileId}.${ext}`;
+      path = `${person_id}/${fileId}.${ext}`;
       break;
   }
 
