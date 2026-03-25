@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 import ImageUpload from '@/components/common/ImageUpload';
+import PersonPicker from '@/components/person/PersonPicker';
+
+interface SelectedPerson {
+  id: string;
+  slug: string;
+  name_en: string;
+  thumbnail: string | null;
+}
 
 interface ThreadFormProps {
   personId?: string;
@@ -23,6 +31,11 @@ function isValidVideoUrl(url: string): boolean {
 }
 
 export default function ThreadForm({ personId, personName }: ThreadFormProps) {
+  const [selectedPerson, setSelectedPerson] = useState<SelectedPerson | null>(
+    personId && personName
+      ? { id: personId, slug: '', name_en: personName, thumbnail: null }
+      : null
+  );
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -31,8 +44,14 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
   const router = useRouter();
   const { toast } = useToast();
 
+  const resolvedPersonId = selectedPerson?.id ?? personId;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!resolvedPersonId) {
+      toast('Please select a figure', 'error');
+      return;
+    }
     if (!title.trim() || !content.trim()) {
       toast('Please enter a title and content', 'error');
       return;
@@ -47,7 +66,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
       const res = await apiFetch<{ id: string }>('/api/threads', {
         method: 'POST',
         body: JSON.stringify({
-          person_id: personId,
+          person_id: resolvedPersonId,
           title: title.trim(),
           content: content.trim(),
           ...(videoUrl ? { video_url: videoUrl } : {}),
@@ -65,7 +84,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="card-flat p-5 space-y-4">
-      {personName && (
+      {personId && personName ? (
         <div className="flex items-center gap-1.5 text-sm text-brand-600">
           <span className="flex h-5 w-5 items-center justify-center rounded bg-brand-100 text-[10px] font-bold text-brand-700">
             {personName.charAt(0)}
@@ -73,6 +92,8 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
           <span className="font-medium">{personName}</span>
           <span className="text-gray-400">— Thread</span>
         </div>
+      ) : (
+        <PersonPicker value={selectedPerson} onChange={setSelectedPerson} />
       )}
 
       <input
@@ -120,7 +141,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
         </p>
         <button
           type="submit"
-          disabled={submitting || !title.trim() || !content.trim()}
+          disabled={submitting || !resolvedPersonId || !title.trim() || !content.trim()}
           className="btn-primary disabled:opacity-50"
         >
           {submitting ? 'Posting...' : 'Post Thread'}
