@@ -14,7 +14,7 @@ async function getThread(id: string) {
     .select(
       `*, profiles!threads_author_id_fkey ( nickname, avatar_url ),
        persons!threads_person_id_fkey ( slug, name_en ),
-       thread_images ( id, image_url, display_order )`
+       thread_images ( id, url, sort_order )`
     )
     .eq('id', id)
     .eq('is_deleted', false)
@@ -117,7 +117,7 @@ export default async function ThreadDetailPage({ params }: Props) {
               {images.map((img) => (
                 <img
                   key={img.id as string}
-                  src={img.image_url as string}
+                  src={img.url as string}
                   alt=""
                   className="max-h-64 rounded-lg object-cover"
                 />
