@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 async function getHomeData() {
   const [
     { data: newPersons },
-    { data: recentThreads },
+    { data: recentThreads, error: threadsError },
     { data: latestArticles },
     { count: personCount },
     { count: threadCount },
@@ -49,6 +49,10 @@ async function getHomeData() {
       .select('*', { count: 'exact', head: true })
       .eq('is_deleted', false),
   ]);
+
+  if (threadsError) {
+    console.error('[HomePage] threads query error:', threadsError);
+  }
 
   return {
     newPersons: newPersons ?? [],

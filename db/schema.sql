@@ -208,7 +208,7 @@ $$ LANGUAGE sql;
 CREATE TABLE threads (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   person_id   UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  author_id   UUID REFERENCES auth.users(id),
+  author_id   UUID REFERENCES profiles(id),
   title       TEXT NOT NULL,
   content     TEXT NOT NULL,
   video_url   TEXT,
@@ -237,7 +237,7 @@ CREATE TABLE thread_replies (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   thread_id  UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
   parent_id  UUID REFERENCES thread_replies(id) ON DELETE SET NULL,
-  author_id  UUID REFERENCES auth.users(id),
+  author_id  UUID REFERENCES profiles(id),
   content    TEXT NOT NULL,
   depth      INTEGER NOT NULL DEFAULT 0,
   like_count INTEGER DEFAULT 0,
@@ -275,7 +275,7 @@ CREATE INDEX thread_images_thread_id_idx ON thread_images (thread_id, sort_order
 CREATE TABLE node_comments (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   node_id    UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-  author_id  UUID REFERENCES auth.users(id),
+  author_id  UUID REFERENCES profiles(id),
   content    TEXT NOT NULL,
   like_count INTEGER DEFAULT 0,
   is_deleted BOOLEAN DEFAULT FALSE,
@@ -325,7 +325,7 @@ CREATE INDEX person_timeline_person_id_idx ON person_timeline (person_id);
 
 CREATE TABLE person_requests (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  requester_id    UUID REFERENCES auth.users(id),
+  requester_id    UUID REFERENCES profiles(id),
   name_ko         TEXT NOT NULL,
   birth_year      INTEGER,
   death_year      INTEGER,
@@ -368,7 +368,7 @@ CREATE INDEX reports_status_idx ON reports (status, created_at ASC);
 
 CREATE TABLE collections (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID REFERENCES auth.users(id),
+  user_id     UUID REFERENCES profiles(id),
   title       TEXT NOT NULL,
   description TEXT,
   is_public   BOOLEAN DEFAULT TRUE,
