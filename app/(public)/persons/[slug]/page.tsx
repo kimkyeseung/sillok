@@ -97,7 +97,8 @@ export default async function PersonDetailPage({ params }: Props) {
       .from('threads')
       .select(
         `id, title, like_count, reply_count, created_at,
-         profiles!threads_author_id_fkey ( nickname )`
+         profiles!threads_author_id_fkey ( nickname ),
+         thread_images ( url, sort_order )`
       )
       .eq('person_id', person.id)
       .eq('is_deleted', false)
@@ -407,13 +408,26 @@ export default async function PersonDetailPage({ params }: Props) {
                 string,
                 unknown
               > | null;
+              const images = (thread.thread_images ?? []) as Array<Record<string, unknown>>;
+              const firstImage = images.sort(
+                (a, b) => (a.sort_order as number) - (b.sort_order as number)
+              )[0];
               return (
                 <Link
                   key={thread.id as string}
                   href={`/threads/${thread.id}`}
                   className="block px-4 py-3.5 transition-colors hover:bg-gray-50"
                 >
-                  <p className="text-sm font-medium text-gray-900">
+                  {firstImage && (
+                    <div className="mb-2.5 overflow-hidden rounded-lg">
+                      <img
+                        src={firstImage.url as string}
+                        alt=""
+                        className="h-36 w-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <p className={`font-medium text-gray-900 ${firstImage ? 'text-base' : 'text-sm'}`}>
                     {thread.title as string}
                   </p>
                   <div className="mt-1 flex gap-3 text-xs text-gray-400">
