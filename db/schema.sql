@@ -762,9 +762,24 @@ CREATE TRIGGER collection_items_count_sync
 
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  _nickname TEXT;
 BEGIN
+  _nickname := NEW.raw_user_meta_data ->> 'nickname';
+
+  -- nickname이 없거나 빈 문자열이면 fallback 생성
+  IF _nickname IS NULL OR _nickname = '' THEN
+    _nickname := 'user_' || substr(NEW.id::text, 1, 8);
+  END IF;
+
+  -- 중복 시 suffix 추가
+  IF EXISTS (SELECT 1 FROM profiles WHERE nickname = _nickname) THEN
+    _nickname := _nickname || '_' || substr(NEW.id::text, 1, 4);
+  END IF;
+
   INSERT INTO profiles (id, nickname)
-  VALUES (NEW.id, NEW.raw_user_meta_data ->> 'nickname');
+  VALUES (NEW.id, _nickname);
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

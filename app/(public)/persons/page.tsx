@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
+import RankingSection from '@/components/ranking/RankingSection';
 
 export const metadata: Metadata = {
   title: 'Figures',
@@ -23,7 +24,7 @@ export default async function PersonsPage({
   let query = supabaseAdmin
     .from('persons')
     .select(
-      'id, slug, name_en, name_hanja, birth_year, death_year, thumbnail, summary'
+      'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, summary'
     )
     .eq('is_deleted', false)
     .eq('is_published', true)
@@ -38,10 +39,16 @@ export default async function PersonsPage({
 
   return (
     <div>
-      {/* Header */}
+      {/* Ranking Section */}
+      <RankingSection />
+
+      {/* Divider */}
+      <div className="my-8 border-t border-gray-200" />
+
+      {/* All Figures Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Figures</h1>
+          <h2 className="text-xl font-bold text-gray-900">All Figures</h2>
           <p className="mt-0.5 text-sm text-gray-500">
             Explore Korean historical figures
           </p>
@@ -78,11 +85,11 @@ export default async function PersonsPage({
               />
             ) : (
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-2xl font-bold text-brand-600 ring-2 ring-gray-100 transition-all group-hover:ring-brand-200">
-                {person.name_en.charAt(0)}
+                {(person.name_en || person.name_ko).charAt(0)}
               </div>
             )}
             <p className="mt-3 text-sm font-semibold text-gray-900 group-hover:text-brand-600">
-              {person.name_en}
+              {person.name_ko}
             </p>
             {person.name_hanja && (
               <p className="text-xs text-gray-400">{person.name_hanja}</p>
