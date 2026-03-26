@@ -92,8 +92,8 @@ export async function POST(request: Request) {
       if (tag_names && tag_names.length > 0) {
         const { data: tags } = await supabaseAdmin
           .from('tags')
-          .select('id, name')
-          .in('name', tag_names);
+          .select('id, name_ko')
+          .in('name_ko', tag_names);
 
         if (tags && tags.length > 0) {
           const tagLinks = tags.map((tag) => ({

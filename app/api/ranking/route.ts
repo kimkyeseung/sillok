@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const { data: tagRow } = await supabaseAdmin
       .from('tags')
       .select('id')
-      .eq('name', tag)
+      .eq('name_ko', tag)
       .eq('type', 'ERA')
       .single();
 
@@ -129,7 +129,7 @@ export async function GET(request: Request) {
   const { data: persons } = await supabaseAdmin
     .from('persons')
     .select(
-      'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, summary, person_tags ( tags ( name, type ) )'
+      'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, summary, person_tags ( tags ( name_en, name_ko, type ) )'
     )
     .in('id', rankedPersonIds)
     .eq('is_deleted', false)
@@ -142,10 +142,10 @@ export async function GET(request: Request) {
       const person = personMap.get(pid);
       if (!person) return null;
       const { person_tags, ...personData } = person as typeof person & {
-        person_tags: { tags: { name: string; type: string } | null }[];
+        person_tags: { tags: { name_en: string | null; name_ko: string; type: string } | null }[];
       };
       const tags = (person_tags ?? [])
-        .map((pt) => (pt.tags as unknown as { name: string; type: string } | null)?.name)
+        .map((pt) => (pt.tags as unknown as { name_en: string | null; name_ko: string; type: string } | null)?.name_en || (pt.tags as unknown as { name_en: string | null; name_ko: string } | null)?.name_ko)
         .filter(Boolean) as string[];
       return {
         rank: cursor + idx + 1,

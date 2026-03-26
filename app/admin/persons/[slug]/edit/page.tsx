@@ -18,7 +18,7 @@ interface PersonDetail {
   is_controversial: boolean;
   is_alive: boolean;
   is_published: boolean;
-  person_tags: Array<{ tag_id: string; tags: { id: string; name: string; type: string } }>;
+  person_tags: Array<{ tag_id: string; tags: { id: string; name_ko: string; name_en: string | null; type: string } }>;
 }
 
 export default function AdminEditPersonPage() {

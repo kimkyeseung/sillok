@@ -106,7 +106,7 @@ export default async function PersonDetailPage({ params }: Props) {
       .limit(10),
     supabaseAdmin
       .from('person_tags')
-      .select('tags!inner ( id, name, type )')
+      .select('tags!inner ( id, name_ko, name_en, type )')
       .eq('person_id', person.id),
     supabaseAdmin
       .from('person_node_links')
@@ -205,7 +205,7 @@ export default async function PersonDetailPage({ params }: Props) {
                 const tag = pt.tags as Record<string, unknown>;
                 return (
                   <span key={tag.id as string} className="badge-brand">
-                    {tag.name as string}
+                    {(tag.name_en || tag.name_ko) as string}
                   </span>
                 );
               })}

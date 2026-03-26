@@ -14,7 +14,7 @@ export async function GET(
     .select(
       `
       *,
-      person_tags ( tag_id, tags ( id, name, type ) )
+      person_tags ( tag_id, tags ( id, name_ko, name_en, type ) )
     `
     )
     .eq('slug', params.slug)

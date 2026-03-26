@@ -95,9 +95,10 @@ CREATE TRIGGER persons_updated_at
 -- ============================================================
 
 CREATE TABLE tags (
-  id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name  TEXT UNIQUE NOT NULL,
-  type  TEXT NOT NULL CHECK (type IN ('ERA', 'FIELD', 'CUSTOM'))
+  id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name_ko  TEXT UNIQUE NOT NULL,
+  name_en  TEXT,
+  type     TEXT NOT NULL CHECK (type IN ('ERA', 'FIELD', 'CUSTOM'))
 );
 
 -- ============================================================

@@ -8,7 +8,8 @@ import useSWR from 'swr';
 
 interface Tag {
   id: string;
-  name: string;
+  name_ko: string;
+  name_en: string | null;
   type: string;
 }
 
@@ -300,7 +301,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    {tag.name}
+                    {tag.name_en || tag.name_ko}
                   </button>
                 ))}
               </div>

@@ -11,9 +11,9 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabaseAdmin
     .from('tags')
-    .select('id, name, type')
+    .select('id, name_ko, name_en, type')
     .order('type')
-    .order('name');
+    .order('name_ko');
 
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
