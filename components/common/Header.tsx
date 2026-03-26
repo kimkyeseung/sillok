@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -15,17 +16,18 @@ const NAV_ITEMS = [
 export default function Header() {
   const { user, loading, signOut } = useAuth();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-lg">
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-8 px-4">
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
         {/* Logo */}
-        <Link href="/" className="shrink-0">
+        <Link href="/" className="shrink-0" onClick={() => setMenuOpen(false)}>
           <Image src="/logo.png" alt="Sillok" width={80} height={30} priority />
         </Link>
 
-        {/* Nav */}
-        <nav className="flex items-center gap-1">
+        {/* Desktop Nav */}
+        <nav className="hidden items-center gap-1 sm:flex">
           {NAV_ITEMS.map((item) => {
             const isActive =
               item.href === '/'
@@ -50,8 +52,8 @@ export default function Header() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Auth */}
-        <div className="flex items-center gap-2">
+        {/* Desktop Auth */}
+        <div className="hidden items-center gap-2 sm:flex">
           {loading ? (
             <div className="h-8 w-20 animate-pulse rounded-lg bg-gray-100" />
           ) : user ? (
@@ -83,7 +85,95 @@ export default function Header() {
             </Link>
           )}
         </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 sm:hidden"
+          aria-label="Toggle menu"
+        >
+          {menuOpen ? (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          )}
+        </button>
       </div>
+
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className="border-t border-gray-100 bg-white px-4 pb-4 pt-2 sm:hidden">
+          <nav className="space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive =
+                item.href === '/'
+                  ? pathname === '/'
+                  : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-3 border-t border-gray-100 pt-3">
+            {loading ? (
+              <div className="h-10 animate-pulse rounded-lg bg-gray-100" />
+            ) : user ? (
+              <div className="space-y-1">
+                <Link
+                  href="/collections"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                >
+                  Collections
+                </Link>
+                <Link
+                  href="/notifications"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                >
+                  Notifications
+                </Link>
+                <Link
+                  href="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => { signOut(); setMenuOpen(false); }}
+                  className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-500 hover:bg-red-50"
+                >
+                  Log Out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-lg bg-brand-600 px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Log In
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
