@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { replyCreateLimiter } from '@/lib/rate-limit';
 
 // ─── GET /api/threads/:id/replies — List replies (public) ───
 
@@ -67,6 +68,10 @@ export async function POST(
   const user = await requireUser(request);
   if (!user)
     return apiError('UNAUTHORIZED', 'Login required.', 401);
+
+  const { success } = await replyCreateLimiter.check(user.id);
+  if (!success)
+    return apiError('RATE_LIMIT_EXCEEDED', 'Too many replies. Please try again later.', 429);
 
   // Check thread exists
   const { data: thread } = await supabaseAdmin

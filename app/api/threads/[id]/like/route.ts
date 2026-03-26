@@ -1,6 +1,7 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { generalLimiter } from '@/lib/rate-limit';
 
 // ─── POST /api/threads/:id/like — Toggle like [USER] ───
 
@@ -11,6 +12,10 @@ export async function POST(
   const user = await requireUser(request);
   if (!user)
     return apiError('UNAUTHORIZED', 'Login required.', 401);
+
+  const { success } = await generalLimiter.check(user.id);
+  if (!success)
+    return apiError('RATE_LIMIT_EXCEEDED', 'Too many requests. Please try again later.', 429);
 
   // Check thread exists
   const { data: thread } = await supabaseAdmin

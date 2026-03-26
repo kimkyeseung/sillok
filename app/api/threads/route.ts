@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { threadCreateLimiter } from '@/lib/rate-limit';
 
 const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'tv.naver.com'];
 
@@ -82,6 +83,10 @@ export async function POST(request: Request) {
   const user = await requireUser(request);
   if (!user)
     return apiError('UNAUTHORIZED', 'Login required.', 401);
+
+  const { success } = await threadCreateLimiter.check(user.id);
+  if (!success)
+    return apiError('RATE_LIMIT_EXCEEDED', 'Too many threads. Please try again later.', 429);
 
   let body;
   try {
