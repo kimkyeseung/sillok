@@ -4,6 +4,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ThreadActions, ReplyActions, ReplyFormWrapper } from '@/components/thread/ThreadInteractions';
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
   params: { id: string };
 }
