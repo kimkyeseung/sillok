@@ -1,0 +1,231 @@
+'use client';
+
+import { useState } from 'react';
+import useSWR from 'swr';
+import Link from 'next/link';
+import { fetcher, apiFetch } from '@/lib/fetcher';
+import { useToast } from '@/components/common/Toast';
+
+interface Thread {
+  id: string;
+  title: string;
+  content: string;
+  is_deleted: boolean;
+  view_count: number;
+  reply_count: number;
+  like_count: number;
+  created_at: string;
+  author_id: string;
+  profiles: { nickname: string } | null;
+  persons: { slug: string; name_ko: string; name_en: string } | null;
+}
+
+interface ThreadsResponse {
+  items: Thread[];
+  has_next: boolean;
+  next_cursor: string | null;
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '방금';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}일 전`;
+  return new Date(dateStr).toLocaleDateString('ko-KR');
+}
+
+export default function AdminThreadsPage() {
+  const [search, setSearch] = useState('');
+  const [cursor, setCursor] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const url = `/api/admin/threads?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}`;
+  const { data, isLoading, mutate } = useSWR<ThreadsResponse>(url, fetcher);
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`"${title}" 스레드를 삭제하시겠습니까?`)) return;
+    try {
+      await apiFetch(`/api/admin/threads/${id}`, { method: 'DELETE' });
+      toast('삭제되었습니다');
+      mutate();
+    } catch {
+      toast('삭제에 실패했습니다', 'error');
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      await apiFetch(`/api/admin/threads/${id}`, { method: 'PATCH' });
+      toast('복구되었습니다');
+      mutate();
+    } catch {
+      toast('복구에 실패했습니다', 'error');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">스레드 관리</h1>
+        <p className="mt-0.5 text-sm text-gray-500">
+          스레드 목록을 관리합니다
+        </p>
+      </div>
+
+      {/* 검색 */}
+      <div className="relative">
+        <svg
+          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <input
+          type="text"
+          placeholder="제목으로 검색..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCursor(null);
+          }}
+          className="input pl-10"
+        />
+      </div>
+
+      {/* 테이블 */}
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-12 text-gray-400">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+          <span className="text-sm">로딩 중...</span>
+        </div>
+      ) : (
+        <div className="card-flat overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-4 py-3">스레드</th>
+                <th className="px-4 py-3">인물</th>
+                <th className="px-4 py-3">작성자</th>
+                <th className="px-4 py-3 text-center">상태</th>
+                <th className="px-4 py-3 text-right">댓글</th>
+                <th className="px-4 py-3 text-right">좋아요</th>
+                <th className="px-4 py-3 text-right">작성일</th>
+                <th className="px-4 py-3 text-right">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {(data?.items ?? []).map((thread) => (
+                <tr
+                  key={thread.id}
+                  className={`transition-colors hover:bg-gray-50 ${thread.is_deleted ? 'opacity-50' : ''}`}
+                >
+                  <td className="max-w-[240px] px-4 py-3">
+                    <Link
+                      href={`/threads/${thread.id}`}
+                      className="font-medium text-gray-900 hover:text-brand-600 line-clamp-1"
+                    >
+                      {thread.title}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    {thread.persons ? (
+                      <Link
+                        href={`/persons/${thread.persons.slug}`}
+                        className="text-brand-600 hover:text-brand-700"
+                      >
+                        {thread.persons.name_ko}
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {thread.profiles?.nickname ?? 'Anonymous'}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        thread.is_deleted
+                          ? 'bg-red-50 text-red-600'
+                          : 'bg-green-50 text-green-700'
+                      }`}
+                    >
+                      {thread.is_deleted ? '삭제됨' : '공개'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-500">
+                    {thread.reply_count}
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-500">
+                    {thread.like_count}
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-400 text-xs">
+                    {timeAgo(thread.created_at)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {thread.is_deleted ? (
+                        <button
+                          onClick={() => handleRestore(thread.id)}
+                          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600"
+                          title="복구"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleDelete(thread.id, thread.title)}
+                          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                          title="삭제"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {(data?.items ?? []).length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-gray-400"
+                  >
+                    스레드가 없습니다
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 페이지네이션 */}
+      {data?.has_next && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setCursor(data.next_cursor)}
+            className="btn-ghost text-sm"
+          >
+            더 보기
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
