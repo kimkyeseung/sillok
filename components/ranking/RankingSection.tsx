@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 const ERA_TABS = [
-  { label: '전체', value: '' },
-  { label: '삼국', value: '삼국' },
-  { label: '고려', value: '고려' },
-  { label: '조선', value: '조선' },
-  { label: '근현대', value: '근현대' },
+  { label: 'All', value: '' },
+  { label: 'Three Kingdoms', value: '삼국' },
+  { label: 'Goryeo', value: '고려' },
+  { label: 'Joseon', value: '조선' },
+  { label: 'Modern', value: '근현대' },
 ];
 
-interface RankedPerson {
+export interface RankedPerson {
   rank: number;
   id: string;
   slug: string;
@@ -22,21 +22,30 @@ interface RankedPerson {
   birth_year: number | null;
   death_year: number | null;
   thumbnail: string | null;
-  score: number;
+  tags: string[];
   thread_count: number;
   hot_thread_count: number;
   like_count: number;
 }
 
-export default function RankingSection() {
-  const [tag, setTag] = useState('');
-  const [persons, setPersons] = useState<RankedPerson[]>([]);
-  const [loading, setLoading] = useState(true);
+interface RankingSectionProps {
+  initialPersons: RankedPerson[];
+}
 
-  const fetchRanking = useCallback(async (selectedTag: string) => {
+export default function RankingSection({ initialPersons }: RankingSectionProps) {
+  const [tag, setTag] = useState('');
+  const [persons, setPersons] = useState<RankedPerson[]>(initialPersons);
+  const [loading, setLoading] = useState(false);
+
+  const fetchRanking = async (selectedTag: string) => {
+    if (!selectedTag) {
+      // "All" 탭은 SSR 초기 데이터 사용
+      setPersons(initialPersons);
+      return;
+    }
     setLoading(true);
     const params = new URLSearchParams();
-    if (selectedTag) params.set('tag', selectedTag);
+    params.set('tag', selectedTag);
     params.set('limit', '10');
 
     const res = await fetch(`/api/ranking?${params}`);
@@ -46,11 +55,12 @@ export default function RankingSection() {
       setPersons(json.data.persons);
     }
     setLoading(false);
-  }, []);
+  };
 
-  useEffect(() => {
-    fetchRanking(tag);
-  }, [tag, fetchRanking]);
+  const handleTabChange = (value: string) => {
+    setTag(value);
+    fetchRanking(value);
+  };
 
   return (
     <div>
@@ -58,7 +68,7 @@ export default function RankingSection() {
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Trending Figures</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          최근 7일간 가장 활발하게 논의된 인물
+          Most discussed figures in the past 7 days
         </p>
       </div>
 
@@ -67,7 +77,7 @@ export default function RankingSection() {
         {ERA_TABS.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => setTag(tab.value)}
+            onClick={() => handleTabChange(tab.value)}
             className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               tag === tab.value
                 ? 'bg-brand-600 text-white'
@@ -123,22 +133,30 @@ export default function RankingSection() {
 
               {/* Info */}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-brand-600">
-                  {person.name_ko}
-                </p>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <span>스레드 {person.thread_count}</span>
-                  {person.hot_thread_count > 0 && (
-                    <span className="text-red-400">핫 {person.hot_thread_count}</span>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-brand-600">
+                    {person.name_en || person.name_ko}
+                  </p>
+                  {person.tags?.length > 0 && (
+                    <div className="flex gap-1">
+                      {person.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="inline-flex shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                  <span>좋아요 {person.like_count}</span>
                 </div>
-              </div>
-
-              {/* Score */}
-              <div className="shrink-0 text-right">
-                <p className="text-base font-bold text-brand-600">{person.score}</p>
-                <p className="text-xs text-gray-400">점</p>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <span>{person.thread_count} threads</span>
+                  {person.hot_thread_count > 0 && (
+                    <span className="text-red-400">{person.hot_thread_count} hot</span>
+                  )}
+                  <span>{person.like_count} likes</span>
+                </div>
               </div>
             </Link>
           ))}
@@ -162,10 +180,10 @@ export default function RankingSection() {
             />
           </svg>
           <p className="mt-3 text-sm font-medium text-gray-500">
-            최근 7일간 활동이 없습니다
+            No activity in the past 7 days
           </p>
           <p className="text-xs text-gray-400">
-            인물 페이지에서 스레드를 작성해보세요
+            Start a thread on any figure&apos;s page
           </p>
         </div>
       )}

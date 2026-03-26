@@ -87,6 +87,7 @@ db/
 - **모든 목록 API**는 Cursor 기반 페이지네이션 사용 (`limit+1` 조회 → `has_next` 판단)
 - **모든 읽기 쿼리**는 `WHERE is_deleted = FALSE` 포함할 것
 - **slug**는 항상 영문 (`sejong-daewang` 방식)
+- **모든 UI 텍스트는 영어로 표시** — 버튼, 라벨, 설명문, 빈 상태 메시지 등 사용자에게 보이는 모든 텍스트는 영어. 한글 UI 텍스트 금지
 - **소셜 로그인**: Google, Discord만. 직접 구현 금지 — Supabase Auth 사용
 
 ### 절대 하면 안 되는 것

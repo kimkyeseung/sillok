@@ -125,11 +125,11 @@ export async function GET(request: Request) {
     return apiSuccess({ persons: [], has_next: false });
   }
 
-  // 5) 인물 정보 조회
+  // 5) 인물 정보 + 태그 조회
   const { data: persons } = await supabaseAdmin
     .from('persons')
     .select(
-      'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, summary'
+      'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, summary, person_tags ( tags ( name, type ) )'
     )
     .in('id', rankedPersonIds)
     .eq('is_deleted', false)
@@ -141,10 +141,16 @@ export async function GET(request: Request) {
     .map(([pid, stats], idx) => {
       const person = personMap.get(pid);
       if (!person) return null;
+      const { person_tags, ...personData } = person as typeof person & {
+        person_tags: { tags: { name: string; type: string } | null }[];
+      };
+      const tags = (person_tags ?? [])
+        .map((pt) => (pt.tags as unknown as { name: string; type: string } | null)?.name)
+        .filter(Boolean) as string[];
       return {
         rank: cursor + idx + 1,
-        ...person,
-        score: stats.score,
+        ...personData,
+        tags,
         thread_count: stats.threadCount,
         hot_thread_count: stats.hotCount,
         like_count: stats.likeCount,

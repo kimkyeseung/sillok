@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import RankingSection from '@/components/ranking/RankingSection';
+import RankingSection, { type RankedPerson } from '@/components/ranking/RankingSection';
 
 export const metadata: Metadata = {
   title: 'Figures',
@@ -38,10 +38,97 @@ export default async function PersonsPage({
 
   const { data: persons } = await query;
 
+  // ── Trending Figures: SSR fetch (no cache) ──
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: recentThreads } = await supabaseAdmin
+    .from('threads')
+    .select('id, person_id, reply_count, like_count')
+    .eq('is_deleted', false)
+    .gte('created_at', sevenDaysAgo);
+
+  const threadIds = (recentThreads ?? []).map((t) => t.id);
+  let recentLikesByThread: Record<string, number> = {};
+
+  if (threadIds.length > 0) {
+    const { data: likes } = await supabaseAdmin
+      .from('likes')
+      .select('target_id')
+      .eq('target_type', 'thread')
+      .in('target_id', threadIds)
+      .gte('created_at', sevenDaysAgo);
+
+    for (const like of likes ?? []) {
+      recentLikesByThread[like.target_id] =
+        (recentLikesByThread[like.target_id] || 0) + 1;
+    }
+  }
+
+  const scoreMap = new Map<
+    string,
+    { score: number; threadCount: number; hotCount: number; likeCount: number }
+  >();
+
+  for (const thread of recentThreads ?? []) {
+    const pid = thread.person_id;
+    if (!scoreMap.has(pid)) {
+      scoreMap.set(pid, { score: 0, threadCount: 0, hotCount: 0, likeCount: 0 });
+    }
+    const entry = scoreMap.get(pid)!;
+    const isHot = (thread.reply_count ?? 0) >= 10;
+    const threadScore = isHot ? 10 : 3;
+    const likeScore = recentLikesByThread[thread.id] || 0;
+    entry.score += threadScore + likeScore;
+    entry.threadCount += 1;
+    if (isHot) entry.hotCount += 1;
+    entry.likeCount += likeScore;
+  }
+
+  const ranked = Array.from(scoreMap.entries())
+    .filter(([, v]) => v.score > 0)
+    .sort((a, b) => b[1].score - a[1].score)
+    .slice(0, 10);
+
+  const rankedPersonIds = ranked.map(([pid]) => pid);
+  let rankedPersons: RankedPerson[] = [];
+
+  if (rankedPersonIds.length > 0) {
+    const { data: rPersons } = await supabaseAdmin
+      .from('persons')
+      .select(
+        'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, person_tags ( tags ( name, type ) )'
+      )
+      .in('id', rankedPersonIds)
+      .eq('is_deleted', false)
+      .eq('is_published', true);
+
+    const personMap = new Map((rPersons ?? []).map((p) => [p.id, p]));
+    rankedPersons = ranked
+      .map(([pid, stats], idx) => {
+        const person = personMap.get(pid);
+        if (!person) return null;
+        const { person_tags, ...personData } = person as typeof person & {
+          person_tags: { tags: { name: string; type: string } | null }[];
+        };
+        const tags = (person_tags ?? [])
+          .map((pt) => (pt.tags as unknown as { name: string; type: string } | null)?.name)
+          .filter(Boolean) as string[];
+        return {
+          rank: idx + 1,
+          ...personData,
+          tags,
+          thread_count: stats.threadCount,
+          hot_thread_count: stats.hotCount,
+          like_count: stats.likeCount,
+        } as RankedPerson;
+      })
+      .filter(Boolean) as RankedPerson[];
+  }
+
   return (
     <div>
       {/* Ranking Section */}
-      <RankingSection />
+      <RankingSection initialPersons={rankedPersons} />
 
       {/* Divider */}
       <div className="my-8 border-t border-gray-200" />
@@ -90,7 +177,7 @@ export default async function PersonsPage({
               </div>
             )}
             <p className="mt-3 text-sm font-semibold text-gray-900 group-hover:text-brand-600">
-              {person.name_ko}
+              {person.name_en}
             </p>
             {person.name_hanja && (
               <p className="text-xs text-gray-400">{person.name_hanja}</p>
