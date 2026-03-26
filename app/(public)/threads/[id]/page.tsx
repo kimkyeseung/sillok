@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ThreadActions, ReplyActions, ReplyFormWrapper } from '@/components/thread/ThreadInteractions';
+import ViewLogger from '@/components/thread/ViewLogger';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -78,6 +79,7 @@ export default async function ThreadDetailPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       {/* Thread Content Card */}
+      <ViewLogger threadId={params.id} />
       <article className="card-flat overflow-hidden">
         {/* Person Tag Bar */}
         {person && (
