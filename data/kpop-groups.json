@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "bts",
+    "node_type": "GROUP",
+    "title": "BTS",
+    "description": "South Korean boy band formed in 2013 under Big Hit Entertainment (now HYBE). Consisting of 7 members, BTS became a global phenomenon and one of the best-selling music acts in history, known for their socially conscious lyrics and powerful performances.",
+    "metadata": { "subtype": "music_group", "debut_year": 2013 },
+    "is_published": true
+  },
+  {
+    "slug": "blackpink",
+    "node_type": "GROUP",
+    "title": "BLACKPINK",
+    "description": "South Korean girl group formed in 2016 by YG Entertainment. Consisting of 4 members, BLACKPINK became one of the most followed music acts on social media and the highest-charting female Korean act on the Billboard Hot 100.",
+    "metadata": { "subtype": "music_group", "debut_year": 2016 },
+    "is_published": true
+  },
+  {
+    "slug": "newjeans",
+    "node_type": "GROUP",
+    "title": "NewJeans",
+    "description": "South Korean girl group formed in 2022 under ADOR (HYBE subsidiary). Consisting of 5 members, NewJeans gained rapid popularity for their retro-inspired sound and minimalist aesthetic, winning multiple Rookie of the Year awards.",
+    "metadata": { "subtype": "music_group", "debut_year": 2022 },
+    "is_published": true
+  }
+]

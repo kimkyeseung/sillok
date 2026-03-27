@@ -16,6 +16,9 @@ const SuggestRelationSchema = z.object({
     'RIVAL',
     'LORD_VASSAL',
     'INFLUENCE',
+    'MEMBER_OF',
+    'FOUNDED',
+    'AFFILIATED',
   ]),
   description: z.string().max(500).optional(),
 });

@@ -12,6 +12,9 @@ const RELATION_TYPES = [
   { value: 'RIVAL', label: 'Rival' },
   { value: 'LORD_VASSAL', label: 'Lord/Vassal' },
   { value: 'INFLUENCE', label: 'Influence' },
+  { value: 'MEMBER_OF', label: 'Member' },
+  { value: 'FOUNDED', label: 'Founded' },
+  { value: 'AFFILIATED', label: 'Affiliated' },
 ] as const;
 
 interface RelationSuggestFormProps {

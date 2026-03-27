@@ -66,12 +66,14 @@ export default async function NodeDetailPage({ params }: Props) {
     ARTIFACT: 'Artifact',
     MEDIA: 'Media',
     EVENT: 'Event',
+    GROUP: 'Group',
   };
 
   const typeColor: Record<string, string> = {
     ARTIFACT: 'bg-amber-50 text-amber-700',
     MEDIA: 'bg-blue-50 text-blue-700',
     EVENT: 'bg-purple-50 text-purple-700',
+    GROUP: 'bg-indigo-50 text-indigo-700',
   };
 
   return (

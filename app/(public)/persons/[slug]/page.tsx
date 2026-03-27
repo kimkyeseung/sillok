@@ -20,6 +20,9 @@ const RELATION_TYPE_LABELS: Record<string, string> = {
   RIVAL: 'Rival',
   LORD_VASSAL: 'Lord/Vassal',
   INFLUENCE: 'Influence',
+  MEMBER_OF: 'Member',
+  FOUNDED: 'Founded',
+  AFFILIATED: 'Affiliated',
 };
 
 const RELATION_TYPE_COLORS: Record<string, string> = {
@@ -29,18 +32,23 @@ const RELATION_TYPE_COLORS: Record<string, string> = {
   RIVAL: 'bg-red-50 text-red-700',
   LORD_VASSAL: 'bg-purple-50 text-purple-700',
   INFLUENCE: 'bg-amber-50 text-amber-700',
+  MEMBER_OF: 'bg-indigo-50 text-indigo-700',
+  FOUNDED: 'bg-teal-50 text-teal-700',
+  AFFILIATED: 'bg-slate-50 text-slate-700',
 };
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   ARTIFACT: 'Artifact',
   MEDIA: 'Media',
   EVENT: 'Event',
+  GROUP: 'Group',
 };
 
 const NODE_TYPE_COLORS: Record<string, string> = {
   ARTIFACT: 'bg-amber-50 text-amber-700',
   MEDIA: 'bg-blue-50 text-blue-700',
   EVENT: 'bg-purple-50 text-purple-700',
+  GROUP: 'bg-indigo-50 text-indigo-700',
 };
 
 async function getPerson(slug: string) {

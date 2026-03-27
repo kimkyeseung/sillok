@@ -31,6 +31,9 @@ const RELATION_LABELS: Record<string, string> = {
   RIVAL: '라이벌',
   LORD_VASSAL: '군신',
   INFLUENCE: '영향',
+  MEMBER_OF: '소속',
+  FOUNDED: '창설',
+  AFFILIATED: '연관',
 };
 
 const RELATION_COLORS: Record<string, string> = {
@@ -40,6 +43,9 @@ const RELATION_COLORS: Record<string, string> = {
   RIVAL: 'bg-red-50 text-red-700',
   LORD_VASSAL: 'bg-purple-50 text-purple-700',
   INFLUENCE: 'bg-amber-50 text-amber-700',
+  MEMBER_OF: 'bg-indigo-50 text-indigo-700',
+  FOUNDED: 'bg-teal-50 text-teal-700',
+  AFFILIATED: 'bg-slate-50 text-slate-700',
 };
 
 export default function AdminRelationsPage() {

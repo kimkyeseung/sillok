@@ -88,12 +88,31 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // 2. Link tags (lookup tag_id from tag_names)
+      // 2. Link tags (lookup tag_id from tag_names — matches name_en first, then name_ko)
       if (tag_names && tag_names.length > 0) {
-        const { data: tags } = await supabaseAdmin
+        const { data: tagsByEn } = await supabaseAdmin
           .from('tags')
-          .select('id, name_ko')
-          .in('name_ko', tag_names);
+          .select('id, name_en')
+          .in('name_en', tag_names);
+
+        const matchedIds = new Set((tagsByEn ?? []).map((t) => t.id));
+        const unmatchedNames = tag_names.filter(
+          (n) => !(tagsByEn ?? []).some((t) => t.name_en === n)
+        );
+
+        let tagsByKo: { id: string }[] = [];
+        if (unmatchedNames.length > 0) {
+          const { data } = await supabaseAdmin
+            .from('tags')
+            .select('id, name_ko')
+            .in('name_ko', unmatchedNames);
+          tagsByKo = data ?? [];
+        }
+
+        const tags = [
+          ...(tagsByEn ?? []),
+          ...tagsByKo.filter((t) => !matchedIds.has(t.id)),
+        ];
 
         if (tags && tags.length > 0) {
           const tagLinks = tags.map((tag) => ({

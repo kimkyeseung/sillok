@@ -30,6 +30,7 @@ const nodeTypeLabel: Record<string, string> = {
   ARTIFACT: 'Artifact',
   MEDIA: 'Media',
   EVENT: 'Event',
+  GROUP: 'Group',
 };
 
 export default function SearchClient() {

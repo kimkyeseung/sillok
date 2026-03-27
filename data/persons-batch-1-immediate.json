@@ -1,0 +1,54 @@
+[
+  {
+    "slug": "yi-sun-sin",
+    "name_ko": "이순신",
+    "name_hanja": "李舜臣",
+    "name_en": "Yi Sun-sin",
+    "birth_year": 1545,
+    "death_year": 1598,
+    "summary": "Korean naval commander during the Joseon dynasty, renowned for his victories against the Japanese navy during the Imjin War. He is celebrated for his innovative use of the turtle ship (geobukseon) and his undefeated record in naval warfare.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Joseon", "General"]
+  },
+  {
+    "slug": "yu-gwan-sun",
+    "name_ko": "유관순",
+    "name_hanja": "柳寬順",
+    "name_en": "Yu Gwan-sun",
+    "birth_year": 1902,
+    "death_year": 1920,
+    "summary": "Korean independence activist who organized and led the March 1st Movement protests in Cheonan during the Japanese colonial period. She was arrested, tortured, and died in prison at the age of 17.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Modern", "Independence Activist"]
+  },
+  {
+    "slug": "ahn-jung-geun",
+    "name_ko": "안중근",
+    "name_hanja": "安重根",
+    "name_en": "Ahn Jung-geun",
+    "birth_year": 1879,
+    "death_year": 1910,
+    "summary": "Korean independence activist who assassinated Itō Hirobumi, the first Resident-General of Korea, at Harbin railway station in 1909. He is regarded as a national hero in Korea for his resistance against Japanese imperialism.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Modern", "Independence Activist"]
+  },
+  {
+    "slug": "gwanggaeto-the-great",
+    "name_ko": "광개토대왕",
+    "name_hanja": "廣開土大王",
+    "name_en": "Gwanggaeto the Great",
+    "birth_year": 374,
+    "death_year": 413,
+    "summary": "The 19th king of Goguryeo who dramatically expanded the kingdom's territory, making it one of the largest empires in East Asian history. His achievements are recorded on the Gwanggaeto Stele, one of the most significant historical monuments in Korean history.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Three Kingdoms", "King"]
+  }
+]

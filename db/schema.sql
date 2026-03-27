@@ -17,7 +17,10 @@ CREATE TYPE relation_type AS ENUM (
   'ALLY',          -- 협력자/동지 (양방향)
   'RIVAL',         -- 대립/적대 (양방향)
   'LORD_VASSAL',   -- 군신 관계 (단방향: from=왕, to=신하)
-  'INFLUENCE'      -- 영향 (단방향: from=영향을 준 사람, to=받은 사람)
+  'INFLUENCE',     -- 영향 (단방향: from=영향을 준 사람, to=받은 사람)
+  'MEMBER_OF',     -- 멤버/소속 (단방향: from=멤버, to=그룹 대표 인물)
+  'FOUNDED',       -- 창업/창설 (단방향: from=창업자, to=조직 대표 인물)
+  'AFFILIATED'     -- 느슨한 연관 (양방향: 고문, 파트너 등)
 );
 
 -- ============================================================
@@ -121,7 +124,7 @@ CREATE INDEX person_tags_tag_id_idx    ON person_tags (tag_id);
 CREATE TABLE nodes (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug         TEXT UNIQUE NOT NULL,
-  node_type    TEXT NOT NULL CHECK (node_type IN ('ARTIFACT', 'MEDIA', 'EVENT')),
+  node_type    TEXT NOT NULL CHECK (node_type IN ('ARTIFACT', 'MEDIA', 'EVENT', 'GROUP')),
   title        TEXT NOT NULL,
   description  TEXT,
   thumbnail    TEXT,
@@ -188,18 +191,18 @@ RETURNS TABLE (
 ) AS $$
   SELECT
     id, to_person_id, relation_type,
-    CASE WHEN relation_type IN ('FAMILY','ALLY','RIVAL') THEN 'both' ELSE 'outgoing' END,
+    CASE WHEN relation_type IN ('FAMILY','ALLY','RIVAL','AFFILIATED') THEN 'both' ELSE 'outgoing' END,
     description
   FROM person_relations
   WHERE from_person_id = p_id AND is_approved = TRUE
   UNION ALL
   SELECT
     id, from_person_id, relation_type,
-    CASE WHEN relation_type IN ('FAMILY','ALLY','RIVAL') THEN 'both' ELSE 'incoming' END,
+    CASE WHEN relation_type IN ('FAMILY','ALLY','RIVAL','AFFILIATED') THEN 'both' ELSE 'incoming' END,
     description
   FROM person_relations
   WHERE to_person_id = p_id AND is_approved = TRUE
-    AND relation_type NOT IN ('FAMILY','ALLY','RIVAL')
+    AND relation_type NOT IN ('FAMILY','ALLY','RIVAL','AFFILIATED')
 $$ LANGUAGE sql;
 
 -- ============================================================

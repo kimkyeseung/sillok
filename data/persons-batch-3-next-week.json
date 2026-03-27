@@ -1,0 +1,103 @@
+[
+  {
+    "slug": "kim-yu-sin",
+    "name_ko": "김유신",
+    "name_hanja": "金庾信",
+    "name_en": "Kim Yu-sin",
+    "birth_year": 595,
+    "death_year": 673,
+    "summary": "A Silla general who played a pivotal role in the unification of the Three Kingdoms of Korea. He led Silla's military campaigns against Baekje and Goguryeo, ultimately achieving the unification of the Korean Peninsula under Silla.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Three Kingdoms", "General"]
+  },
+  {
+    "slug": "jumong",
+    "name_ko": "주몽",
+    "name_hanja": "朱蒙",
+    "name_en": "Jumong",
+    "birth_year": -58,
+    "death_year": -19,
+    "summary": "The founding king of Goguryeo, one of the Three Kingdoms of Korea. According to legend, he was an exceptional archer and military leader who established Goguryeo in 37 BCE after fleeing from Buyeo.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Ancient", "King"]
+  },
+  {
+    "slug": "eulji-mundeok",
+    "name_ko": "을지문덕",
+    "name_hanja": "乙支文德",
+    "name_en": "Eulji Mundeok",
+    "summary": "A Goguryeo military commander who defeated the Sui dynasty's invasion force at the Battle of Salsu in 612 CE. His strategic brilliance led to the destruction of over 300,000 Sui troops.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Three Kingdoms", "General"]
+  },
+  {
+    "slug": "heungseon-daewongun",
+    "name_ko": "흥선대원군",
+    "name_hanja": "興宣大院君",
+    "name_en": "Heungseon Daewongun",
+    "birth_year": 1820,
+    "death_year": 1898,
+    "summary": "Father of King Gojong and regent of the late Joseon dynasty. He implemented sweeping reforms to strengthen royal authority and pursued an isolationist foreign policy, but his resistance to modernization remains debated.",
+    "is_controversial": true,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Modern", "Politician"]
+  },
+  {
+    "slug": "yun-bong-gil",
+    "name_ko": "윤봉길",
+    "name_hanja": "尹奉吉",
+    "name_en": "Yun Bong-gil",
+    "birth_year": 1908,
+    "death_year": 1932,
+    "summary": "Korean independence activist who carried out the Hongkew Park bombing in Shanghai in 1932, targeting Japanese military officials. His act reinvigorated the Korean independence movement internationally.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Modern", "Independence Activist"]
+  },
+  {
+    "slug": "sin-saimdang",
+    "name_ko": "신사임당",
+    "name_hanja": "申師任堂",
+    "name_en": "Sin Saimdang",
+    "birth_year": 1504,
+    "death_year": 1551,
+    "summary": "A renowned Korean artist, calligrapher, and poet of the Joseon dynasty. She is celebrated as an ideal of Confucian womanhood and is the mother of the great scholar Yi I. Her artwork appears on the Korean 50,000 won banknote.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Joseon", "Artist"]
+  },
+  {
+    "slug": "yi-hwang",
+    "name_ko": "이황",
+    "name_hanja": "李滉",
+    "name_en": "Yi Hwang (Toegye)",
+    "birth_year": 1501,
+    "death_year": 1570,
+    "summary": "One of the most prominent Korean Confucian scholars of the Joseon dynasty, known by his pen name Toegye. He founded the Yeongnam school of Neo-Confucianism and his teachings profoundly influenced Korean intellectual history. His portrait appears on the Korean 1,000 won banknote.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Joseon", "Scholar"]
+  },
+  {
+    "slug": "ban-ki-moon",
+    "name_ko": "반기문",
+    "name_hanja": "潘基文",
+    "name_en": "Ban Ki-moon",
+    "birth_year": 1944,
+    "summary": "South Korean diplomat who served as the 8th Secretary-General of the United Nations from 2007 to 2016. Before his UN role, he held various positions in the South Korean Ministry of Foreign Affairs.",
+    "is_controversial": false,
+    "is_alive": true,
+    "is_published": true,
+    "tag_names": ["Modern", "Politician"]
+  }
+]

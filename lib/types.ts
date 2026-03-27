@@ -4,7 +4,7 @@
  */
 
 // 노드 타입
-export type NodeType = 'ARTIFACT' | 'MEDIA' | 'EVENT';
+export type NodeType = 'ARTIFACT' | 'MEDIA' | 'EVENT' | 'GROUP';
 
 // 인물 관계 타입
 export type RelationType =
@@ -13,13 +13,17 @@ export type RelationType =
   | 'ALLY'
   | 'RIVAL'
   | 'LORD_VASSAL'
-  | 'INFLUENCE';
+  | 'INFLUENCE'
+  | 'MEMBER_OF'
+  | 'FOUNDED'
+  | 'AFFILIATED';
 
 // 양방향 관계 타입 (FAMILY, ALLY, RIVAL)
 export const BIDIRECTIONAL_RELATIONS: RelationType[] = [
   'FAMILY',
   'ALLY',
   'RIVAL',
+  'AFFILIATED',
 ];
 
 // 유저 역할

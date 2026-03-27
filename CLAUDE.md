@@ -165,9 +165,9 @@ if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니�
 | 1 | `persons` | 인물 (핵심) — summary, birth_place 영문 직접 저장 |
 | 2 | `tags` | 시대/분야 태그 |
 | 3 | `person_tags` | 인물-태그 연결 |
-| 4 | `nodes` | 유물/미디어/사건 (ARTIFACT·MEDIA·EVENT) |
+| 4 | `nodes` | 유물/미디어/사건/그룹 (ARTIFACT·MEDIA·EVENT·GROUP) |
 | 5 | `person_node_links` | 인물-노드 연결 |
-| 6 | `person_relations` | 인물 간 관계 (FAMILY·TEACHER·ALLY·RIVAL·LORD_VASSAL·INFLUENCE) |
+| 6 | `person_relations` | 인물 간 관계 (FAMILY·TEACHER·ALLY·RIVAL·LORD_VASSAL·INFLUENCE·MEMBER_OF·FOUNDED·AFFILIATED) |
 | 7 | `threads` | 스레드 (video_url, like_count 포함) |
 | 8 | `thread_replies` | 댓글 (depth 자동 계산, 0-based) |
 | 9 | `thread_images` | 스레드 이미지 첨부 (스레드당 최대 3장) |

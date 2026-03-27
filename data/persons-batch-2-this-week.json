@@ -1,0 +1,65 @@
+[
+  {
+    "slug": "seondeok-of-silla",
+    "name_ko": "선덕여왕",
+    "name_hanja": "善德女王",
+    "name_en": "Queen Seondeok",
+    "birth_year": 595,
+    "death_year": 647,
+    "summary": "The 27th ruler of Silla and the first queen regnant in Korean history. She oversaw the construction of the Cheomseongdae observatory and promoted Buddhism and scholarship during her reign.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Three Kingdoms", "King"]
+  },
+  {
+    "slug": "kim-gu",
+    "name_ko": "김구",
+    "name_hanja": "金九",
+    "name_en": "Kim Gu",
+    "birth_year": 1876,
+    "death_year": 1949,
+    "summary": "Korean independence activist and politician who served as the president of the Provisional Government of the Republic of Korea in Shanghai. He dedicated his life to Korean independence and reunification.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Modern", "Independence Activist"]
+  },
+  {
+    "slug": "empress-myeongseong",
+    "name_ko": "명성황후",
+    "name_hanja": "明成皇后",
+    "name_en": "Empress Myeongseong",
+    "birth_year": 1851,
+    "death_year": 1895,
+    "summary": "Queen consort of the Joseon dynasty, known for her political influence and diplomatic efforts to counter Japanese encroachment. She was assassinated by Japanese agents in the Eulmi Incident of 1895.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Modern", "King"]
+  },
+  {
+    "slug": "jang-yeong-sil",
+    "name_ko": "장영실",
+    "name_hanja": "蔣英實",
+    "name_en": "Jang Yeong-sil",
+    "birth_year": 1390,
+    "death_year": 1450,
+    "summary": "A Korean scientist and inventor during the Joseon dynasty, best known for creating the Jagyeongnu (self-striking water clock), Angbuilgu (sundial), and other scientific instruments under the patronage of King Sejong.",
+    "is_controversial": false,
+    "is_alive": false,
+    "is_published": true,
+    "tag_names": ["Joseon", "Scholar"]
+  },
+  {
+    "slug": "bong-joon-ho",
+    "name_ko": "봉준호",
+    "name_en": "Bong Joon-ho",
+    "birth_year": 1969,
+    "summary": "South Korean filmmaker who directed Parasite (2019), the first non-English language film to win the Academy Award for Best Picture. Known for genre-blending storytelling and sharp social commentary.",
+    "is_controversial": false,
+    "is_alive": true,
+    "is_published": true,
+    "tag_names": ["Modern", "Entertainer"]
+  }
+]

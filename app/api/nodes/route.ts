@@ -8,7 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),
-  type: z.enum(['ARTIFACT', 'MEDIA', 'EVENT']).optional(),
+  type: z.enum(['ARTIFACT', 'MEDIA', 'EVENT', 'GROUP']).optional(),
   q: z.string().optional(),
 });
 
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
 const CreateNodeSchema = z.object({
   slug: z.string().min(1).max(200).regex(/^[a-z0-9-]+$/),
-  node_type: z.enum(['ARTIFACT', 'MEDIA', 'EVENT']),
+  node_type: z.enum(['ARTIFACT', 'MEDIA', 'EVENT', 'GROUP']),
   title: z.string().min(1).max(300),
   description: z.string().max(10000).optional(),
   thumbnail: z.string().url().optional(),
