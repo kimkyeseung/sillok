@@ -10,7 +10,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 const PresignedSchema = z.object({
-  bucket: z.enum(['avatars', 'threads', 'persons']),
+  bucket: z.enum(['avatars', 'threads', 'persons', 'articles']),
   content_type: z.string().refine((v) => ALLOWED_TYPES.includes(v), {
     message: 'Unsupported file type.',
   }),
@@ -53,6 +53,9 @@ export async function POST(request: Request) {
       if (!person_id)
         return apiError('VALIDATION_ERROR', 'person_id is required.', 422);
       path = `${person_id}/${fileId}.${ext}`;
+      break;
+    case 'articles':
+      path = `${user.id}/${fileId}.${ext}`;
       break;
   }
 

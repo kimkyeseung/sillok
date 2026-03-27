@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { fetcher, apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
+import ArticleBody from '@/components/article/ArticleBody';
 
 interface Article {
   id: string;
@@ -149,9 +150,7 @@ function PreviewDialog({
                   day: 'numeric',
                 })}
               </p>
-              <div className="mt-8 whitespace-pre-wrap text-sm leading-[1.8] text-gray-700">
-                {article.body}
-              </div>
+              <ArticleBody content={article.body} />
             </div>
           </div>
         )}
