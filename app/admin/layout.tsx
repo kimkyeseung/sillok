@@ -76,6 +76,15 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+  {
+    href: '/admin/api-docs',
+    label: 'API 문서',
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    ),
+  },
 ];
 
 export default function AdminLayout({
