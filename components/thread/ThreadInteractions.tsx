@@ -29,13 +29,13 @@ export function ThreadActions({
   const isOwner = user?.id === authorId;
 
   const handleDelete = async () => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+    if (!confirm('Are you sure you want to delete this?')) return;
     setDeleting(true);
     try {
       await apiFetch(`/api/threads/${threadId}`, { method: 'DELETE' });
       router.push('/');
     } catch {
-      alert('삭제에 실패했습니다.');
+      alert('Failed to delete.');
       setDeleting(false);
     }
   };
@@ -63,7 +63,7 @@ export function ThreadActions({
           disabled={deleting}
           className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-50"
         >
-          {deleting ? '삭제 중...' : '삭제'}
+          {deleting ? 'Deleting...' : 'Delete'}
         </button>
       )}
       <ReportButton targetType="thread" targetId={threadId} />
