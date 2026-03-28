@@ -2,6 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generalLimiter } from '@/lib/rate-limit';
+import { createNotification, getUserNickname } from '@/lib/notifications';
 
 // ─── POST /api/replies/:id/like — Toggle reply like [USER] ───
 
@@ -19,7 +20,7 @@ export async function POST(
 
   const { data: reply } = await supabaseAdmin
     .from('thread_replies')
-    .select('id, like_count')
+    .select('id, like_count, author_id, thread_id')
     .eq('id', params.id)
     .eq('is_deleted', false)
     .single();
@@ -47,6 +48,20 @@ export async function POST(
       target_type: 'reply',
       target_id: params.id,
     });
+
+    // Notify reply author (fire-and-forget)
+    if (reply.author_id && reply.author_id !== user.id) {
+      getUserNickname(user.id).then((nickname) => {
+        createNotification({
+          userId: reply.author_id,
+          type: 'THREAD_LIKED',
+          title: `${nickname} liked your comment`,
+          link: undefined,
+          sourceId: params.id,
+        });
+      });
+    }
+
     return apiSuccess({
       liked: true,
       like_count: (reply.like_count ?? 0) + 1,

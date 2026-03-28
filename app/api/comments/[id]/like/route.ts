@@ -1,6 +1,7 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createNotification, getUserNickname } from '@/lib/notifications';
 
 // ─── POST /api/comments/:id/like — Toggle node comment like [USER] ───
 
@@ -14,7 +15,7 @@ export async function POST(
 
   const { data: comment } = await supabaseAdmin
     .from('node_comments')
-    .select('id, like_count')
+    .select('id, like_count, author_id')
     .eq('id', params.id)
     .eq('is_deleted', false)
     .single();
@@ -42,6 +43,19 @@ export async function POST(
       target_type: 'node_comment',
       target_id: params.id,
     });
+
+    // Notify comment author (fire-and-forget)
+    if (comment.author_id && comment.author_id !== user.id) {
+      getUserNickname(user.id).then((nickname) => {
+        createNotification({
+          userId: comment.author_id,
+          type: 'THREAD_LIKED',
+          title: `${nickname} liked your comment`,
+          sourceId: params.id,
+        });
+      });
+    }
+
     return apiSuccess({
       liked: true,
       like_count: (comment.like_count ?? 0) + 1,

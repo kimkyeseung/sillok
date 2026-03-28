@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { threadCreateLimiter } from '@/lib/rate-limit';
+import { notifyFollowers } from '@/lib/notifications';
 
 const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'tv.naver.com'];
 
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
   // Check person exists
   const { data: person } = await supabaseAdmin
     .from('persons')
-    .select('id')
+    .select('id, slug')
     .eq('id', threadData.person_id)
     .eq('is_deleted', false)
     .single();
@@ -140,6 +141,15 @@ export async function POST(request: Request) {
       .in('id', image_ids)
       .is('thread_id', null);
   }
+
+  // Notify followers of this person (fire-and-forget)
+  notifyFollowers({
+    personId: threadData.person_id,
+    threadAuthorId: user.id,
+    threadTitle: threadData.title,
+    personSlug: person.slug,
+    threadId: thread.id,
+  });
 
   return apiSuccess(thread);
 }

@@ -2,6 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generalLimiter } from '@/lib/rate-limit';
+import { createNotification, getUserNickname } from '@/lib/notifications';
 
 // ─── POST /api/threads/:id/like — Toggle like [USER] ───
 
@@ -20,7 +21,7 @@ export async function POST(
   // Check thread exists
   const { data: thread } = await supabaseAdmin
     .from('threads')
-    .select('id, like_count')
+    .select('id, like_count, author_id, title, person_id, persons!threads_person_id_fkey ( slug )')
     .eq('id', params.id)
     .eq('is_deleted', false)
     .single();
@@ -52,6 +53,23 @@ export async function POST(
       target_type: 'thread',
       target_id: params.id,
     });
+
+    // Notify thread author (fire-and-forget)
+    if (thread.author_id && thread.author_id !== user.id) {
+      const personSlug = (thread as Record<string, unknown>).persons
+        ? ((thread as Record<string, unknown>).persons as Record<string, string>).slug
+        : '';
+      getUserNickname(user.id).then((nickname) => {
+        createNotification({
+          userId: thread.author_id,
+          type: 'THREAD_LIKED',
+          title: `${nickname} liked your thread`,
+          body: thread.title,
+          link: personSlug ? `/persons/${personSlug}?thread=${params.id}` : undefined,
+          sourceId: params.id,
+        });
+      });
+    }
 
     return apiSuccess({
       liked: true,

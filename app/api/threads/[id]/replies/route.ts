@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { replyCreateLimiter } from '@/lib/rate-limit';
+import { createNotification, getUserNickname } from '@/lib/notifications';
 
 // ─── GET /api/threads/:id/replies — List replies (public) ───
 
@@ -76,7 +77,7 @@ export async function POST(
   // Check thread exists
   const { data: thread } = await supabaseAdmin
     .from('threads')
-    .select('id')
+    .select('id, author_id, title, person_id, persons!threads_person_id_fkey ( slug )')
     .eq('id', params.id)
     .eq('is_deleted', false)
     .single();
@@ -109,6 +110,53 @@ export async function POST(
 
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+
+  // --- Notifications (fire-and-forget) ---
+  const personSlug = (thread as Record<string, unknown>).persons
+    ? ((thread as Record<string, unknown>).persons as Record<string, string>).slug
+    : '';
+  const threadLink = personSlug
+    ? `/persons/${personSlug}?thread=${params.id}`
+    : undefined;
+
+  getUserNickname(user.id).then((nickname) => {
+    // 1. Notify thread author (THREAD_REPLY)
+    if (thread.author_id && thread.author_id !== user.id) {
+      createNotification({
+        userId: thread.author_id,
+        type: 'THREAD_REPLY',
+        title: `${nickname} replied to your thread`,
+        body: thread.title,
+        link: threadLink,
+        sourceId: reply.id,
+      });
+    }
+
+    // 2. Notify parent reply author (REPLY_REPLY)
+    if (result.data.parent_id) {
+      supabaseAdmin
+        .from('thread_replies')
+        .select('author_id')
+        .eq('id', result.data.parent_id)
+        .single()
+        .then(({ data: parentReply }) => {
+          if (
+            parentReply?.author_id &&
+            parentReply.author_id !== user.id &&
+            parentReply.author_id !== thread.author_id // avoid double notification
+          ) {
+            createNotification({
+              userId: parentReply.author_id,
+              type: 'REPLY_REPLY',
+              title: `${nickname} replied to your comment`,
+              body: thread.title,
+              link: threadLink,
+              sourceId: reply.id,
+            });
+          }
+        });
+    }
+  });
 
   return apiSuccess(reply);
 }

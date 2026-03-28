@@ -51,7 +51,8 @@ export async function GET(request: Request) {
 // ─── PUT /api/notifications — Mark notifications as read [USER] ───
 
 const MarkReadSchema = z.object({
-  notification_ids: z.array(z.string().uuid()).min(1).max(100),
+  notification_ids: z.array(z.string().uuid()).min(1).max(100).optional(),
+  mark_all_read: z.boolean().optional(),
 });
 
 export async function PUT(request: Request) {
@@ -70,14 +71,28 @@ export async function PUT(request: Request) {
   if (!result.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { error } = await supabaseAdmin
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('user_id', user.id)
-    .in('id', result.data.notification_ids);
+  if (result.data.mark_all_read) {
+    // Mark all unread notifications as read
+    const { error } = await supabaseAdmin
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
 
-  if (error)
-    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+    if (error)
+      return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  } else if (result.data.notification_ids) {
+    const { error } = await supabaseAdmin
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', user.id)
+      .in('id', result.data.notification_ids);
+
+    if (error)
+      return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  } else {
+    return apiError('VALIDATION_ERROR', 'Provide notification_ids or mark_all_read.', 422);
+  }
 
   return apiSuccess({ updated: true });
 }
