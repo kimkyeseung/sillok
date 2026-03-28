@@ -37,10 +37,11 @@ export default function AdminTimelinesPage() {
 
   // Person search
   const [personSearch, setPersonSearch] = useState('');
-  const { data: allPersons } = useSWR<Person[]>(
+  const { data: personsData } = useSWR<{ items: Person[]; total: number }>(
     '/api/admin/persons/all',
     fetcher
   );
+  const allPersons = personsData?.items ?? [];
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
 
   // Timeline entries
@@ -55,7 +56,7 @@ export default function AdminTimelinesPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  const filteredPersons = (allPersons ?? []).filter((p) => {
+  const filteredPersons = allPersons.filter((p) => {
     if (!personSearch.trim()) return false;
     const q = personSearch.toLowerCase();
     return (
@@ -152,53 +153,51 @@ export default function AdminTimelinesPage() {
       {/* Person Selector */}
       <div className="card-flat space-y-3 p-5">
         <label className="block text-xs font-medium text-gray-600">Select a Person</label>
-        <div className="relative">
-          <input
-            type="text"
-            value={selectedPerson ? `${selectedPerson.name_en} (${selectedPerson.name_ko})` : personSearch}
-            onChange={(e) => {
-              setPersonSearch(e.target.value);
-              if (selectedPerson) setSelectedPerson(null);
-            }}
-            placeholder="Search by name or slug..."
-            className="input w-full"
-          />
-          {!selectedPerson && filteredPersons.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
-              {filteredPersons.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setSelectedPerson(p);
-                    setPersonSearch('');
-                    resetForm();
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-50"
-                >
-                  <span className="font-medium text-gray-900">{p.name_en}</span>
-                  <span className="text-xs text-gray-400">{p.name_ko}</span>
-                  {p.birth_year && (
-                    <span className="text-xs text-gray-400">
-                      {p.birth_year}–{p.death_year ?? ''}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {selectedPerson && (
+        {selectedPerson ? (
           <div className="flex items-center gap-2">
             <span className="badge-brand">
               {selectedPerson.name_en}
             </span>
-            <span className="text-xs text-gray-400">{selectedPerson.slug}</span>
+            <span className="text-xs text-gray-400">{selectedPerson.name_ko} · {selectedPerson.slug}</span>
             <button
               onClick={() => { setSelectedPerson(null); setPersonSearch(''); resetForm(); }}
               className="ml-auto text-xs text-gray-400 hover:text-gray-600"
             >
               Change
             </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              type="text"
+              value={personSearch}
+              onChange={(e) => setPersonSearch(e.target.value)}
+              placeholder="Search by name or slug..."
+              className="input w-full"
+            />
+            {filteredPersons.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                {filteredPersons.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedPerson(p);
+                      setPersonSearch('');
+                      resetForm();
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-50"
+                  >
+                    <span className="font-medium text-gray-900">{p.name_en}</span>
+                    <span className="text-xs text-gray-400">{p.name_ko}</span>
+                    {p.birth_year && (
+                      <span className="text-xs text-gray-400">
+                        {p.birth_year}–{p.death_year ?? ''}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
