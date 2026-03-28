@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 // ─── POST /api/view-logs — Log view (public, IP dedup) ───
 
 const ViewLogSchema = z.object({
-  target_type: z.enum(['PERSON', 'NODE', 'THREAD']),
+  target_type: z.enum(['PERSON', 'NODE', 'THREAD', 'ARTICLE']),
   target_id: z.string().uuid(),
 });
 

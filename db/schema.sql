@@ -299,7 +299,7 @@ CREATE TRIGGER node_comments_updated_at
 
 CREATE TABLE view_logs (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  target_type TEXT NOT NULL CHECK (target_type IN ('PERSON', 'NODE', 'THREAD')),
+  target_type TEXT NOT NULL CHECK (target_type IN ('PERSON', 'NODE', 'THREAD', 'ARTICLE')),
   target_id   UUID NOT NULL,
   viewer_ip   TEXT,
   viewed_at   TIMESTAMPTZ DEFAULT NOW()

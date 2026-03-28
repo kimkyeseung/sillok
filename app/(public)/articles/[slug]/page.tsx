@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { articleJsonLd } from '@/lib/jsonld';
 import ArticleBody from '@/components/article/ArticleBody';
+import ArticleViewLogger from '@/components/article/ArticleViewLogger';
 import LikeButton from '@/components/thread/LikeButton';
 
 interface Props {
@@ -49,6 +50,7 @@ export default async function ArticleDetailPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd(article)) }}
       />
+      <ArticleViewLogger slug={params.slug} />
       <article className="card-flat overflow-hidden">
         {article.thumbnail && (
           <img
