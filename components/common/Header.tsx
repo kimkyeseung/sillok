@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { fetcher } from '@/lib/fetcher';
@@ -11,14 +11,16 @@ import { fetcher } from '@/lib/fetcher';
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/persons', label: 'Figures' },
-  { href: '/search', label: 'Search' },
+  { href: '/age-flow', label: 'Age Flow' },
   { href: '/articles', label: 'Articles' },
 ];
 
 export default function Header() {
   const { user, loading, signOut } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: unreadData } = useSWR<{ count: number }>(
     user ? '/api/notifications/unread-count' : null,
     fetcher,
@@ -57,8 +59,37 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        {/* Search Bar */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = searchQuery.trim();
+            if (q) {
+              router.push(`/search?q=${encodeURIComponent(q)}`);
+              setSearchQuery('');
+            }
+          }}
+          className="flex-1 max-sm:hidden"
+        >
+          <div className="relative mx-auto max-w-md">
+            <svg
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search figures, artifacts, threads..."
+              className="w-full rounded-full border border-gray-200 bg-gray-50 py-1.5 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-300"
+            />
+          </div>
+        </form>
 
         {/* Desktop Auth */}
         <div className="hidden items-center gap-2 sm:flex">
@@ -99,6 +130,9 @@ export default function Header() {
           )}
         </div>
 
+        {/* Mobile Spacer */}
+        <div className="flex-1 sm:hidden" />
+
         {/* Mobile Menu Button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -120,6 +154,38 @@ export default function Header() {
       {/* Mobile Menu */}
       {menuOpen && (
         <div className="border-t border-gray-100 bg-white px-4 pb-4 pt-2 sm:hidden">
+          {/* Mobile Search */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = searchQuery.trim();
+              if (q) {
+                router.push(`/search?q=${encodeURIComponent(q)}`);
+                setSearchQuery('');
+                setMenuOpen(false);
+              }
+            }}
+            className="mb-2"
+          >
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search..."
+                className="w-full rounded-full border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-300"
+              />
+            </div>
+          </form>
           <nav className="space-y-1">
             {NAV_ITEMS.map((item) => {
               const isActive =

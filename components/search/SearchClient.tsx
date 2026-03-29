@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { fetcher } from '@/lib/fetcher';
@@ -35,8 +36,18 @@ const nodeTypeLabel: Record<string, string> = {
 };
 
 export default function SearchClient() {
-  const [query, setQuery] = useState('');
-  const [submitted, setSubmitted] = useState('');
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q') ?? '';
+  const [query, setQuery] = useState(initialQuery);
+  const [submitted, setSubmitted] = useState(initialQuery);
+
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    if (q) {
+      setQuery(q);
+      setSubmitted(q);
+    }
+  }, [searchParams]);
 
   const { data, isLoading } = useSWR<SearchResult>(
     submitted ? `/api/search?q=${encodeURIComponent(submitted)}&type=all&limit=10` : null,
