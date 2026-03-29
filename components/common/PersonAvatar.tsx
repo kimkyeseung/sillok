@@ -102,11 +102,11 @@ export default function PersonAvatar({
       {size === 'sm' ? (
         /* Small: icon only */
         <svg
-          className={`${style.text} h-4 w-4`}
+          className={`${style.text} h-5 w-5`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
-          strokeWidth={1.5}
+          strokeWidth={2}
         >
           <path strokeLinecap="round" strokeLinejoin="round" d={style.icon} />
         </svg>
