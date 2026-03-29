@@ -45,13 +45,26 @@ export default function AdminPersonsPage() {
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState<string | null>(null);
   const [missingYear, setMissingYear] = useState(false);
+  const [accumulated, setAccumulated] = useState<Person[]>([]);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<InlineEditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const url = `/api/admin/persons?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}${missingYear ? '&missing_year=true' : ''}`;
-  const { data, isLoading, mutate } = useSWR<PersonsResponse>(url, fetcher);
+  const { data, isLoading, mutate } = useSWR<PersonsResponse>(url, fetcher, {
+    onSuccess: (newData) => {
+      if (cursor) {
+        // Append to accumulated
+        setAccumulated((prev) => [...prev, ...newData.items]);
+      } else {
+        // Fresh load (search/filter changed)
+        setAccumulated(newData.items);
+      }
+    },
+  });
+
+  const allItems = cursor ? accumulated : (data?.items ?? []);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarTarget, setAvatarTarget] = useState<{ id: string; slug: string } | null>(null);
@@ -215,7 +228,7 @@ export default function AdminPersonsPage() {
           placeholder="Search by name..."
           value={search}
           onChange={(e) => {
-            setSearch(e.target.value);
+            setSearch(e.target.value); setAccumulated([]);
             setCursor(null);
           }}
           className="input pl-10"
@@ -225,7 +238,7 @@ export default function AdminPersonsPage() {
       {/* Filters */}
       <div className="flex items-center gap-2">
         <button
-          onClick={() => { setMissingYear(!missingYear); setCursor(null); }}
+          onClick={() => { setMissingYear(!missingYear); setCursor(null); setAccumulated([]); }}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
             missingYear
               ? 'bg-amber-100 text-amber-800'
@@ -256,7 +269,7 @@ export default function AdminPersonsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {(data?.items ?? []).map((person) => {
+              {allItems.map((person) => {
                 const isEditing = editingSlug === person.slug;
 
                 return (
@@ -488,7 +501,7 @@ export default function AdminPersonsPage() {
                   </tr>
                 );
               })}
-              {(data?.items ?? []).length === 0 && (
+              {allItems.length === 0 && (
                 <tr>
                   <td
                     colSpan={6}
