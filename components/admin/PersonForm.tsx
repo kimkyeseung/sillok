@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { apiFetch, fetcher } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
+import { uploadPersonImage } from '@/lib/upload';
 import useSWR from 'swr';
 
 interface Tag {
@@ -39,6 +41,10 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
   const router = useRouter();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.thumbnail ?? null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     slug: initialData?.slug ?? '',
@@ -91,7 +97,22 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
 
     setSaving(true);
     try {
-      const body = {
+      // Upload thumbnail file if pending
+      let thumbnailUrl = form.thumbnail.trim() || undefined;
+      if (pendingFile) {
+        // For create mode, we need the person ID after creation
+        // For edit mode, we can use the existing slug to find the person
+        if (mode === 'edit' && slug) {
+          // Get person ID from slug
+          const personData = await fetcher<{ id: string }>(`/api/persons/${slug}`);
+          setUploading(true);
+          thumbnailUrl = await uploadPersonImage(pendingFile, personData.id);
+          setUploading(false);
+        }
+        // For create mode, we'll upload after creation below
+      }
+
+      const body: Record<string, unknown> = {
         slug: form.slug.trim(),
         name_ko: form.name_ko.trim(),
         name_hanja: form.name_hanja.trim() || undefined,
@@ -100,25 +121,37 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
         death_year: form.death_year ? parseInt(form.death_year) : undefined,
         birth_place: form.birth_place.trim() || undefined,
         summary: form.summary.trim() || undefined,
-        thumbnail: form.thumbnail.trim() || undefined,
         is_controversial: form.is_controversial,
         is_alive: form.is_alive,
         is_published: form.is_published,
         tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       };
 
+      if (thumbnailUrl) body.thumbnail = thumbnailUrl;
+      if (!previewUrl) body.thumbnail = null;
+
       if (mode === 'create') {
-        await apiFetch('/api/persons', {
+        const created = await apiFetch<{ id: string }>('/api/persons', {
           method: 'POST',
           body: JSON.stringify(body),
         });
-        toast('인물이 등록되었습니다');
+        // Upload thumbnail after creation (now we have the ID)
+        if (pendingFile && created.id) {
+          setUploading(true);
+          const url = await uploadPersonImage(pendingFile, created.id);
+          await apiFetch(`/api/persons/${form.slug.trim()}`, {
+            method: 'PUT',
+            body: JSON.stringify({ thumbnail: url }),
+          });
+          setUploading(false);
+        }
+        toast('Person created');
       } else {
         await apiFetch(`/api/persons/${slug}`, {
           method: 'PUT',
           body: JSON.stringify(body),
         });
-        toast('인물이 수정되었습니다');
+        toast('Person updated');
       }
 
       router.push('/admin/persons');
@@ -248,17 +281,64 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">
-            썸네일 URL
+          <label className="mb-2 block text-xs font-medium text-gray-600">
+            Thumbnail
           </label>
-          <input
-            type="url"
-            name="thumbnail"
-            value={form.thumbnail}
-            onChange={handleChange}
-            placeholder="https://..."
-            className="input"
-          />
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 border-dashed border-gray-300 transition-colors hover:border-brand-400"
+            >
+              {previewUrl ? (
+                <Image
+                  src={previewUrl}
+                  alt="Thumbnail"
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-gray-400 group-hover:text-brand-500">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) {
+                  toast('File must be 5MB or less', 'error');
+                  return;
+                }
+                setPendingFile(file);
+                setPreviewUrl(URL.createObjectURL(file));
+              }}
+            />
+            <div className="text-xs text-gray-400">
+              <p>Click to upload image</p>
+              <p>JPEG, PNG, WebP / Max 5MB</p>
+              {previewUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewUrl(null);
+                    setPendingFile(null);
+                    setForm((prev) => ({ ...prev, thumbnail: '' }));
+                  }}
+                  className="mt-1 text-red-500 hover:text-red-600"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         <div>

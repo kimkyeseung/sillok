@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { fetcher, apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
+import { uploadPersonImage } from '@/lib/upload';
 
 interface Person {
   id: string;
@@ -50,6 +51,39 @@ export default function AdminPersonsPage() {
 
   const url = `/api/admin/persons?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}${missingYear ? '&missing_year=true' : ''}`;
   const { data, isLoading, mutate } = useSWR<PersonsResponse>(url, fetcher);
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarTarget, setAvatarTarget] = useState<{ id: string; slug: string } | null>(null);
+
+  const handleAvatarClick = (e: React.MouseEvent, person: Person) => {
+    e.stopPropagation();
+    setAvatarTarget({ id: person.id, slug: person.slug });
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !avatarTarget) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast('File must be 5MB or less', 'error');
+      return;
+    }
+    try {
+      toast('Uploading...');
+      const url = await uploadPersonImage(file, avatarTarget.id);
+      await apiFetch(`/api/persons/${avatarTarget.slug}`, {
+        method: 'PUT',
+        body: JSON.stringify({ thumbnail: url }),
+      });
+      toast('Thumbnail updated');
+      mutate();
+    } catch {
+      toast('Upload failed', 'error');
+    } finally {
+      setAvatarTarget(null);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
 
   const handleDelete = async (slug: string, nameKo: string) => {
     if (!confirm(`"${nameKo}" will be deleted. Continue?`)) return;
@@ -226,17 +260,28 @@ export default function AdminPersonsPage() {
                     {/* Person name + avatar */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {person.thumbnail ? (
-                          <img
-                            src={person.thumbnail}
-                            alt={person.name_ko}
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 overflow-hidden rounded-full">
+                        <button
+                          type="button"
+                          onClick={(e) => handleAvatarClick(e, person)}
+                          className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-gray-200 transition-all hover:ring-brand-400"
+                          title="Click to change thumbnail"
+                        >
+                          {person.thumbnail ? (
+                            <img
+                              src={person.thumbnail}
+                              alt={person.name_ko}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
                             <PersonAvatar name={person.name_ko} size="sm" />
+                          )}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/40">
+                            <svg className="h-3.5 w-3.5 text-white opacity-0 transition-opacity group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
                           </div>
-                        )}
+                        </button>
                         <div>
                           <p className="font-medium text-gray-900">
                             {person.name_ko}
@@ -461,6 +506,14 @@ export default function AdminPersonsPage() {
           </button>
         </div>
       )}
+      {/* Hidden file input for avatar upload */}
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleAvatarUpload}
+      />
     </div>
   );
 }
