@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import PersonAvatar from '@/components/common/PersonAvatar';
 
 const ERA_TABS = [
   { label: 'All', value: '' },
@@ -126,8 +127,12 @@ export default function RankingSection({ initialPersons }: RankingSectionProps) 
                   className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-gray-100"
                 />
               ) : (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-sm font-bold text-brand-600 ring-2 ring-gray-100">
-                  {person.name_ko.charAt(0)}
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-gray-100">
+                  <PersonAvatar
+                    name={person.name_ko}
+                    fieldTag={person.tags.find(t => !['Ancient', 'Three Kingdoms', 'Goryeo', 'Joseon', 'Modern'].includes(t)) ?? null}
+                    size="sm"
+                  />
                 </div>
               )}
 

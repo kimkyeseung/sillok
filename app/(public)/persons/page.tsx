@@ -3,6 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import RankingSection, { type RankedPerson } from '@/components/ranking/RankingSection';
+import PersonAvatar from '@/components/common/PersonAvatar';
+import { getPrimaryFieldTag } from '@/lib/person-utils';
 
 export const metadata: Metadata = {
   title: 'Figures',
@@ -25,7 +27,7 @@ export default async function PersonsPage({
   let query = supabaseAdmin
     .from('persons')
     .select(
-      'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, summary'
+      'id, slug, name_ko, name_en, name_hanja, birth_year, death_year, thumbnail, summary, person_tags ( tags ( id, name_en, type ) )'
     )
     .eq('is_deleted', false)
     .eq('is_published', true)
@@ -172,8 +174,16 @@ export default async function PersonsPage({
                 className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-gray-100 transition-all group-hover:ring-brand-200"
               />
             ) : (
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-50 text-2xl font-bold text-brand-600 ring-2 ring-gray-100 transition-all group-hover:ring-brand-200">
-                {(person.name_en || person.name_ko).charAt(0)}
+              <div className="mx-auto h-20 w-20 overflow-hidden rounded-full ring-2 ring-gray-100 transition-all group-hover:ring-brand-200">
+                <PersonAvatar
+                  name={person.name_ko}
+                  fieldTag={getPrimaryFieldTag(
+                    ((person as any).person_tags ?? [])
+                      .map((pt: any) => pt.tags)
+                      .filter(Boolean)
+                  )}
+                  size="lg"
+                />
               </div>
             )}
             <p className="mt-3 text-sm font-semibold text-gray-900 group-hover:text-brand-600">

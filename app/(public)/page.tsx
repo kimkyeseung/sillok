@@ -4,6 +4,8 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { websiteJsonLd } from '@/lib/jsonld';
 import RecentThreadsFeed from '@/components/thread/RecentThreadsFeed';
+import PersonAvatar from '@/components/common/PersonAvatar';
+import { getPrimaryFieldTag } from '@/lib/person-utils';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
@@ -21,7 +23,7 @@ async function getHomeData() {
   ] = await Promise.all([
     supabaseAdmin
       .from('persons')
-      .select('id, slug, name_en, thumbnail, birth_year, death_year')
+      .select('id, slug, name_en, name_ko, thumbnail, birth_year, death_year, person_tags ( tags ( id, name_en, type ) )')
       .eq('is_deleted', false)
       .eq('is_published', true)
       .order('created_at', { ascending: false })
@@ -221,8 +223,16 @@ export default async function HomePage() {
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-medium text-gray-500">
-                    {person.name_en.charAt(0)}
+                  <div className="h-10 w-10 overflow-hidden rounded-full">
+                    <PersonAvatar
+                      name={person.name_ko || person.name_en}
+                      fieldTag={getPrimaryFieldTag(
+                        ((person as any).person_tags ?? [])
+                          .map((pt: any) => pt.tags)
+                          .filter(Boolean)
+                      )}
+                      size="sm"
+                    />
                   </div>
                 )}
                 <div className="min-w-0">

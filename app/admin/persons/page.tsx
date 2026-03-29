@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
+import PersonAvatar from '@/components/common/PersonAvatar';
 import { fetcher, apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 
@@ -232,8 +233,8 @@ export default function AdminPersonsPage() {
                             className="h-8 w-8 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">
-                            {person.name_ko.charAt(0)}
+                          <div className="h-8 w-8 overflow-hidden rounded-full">
+                            <PersonAvatar name={person.name_ko} size="sm" />
                           </div>
                         )}
                         <div>

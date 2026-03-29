@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import PersonAvatar from '@/components/common/PersonAvatar';
 import { fetcher } from '@/lib/fetcher';
 
 interface SearchResult {
@@ -113,8 +114,8 @@ export default function SearchClient() {
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-600">
-                        {p.name_en.charAt(0)}
+                      <div className="h-10 w-10 overflow-hidden rounded-full">
+                        <PersonAvatar name={p.name_en} size="sm" />
                       </div>
                     )}
                     <div>

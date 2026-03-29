@@ -8,6 +8,8 @@ import VoteTodayButton from '@/components/person/VoteTodayButton';
 import RelationSuggestForm from '@/components/person/RelationSuggestForm';
 import PersonRequestButton from '@/components/person/PersonRequestButton';
 import { personJsonLd } from '@/lib/jsonld';
+import PersonAvatar from '@/components/common/PersonAvatar';
+import { getPrimaryFieldTag } from '@/lib/person-utils';
 
 interface Props {
   params: { slug: string };
@@ -188,8 +190,14 @@ export default async function PersonDetailPage({ params }: Props) {
                   className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-md"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-brand-400 to-brand-600 text-3xl font-bold text-white shadow-md">
-                  {person.name_en.charAt(0)}
+                <div className="h-24 w-24 overflow-hidden rounded-2xl border-4 border-white shadow-md">
+                  <PersonAvatar
+                    name={person.name_ko || person.name_en}
+                    fieldTag={getPrimaryFieldTag(
+                      (tags ?? []).map((pt: any) => pt.tags).filter(Boolean)
+                    )}
+                    size="lg"
+                  />
                 </div>
               )}
               <div className="pb-1">
@@ -279,8 +287,8 @@ export default async function PersonDetailPage({ params }: Props) {
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-500">
-                        {other.name_en.charAt(0)}
+                      <div className="h-10 w-10 overflow-hidden rounded-full">
+                        <PersonAvatar name={other.name_en} size="sm" />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
