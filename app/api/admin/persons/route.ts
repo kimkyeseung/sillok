@@ -9,6 +9,7 @@ const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),
   q: z.string().optional(),
+  missing_year: z.enum(['true', 'false']).optional(),
 });
 
 export async function GET(request: Request) {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   if (!parsed.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { limit, cursor, q } = parsed.data;
+  const { limit, cursor, q, missing_year } = parsed.data;
 
   let query = supabaseAdmin
     .from('persons')
@@ -39,6 +40,11 @@ export async function GET(request: Request) {
     query = query.or(
       `name_ko.ilike.%${q}%,name_hanja.ilike.%${q}%,name_en.ilike.%${q}%`
     );
+  }
+
+  // Filter persons missing birth_year or death_year (for age-flow data management)
+  if (missing_year === 'true') {
+    query = query.or('birth_year.is.null,death_year.is.null');
   }
 
   query = query.order('created_at', { ascending: false });

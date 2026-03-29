@@ -30,9 +30,10 @@ interface PersonsResponse {
 export default function AdminPersonsPage() {
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState<string | null>(null);
+  const [missingYear, setMissingYear] = useState(false);
   const { toast } = useToast();
 
-  const url = `/api/admin/persons?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}`;
+  const url = `/api/admin/persons?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}${missingYear ? '&missing_year=true' : ''}`;
   const { data, isLoading, mutate } = useSWR<PersonsResponse>(url, fetcher);
 
   const handleDelete = async (slug: string, nameKo: string) => {
@@ -100,6 +101,20 @@ export default function AdminPersonsPage() {
         />
       </div>
 
+      {/* 필터 */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => { setMissingYear(!missingYear); setCursor(null); }}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            missingYear
+              ? 'bg-amber-100 text-amber-800'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {missingYear ? '✓ ' : ''}연도 미입력
+        </button>
+      </div>
+
       {/* 테이블 */}
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
@@ -150,8 +165,14 @@ export default function AdminPersonsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {person.birth_year ?? '?'} ~ {person.death_year ?? '?'}
+                  <td className="px-4 py-3">
+                    <span className={person.birth_year == null ? 'font-medium text-amber-600' : 'text-gray-500'}>
+                      {person.birth_year ?? '미입력'}
+                    </span>
+                    <span className="text-gray-300"> ~ </span>
+                    <span className={person.death_year == null ? 'font-medium text-amber-600' : 'text-gray-500'}>
+                      {person.death_year ?? '미입력'}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1.5">
