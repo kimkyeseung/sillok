@@ -23,6 +23,7 @@ async function getHomeData() {
       .from('persons')
       .select('id, slug, name_en, thumbnail, birth_year, death_year')
       .eq('is_deleted', false)
+      .eq('is_published', true)
       .order('created_at', { ascending: false })
       .limit(8),
     supabaseAdmin
