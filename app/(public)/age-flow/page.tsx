@@ -80,21 +80,45 @@ export default function AgeFlowPage() {
     );
   }, [visiblePersons, selectedFieldTags]);
 
-  // Track which persons were visible in previous year for transitions
-  const prevVisibleIds = useRef<Set<string>>(new Set());
+  // Track previous year to detect newborn/dying across multi-year jumps
+  const prevYearRef = useRef(currentYear);
+  const prevFilteredIdsRef = useRef<Set<string>>(new Set());
 
-  const newbornIds = useMemo(() => {
+  const { newbornIds, dyingIds } = useMemo(() => {
+    const prevYear = prevYearRef.current;
+    const prevIds = prevFilteredIdsRef.current;
+    const currentIds = new Set(filteredPersons.map((p) => p.id));
+
     const newIds = new Set<string>();
+    const dieIds = new Set<string>();
+
+    // Newborns: in current set but not in previous set
     filteredPersons.forEach((p) => {
-      if (!prevVisibleIds.current.has(p.id)) {
+      if (!prevIds.has(p.id)) {
         newIds.add(p.id);
       }
     });
-    // Update prev for next render
-    const currentIds = new Set(filteredPersons.map((p) => p.id));
-    prevVisibleIds.current = currentIds;
-    return newIds;
-  }, [filteredPersons]);
+
+    // Dying: still visible now but will die between current year and next scroll
+    // Use previous year to catch multi-year jumps
+    if (prevYear !== currentYear) {
+      filteredPersons.forEach((p) => {
+        if (
+          p.death_year !== null &&
+          p.death_year > currentYear &&
+          p.death_year <= currentYear + Math.max(1, Math.abs(currentYear - prevYear))
+        ) {
+          dieIds.add(p.id);
+        }
+      });
+    }
+
+    // Update refs for next render
+    prevYearRef.current = currentYear;
+    prevFilteredIdsRef.current = currentIds;
+
+    return { newbornIds: newIds, dyingIds: dieIds };
+  }, [filteredPersons, currentYear]);
 
   // Find hovered person's slug for hover panel
   const hoveredPerson = useMemo(
@@ -219,10 +243,7 @@ export default function AgeFlowPage() {
                     person={person}
                     currentYear={currentYear}
                     isNewborn={newbornIds.has(person.id)}
-                    isDying={
-                      person.death_year !== null &&
-                      person.death_year === currentYear + 1
-                    }
+                    isDying={dyingIds.has(person.id)}
                     isDimmed={
                       hoveredPersonId !== null &&
                       hoveredPersonId !== person.id

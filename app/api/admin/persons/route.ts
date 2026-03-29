@@ -7,7 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
-  cursor: z.string().optional(),
+  page: z.coerce.number().min(1).default(1),
   q: z.string().optional(),
   missing_year: z.enum(['true', 'false']).optional(),
 });
@@ -22,7 +22,8 @@ export async function GET(request: Request) {
   if (!parsed.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { limit, cursor, q, missing_year } = parsed.data;
+  const { limit, page, q, missing_year } = parsed.data;
+  const offset = (page - 1) * limit;
 
   let query = supabaseAdmin
     .from('persons')
@@ -31,8 +32,10 @@ export async function GET(request: Request) {
       id, slug, name_ko, name_hanja, name_en,
       birth_year, death_year, summary, thumbnail,
       is_published, is_controversial, is_alive,
-      view_count, follow_count, created_at
-    `
+      view_count, follow_count, created_at,
+      person_node_links ( nodes ( id, title, node_type ) )
+    `,
+      { count: 'exact' }
     )
     .eq('is_deleted', false);
 
@@ -42,28 +45,23 @@ export async function GET(request: Request) {
     );
   }
 
-  // Filter persons missing birth_year or death_year (for age-flow data management)
   if (missing_year === 'true') {
     query = query.or('birth_year.is.null,death_year.is.null');
   }
 
-  query = query.order('created_at', { ascending: false });
-  if (cursor) query = query.lt('created_at', cursor);
+  query = query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
-  query = query.limit(limit + 1);
-
-  const { data, error } = await query;
+  const { data, count, error } = await query;
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  const hasNext = (data?.length ?? 0) > limit;
-  const items = hasNext ? data!.slice(0, limit) : (data ?? []);
-  const lastItem = items[items.length - 1];
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / limit);
 
   return apiSuccess({
-    items,
-    has_next: hasNext,
-    next_cursor: hasNext && lastItem ? lastItem.created_at : null,
-    pagination: { limit },
+    items: data ?? [],
+    pagination: { page, limit, total, total_pages: totalPages },
   });
 }

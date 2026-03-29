@@ -3,11 +3,18 @@
 import { useState, useRef } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { fetcher, apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 import { uploadPersonImage } from '@/lib/upload';
 import ImageCropModal from '@/components/admin/ImageCropModal';
+
+interface GroupNode {
+  id: string;
+  title: string;
+  node_type: string;
+}
 
 interface Person {
   id: string;
@@ -24,12 +31,17 @@ interface Person {
   view_count: number;
   follow_count: number;
   created_at: string;
+  person_node_links: Array<{ nodes: GroupNode | null }> | null;
 }
 
 interface PersonsResponse {
   items: Person[];
-  has_next: boolean;
-  next_cursor: string | null;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
 }
 
 interface InlineEditForm {
@@ -42,29 +54,32 @@ interface InlineEditForm {
 }
 
 export default function AdminPersonsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const page = Math.max(1, Number(searchParams.get('page')) || 1);
+
   const [search, setSearch] = useState('');
-  const [cursor, setCursor] = useState<string | null>(null);
   const [missingYear, setMissingYear] = useState(false);
-  const [accumulated, setAccumulated] = useState<Person[]>([]);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<InlineEditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const url = `/api/admin/persons?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}${missingYear ? '&missing_year=true' : ''}`;
-  const { data, isLoading, mutate } = useSWR<PersonsResponse>(url, fetcher, {
-    onSuccess: (newData) => {
-      if (cursor) {
-        // Append to accumulated
-        setAccumulated((prev) => [...prev, ...newData.items]);
-      } else {
-        // Fresh load (search/filter changed)
-        setAccumulated(newData.items);
-      }
-    },
-  });
+  const setPage = (p: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (p <= 1) {
+      params.delete('page');
+    } else {
+      params.set('page', String(p));
+    }
+    router.push(`/admin/persons${params.size ? `?${params}` : ''}`);
+  };
 
-  const allItems = cursor ? accumulated : (data?.items ?? []);
+  const apiUrl = `/api/admin/persons?limit=20&page=${page}${search ? `&q=${encodeURIComponent(search)}` : ''}${missingYear ? '&missing_year=true' : ''}`;
+  const { data, isLoading, mutate } = useSWR<PersonsResponse>(apiUrl, fetcher);
+
+  const items = data?.items ?? [];
+  const pagination = data?.pagination;
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarTarget, setAvatarTarget] = useState<{ id: string; slug: string } | null>(null);
@@ -228,8 +243,8 @@ export default function AdminPersonsPage() {
           placeholder="Search by name..."
           value={search}
           onChange={(e) => {
-            setSearch(e.target.value); setAccumulated([]);
-            setCursor(null);
+            setSearch(e.target.value);
+            setPage(1);
           }}
           className="input pl-10"
         />
@@ -238,7 +253,7 @@ export default function AdminPersonsPage() {
       {/* Filters */}
       <div className="flex items-center gap-2">
         <button
-          onClick={() => { setMissingYear(!missingYear); setCursor(null); setAccumulated([]); }}
+          onClick={() => { setMissingYear(!missingYear); setPage(1); }}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
             missingYear
               ? 'bg-amber-100 text-amber-800'
@@ -264,12 +279,13 @@ export default function AdminPersonsPage() {
                 <th className="px-4 py-3">Name (EN)</th>
                 <th className="px-4 py-3">Birth</th>
                 <th className="px-4 py-3">Death</th>
+                <th className="px-4 py-3">Groups</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {allItems.map((person) => {
+              {items.map((person) => {
                 const isEditing = editingSlug === person.slug;
 
                 return (
@@ -387,6 +403,22 @@ export default function AdminPersonsPage() {
                       )}
                     </td>
 
+                    {/* Groups */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {(person.person_node_links ?? [])
+                          .filter((l) => l.nodes?.node_type === 'GROUP')
+                          .map((l) => (
+                            <span
+                              key={l.nodes!.id}
+                              className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-medium text-cyan-700"
+                            >
+                              {l.nodes!.title}
+                            </span>
+                          ))}
+                      </div>
+                    </td>
+
                     {/* Status */}
                     <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       {isEditing && editForm ? (
@@ -501,10 +533,10 @@ export default function AdminPersonsPage() {
                   </tr>
                 );
               })}
-              {allItems.length === 0 && (
+              {items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-12 text-center text-gray-400"
                   >
                     No persons found
@@ -517,14 +549,69 @@ export default function AdminPersonsPage() {
       )}
 
       {/* Pagination */}
-      {data?.has_next && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => setCursor(data.next_cursor)}
-            className="btn-ghost text-sm"
-          >
-            Load more
-          </button>
+      {pagination && pagination.total_pages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            {((page - 1) * pagination.limit + 1).toLocaleString()}–{Math.min(page * pagination.limit, pagination.total).toLocaleString()} of {pagination.total.toLocaleString()}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+              className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              Prev
+            </button>
+            {Array.from({ length: pagination.total_pages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === pagination.total_pages || Math.abs(p - page) <= 2)
+              .reduce<(number | 'ellipsis')[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('ellipsis');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="px-1 text-xs text-gray-300">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`min-w-[28px] rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                      p === page
+                        ? 'bg-brand-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page === pagination.total_pages}
+              className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setPage(pagination.total_pages)}
+              disabled={page === pagination.total_pages}
+              className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
       {/* Hidden file input for avatar upload */}
