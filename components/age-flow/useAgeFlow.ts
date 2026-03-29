@@ -94,6 +94,37 @@ export const MAX_YEAR = 2026;
 export const JOSEON_START = 1335; // Taejo's birth year
 export const JOSEON_END = 1910;   // End of Joseon/Korean Empire
 
+// Joseon kings with reign periods (for YearCounter display)
+export const JOSEON_KINGS: Array<{ slug: string; reignStart: number; reignEnd: number }> = [
+  { slug: 'taejo-yi-seong-gye',    reignStart: 1392, reignEnd: 1398 },
+  { slug: 'jeongjong-yi-bang-gwa',  reignStart: 1399, reignEnd: 1400 },
+  { slug: 'taejong-yi-bang-won',    reignStart: 1400, reignEnd: 1418 },
+  { slug: 'sejong-daewang',         reignStart: 1418, reignEnd: 1450 },
+  { slug: 'munjong-yi-hyang',       reignStart: 1450, reignEnd: 1452 },
+  { slug: 'danjong-yi-hong-wi',     reignStart: 1452, reignEnd: 1455 },
+  { slug: 'sejo-yi-yu',             reignStart: 1455, reignEnd: 1468 },
+  { slug: 'yejong-yi-hwang',        reignStart: 1468, reignEnd: 1469 },
+  { slug: 'seongjong-yi-hyeol',     reignStart: 1469, reignEnd: 1494 },
+  { slug: 'yeonsangun-yi-yung',     reignStart: 1494, reignEnd: 1506 },
+  { slug: 'jungjong-yi-yeok',       reignStart: 1506, reignEnd: 1544 },
+  { slug: 'injong-yi-ho',           reignStart: 1544, reignEnd: 1545 },
+  { slug: 'myeongjong-yi-hwan',     reignStart: 1545, reignEnd: 1567 },
+  { slug: 'seonjo-yi-yeon',         reignStart: 1567, reignEnd: 1608 },
+  { slug: 'gwanghaegun-yi-hon',     reignStart: 1608, reignEnd: 1623 },
+  { slug: 'injo-yi-jong',           reignStart: 1623, reignEnd: 1649 },
+  { slug: 'hyojong-yi-ho',          reignStart: 1649, reignEnd: 1659 },
+  { slug: 'hyeonjong-yi-yeon',      reignStart: 1659, reignEnd: 1674 },
+  { slug: 'sukjong-yi-sun',         reignStart: 1674, reignEnd: 1720 },
+  { slug: 'gyeongjong-yi-yun',      reignStart: 1720, reignEnd: 1724 },
+  { slug: 'yeongjo-yi-geum',        reignStart: 1724, reignEnd: 1776 },
+  { slug: 'jeongjo-yi-san',         reignStart: 1776, reignEnd: 1800 },
+  { slug: 'sunjo-yi-gong',          reignStart: 1800, reignEnd: 1834 },
+  { slug: 'heonjong-yi-hwan',       reignStart: 1834, reignEnd: 1849 },
+  { slug: 'cheoljong-yi-byeon',     reignStart: 1849, reignEnd: 1863 },
+  { slug: 'gojong-yi-myeong-bok',   reignStart: 1863, reignEnd: 1907 },
+  { slug: 'sunjong-yi-cheok',       reignStart: 1907, reignEnd: 1910 },
+];
+
 export const ERA_RANGES: Record<Era, { start: number; label: string }> = {
   'Ancient':        { start: -2333, label: 'Ancient' },
   'Three Kingdoms': { start: 57,    label: 'Three Kingdoms' },
@@ -274,15 +305,14 @@ export function useAgeFlow(): UseAgeFlowReturn {
 
   const aliveCount = visiblePersons.length;
 
-  // ── 4b. Current king (Royalty tag, alive in currentYear) ──
+  // ── 4b. Current king — matched by reign period ──
   const currentKing = useMemo(() => {
-    // Find the Royalty person born latest but still alive in currentYear
-    // This approximates "the reigning king" for the given year
-    const royals = visiblePersons
-      .filter((p) => p.tags.some((t) => t.name_en === 'Royalty'))
-      .sort((a, b) => b.birth_year - a.birth_year);
-    return royals[0] ?? null;
-  }, [visiblePersons]);
+    const reign = JOSEON_KINGS.find(
+      (k) => currentYear >= k.reignStart && currentYear <= k.reignEnd
+    );
+    if (!reign) return null;
+    return allPersons.find((p) => p.slug === reign.slug) ?? null;
+  }, [allPersons, currentYear]);
 
   // ── 5. URL ?year= sync ──
   useEffect(() => {
