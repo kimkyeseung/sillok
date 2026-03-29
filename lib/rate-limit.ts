@@ -81,4 +81,3 @@ export const relationSuggestLimiter = rateLimit({
   limit: 10,
 });
 export const reportLimiter = rateLimit({ interval: 60 * 60_000, limit: 10 });
-export const translateLimiter = rateLimit({ interval: 60_000, limit: 10 });

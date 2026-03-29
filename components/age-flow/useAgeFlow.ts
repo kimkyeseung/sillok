@@ -95,7 +95,7 @@ export const JOSEON_START = 1335; // Taejo's birth year
 export const JOSEON_END = 1910;   // End of Joseon/Korean Empire
 
 // Joseon kings with reign periods (for YearCounter display)
-export const JOSEON_KINGS: Array<{ slug: string; reignStart: number; reignEnd: number }> = [
+const JOSEON_KINGS: Array<{ slug: string; reignStart: number; reignEnd: number }> = [
   { slug: 'taejo-yi-seong-gye',    reignStart: 1392, reignEnd: 1398 },
   { slug: 'jeongjong-yi-bang-gwa',  reignStart: 1399, reignEnd: 1400 },
   { slug: 'taejong-yi-bang-won',    reignStart: 1400, reignEnd: 1418 },
