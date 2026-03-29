@@ -314,9 +314,13 @@ export function useAgeFlow(): UseAgeFlowReturn {
     return allPersons.find((p) => p.slug === reign.slug) ?? null;
   }, [allPersons, currentYear]);
 
-  // ── 5. URL ?year= sync ──
+  // ── 5. URL ?year= sync (throttled to avoid Safari SecurityError) ──
+  const lastReplaceRef = useRef(0);
   useEffect(() => {
     if (currentYear > 0 && initialScrollDone.current) {
+      const now = Date.now();
+      if (now - lastReplaceRef.current < 300) return;
+      lastReplaceRef.current = now;
       window.history.replaceState(null, '', `?year=${currentYear}`);
     }
   }, [currentYear]);

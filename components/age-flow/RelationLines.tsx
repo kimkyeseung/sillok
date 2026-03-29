@@ -118,6 +118,7 @@ export default function RelationLines({
       const dx = tx - sx;
       const dy = ty - sy;
       const len = Math.sqrt(dx * dx + dy * dy);
+      if (len === 0) return; // skip overlapping cards
       const offset = Math.min(40, len * 0.2);
       const cx = mx + (-dy / len) * offset;
       const cy = my + (dx / len) * offset;
