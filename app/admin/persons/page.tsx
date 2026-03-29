@@ -7,6 +7,7 @@ import PersonAvatar from '@/components/common/PersonAvatar';
 import { fetcher, apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 import { uploadPersonImage } from '@/lib/upload';
+import ImageCropModal from '@/components/admin/ImageCropModal';
 
 interface Person {
   id: string;
@@ -54,6 +55,7 @@ export default function AdminPersonsPage() {
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarTarget, setAvatarTarget] = useState<{ id: string; slug: string } | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const handleAvatarClick = (e: React.MouseEvent, person: Person) => {
     e.stopPropagation();
@@ -61,16 +63,23 @@ export default function AdminPersonsPage() {
     avatarInputRef.current?.click();
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !avatarTarget) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast('File must be 5MB or less', 'error');
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast('File must be 10MB or less', 'error');
       return;
     }
+    setCropSrc(URL.createObjectURL(file));
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedFile: File) => {
+    setCropSrc(null);
+    if (!avatarTarget) return;
     try {
       toast('Uploading...');
-      const url = await uploadPersonImage(file, avatarTarget.id);
+      const url = await uploadPersonImage(croppedFile, avatarTarget.id);
       await apiFetch(`/api/persons/${avatarTarget.slug}`, {
         method: 'PUT',
         body: JSON.stringify({ thumbnail: url }),
@@ -81,7 +90,6 @@ export default function AdminPersonsPage() {
       toast('Upload failed', 'error');
     } finally {
       setAvatarTarget(null);
-      if (avatarInputRef.current) avatarInputRef.current.value = '';
     }
   };
 
@@ -512,8 +520,18 @@ export default function AdminPersonsPage() {
         type="file"
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
-        onChange={handleAvatarUpload}
+        onChange={handleAvatarFileSelect}
       />
+
+      {/* Crop modal */}
+      {cropSrc && (
+        <ImageCropModal
+          open={!!cropSrc}
+          imageSrc={cropSrc}
+          onClose={() => { setCropSrc(null); setAvatarTarget(null); }}
+          onComplete={handleCropComplete}
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { apiFetch, fetcher } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 import { uploadPersonImage } from '@/lib/upload';
+import ImageCropModal from '@/components/admin/ImageCropModal';
 import useSWR from 'swr';
 
 interface Tag {
@@ -44,6 +45,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.thumbnail ?? null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -313,12 +315,13 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                if (file.size > 5 * 1024 * 1024) {
-                  toast('File must be 5MB or less', 'error');
+                if (file.size > 10 * 1024 * 1024) {
+                  toast('File must be 10MB or less', 'error');
                   return;
                 }
-                setPendingFile(file);
-                setPreviewUrl(URL.createObjectURL(file));
+                // Open crop modal
+                setCropSrc(URL.createObjectURL(file));
+                e.target.value = '';
               }}
             />
             <div className="text-xs text-gray-400">
@@ -463,6 +466,21 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
           취소
         </button>
       </div>
+      {/* Crop modal */}
+      {cropSrc && (
+        <ImageCropModal
+          open={!!cropSrc}
+          imageSrc={cropSrc}
+          onClose={() => {
+            setCropSrc(null);
+          }}
+          onComplete={(croppedFile) => {
+            setPendingFile(croppedFile);
+            setPreviewUrl(URL.createObjectURL(croppedFile));
+            setCropSrc(null);
+          }}
+        />
+      )}
     </form>
   );
 }
