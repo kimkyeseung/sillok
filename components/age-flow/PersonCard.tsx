@@ -36,7 +36,7 @@ export default function PersonCard({
       ref={cardRef}
       data-person-id={person.id}
       className={`
-        w-[120px] h-[160px] md:w-40 md:h-[200px]
+        w-[120px] md:w-40
         rounded-lg border bg-white overflow-hidden
         transition-all duration-200 cursor-pointer
         ${isNewborn ? 'animate-card-appear' : ''}
@@ -73,7 +73,7 @@ export default function PersonCard({
         <p className="truncate text-xs font-medium text-gray-900 md:text-sm">
           {displayName} <span className="text-gray-400">({age})</span>
         </p>
-        <div className="mt-0.5 flex flex-wrap gap-0.5">
+        <div className="mt-2 flex flex-wrap gap-0.5">
           {eraTag && (
             <span className="inline-block rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-medium text-gray-600 md:text-[10px]">
               {eraTag.name_en}
