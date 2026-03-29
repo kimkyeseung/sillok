@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   useAgeFlow,
   Era,
@@ -80,45 +80,103 @@ export default function AgeFlowPage() {
     );
   }, [visiblePersons, selectedFieldTags]);
 
-  // Track previous year to detect newborn/dying across multi-year jumps
+  // Track newborn/dying with timer-based persistence so animations
+  // aren't cancelled by rapid re-renders during fast scrolling.
+  const prevFilteredIdsRef = useRef<Set<string> | null>(null); // null = first render
   const prevYearRef = useRef(currentYear);
-  const prevFilteredIdsRef = useRef<Set<string>>(new Set());
+  const [stickyNewbornIds, setStickyNewbornIds] = useState<Set<string>>(new Set());
+  const [stickyDyingIds, setStickyDyingIds] = useState<Set<string>>(new Set());
+  const newbornTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const dyingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  const { newbornIds, dyingIds } = useMemo(() => {
-    const prevYear = prevYearRef.current;
+  useEffect(() => {
     const prevIds = prevFilteredIdsRef.current;
     const currentIds = new Set(filteredPersons.map((p) => p.id));
+    const prevYear = prevYearRef.current;
 
-    const newIds = new Set<string>();
-    const dieIds = new Set<string>();
-
-    // Newborns: in current set but not in previous set
-    filteredPersons.forEach((p) => {
-      if (!prevIds.has(p.id)) {
-        newIds.add(p.id);
-      }
-    });
-
-    // Dying: still visible now but will die between current year and next scroll
-    // Use previous year to catch multi-year jumps
-    if (prevYear !== currentYear) {
+    // Skip first render — don't animate all initially visible persons
+    if (prevIds !== null) {
+      // Newborns: appeared in this render
+      const freshNewborns: string[] = [];
       filteredPersons.forEach((p) => {
-        if (
-          p.death_year !== null &&
-          p.death_year > currentYear &&
-          p.death_year <= currentYear + Math.max(1, Math.abs(currentYear - prevYear))
-        ) {
-          dieIds.add(p.id);
+        if (!prevIds.has(p.id) && !newbornTimersRef.current.has(p.id)) {
+          freshNewborns.push(p.id);
         }
       });
+
+      // Dying: still visible but will die within the year-jump range
+      const freshDying: string[] = [];
+      if (prevYear !== currentYear) {
+        const jump = Math.max(1, Math.abs(currentYear - prevYear));
+        filteredPersons.forEach((p) => {
+          if (
+            p.death_year !== null &&
+            p.death_year > currentYear &&
+            p.death_year <= currentYear + jump &&
+            !dyingTimersRef.current.has(p.id)
+          ) {
+            freshDying.push(p.id);
+          }
+        });
+      }
+
+      // Add newborns with auto-clear after animation duration (400ms)
+      if (freshNewborns.length > 0) {
+        setStickyNewbornIds((prev) => {
+          const next = new Set(prev);
+          freshNewborns.forEach((id) => next.add(id));
+          return next;
+        });
+        freshNewborns.forEach((id) => {
+          const timer = setTimeout(() => {
+            setStickyNewbornIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+            newbornTimersRef.current.delete(id);
+          }, 400);
+          newbornTimersRef.current.set(id, timer);
+        });
+      }
+
+      // Add dying with auto-clear after animation duration (300ms)
+      if (freshDying.length > 0) {
+        setStickyDyingIds((prev) => {
+          const next = new Set(prev);
+          freshDying.forEach((id) => next.add(id));
+          return next;
+        });
+        freshDying.forEach((id) => {
+          const timer = setTimeout(() => {
+            setStickyDyingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+            dyingTimersRef.current.delete(id);
+          }, 300);
+          dyingTimersRef.current.set(id, timer);
+        });
+      }
     }
 
-    // Update refs for next render
-    prevYearRef.current = currentYear;
     prevFilteredIdsRef.current = currentIds;
-
-    return { newbornIds: newIds, dyingIds: dieIds };
+    prevYearRef.current = currentYear;
   }, [filteredPersons, currentYear]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    const newbornTimers = newbornTimersRef.current;
+    const dyingTimers = dyingTimersRef.current;
+    return () => {
+      newbornTimers.forEach((t) => clearTimeout(t));
+      dyingTimers.forEach((t) => clearTimeout(t));
+    };
+  }, []);
+
+  const newbornIds = stickyNewbornIds;
+  const dyingIds = stickyDyingIds;
 
   // Find hovered person's slug for hover panel
   const hoveredPerson = useMemo(
