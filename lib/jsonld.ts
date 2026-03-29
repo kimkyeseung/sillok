@@ -41,6 +41,29 @@ export function personJsonLd(person: {
   };
 }
 
+export function ageFlowJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Age Flow — Korean Historical Timeline',
+    url: `${BASE_URL}/age-flow`,
+    description:
+      'An interactive scroll-driven timeline visualizing Korean historical figures across centuries — from the Joseon dynasty to modern Korea.',
+    applicationCategory: 'EducationalApplication',
+    operatingSystem: 'All',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'Sillok',
+      url: BASE_URL,
+    },
+  };
+}
+
 export function articleJsonLd(article: {
   title: string;
   summary?: string | null;
