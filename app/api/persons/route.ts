@@ -109,8 +109,7 @@ export async function GET(request: Request) {
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = (data ?? []) as any[];
+  const rows = (data ?? []) as Record<string, any>[];
   const hasNext = rows.length > limit;
   const items = hasNext ? rows.slice(0, limit) : rows;
   const lastItem = items[items.length - 1];

@@ -34,8 +34,7 @@ export default function PersonHoverPanel({
       const res = await fetch(`/api/persons/${slug}`);
       const json = await res.json();
       if (json.success) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const raw: any = json.data;
+        const raw = json.data as Record<string, any>;
         // Transform tags from nested format
         const tags = raw.person_tags
           ? (raw.person_tags as Array<{
