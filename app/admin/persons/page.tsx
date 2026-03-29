@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -54,6 +54,19 @@ interface InlineEditForm {
 }
 
 export default function AdminPersonsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center gap-2 py-12 text-gray-400">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
+        <span className="text-sm">Loading...</span>
+      </div>
+    }>
+      <AdminPersonsContent />
+    </Suspense>
+  );
+}
+
+function AdminPersonsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
