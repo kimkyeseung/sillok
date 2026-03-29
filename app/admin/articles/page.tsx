@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { fetcher, apiFetch } from '@/lib/fetcher';
@@ -77,13 +78,13 @@ function PreviewDialog({
     return () => document.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-12 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-3xl rounded-xl bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl border-b border-gray-100 bg-white/95 px-6 py-3 backdrop-blur">
+      <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-3">
           <span className="text-xs font-medium text-gray-400">
             미리보기
           </span>
@@ -155,7 +156,8 @@ function PreviewDialog({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
