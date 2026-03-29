@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MAX_YEAR } from './useAgeFlow';
+// No more MAX_YEAR import needed — end year derived from props
 
 interface DensityBarProps {
   densityMap: number[];
@@ -147,7 +147,7 @@ export default function DensityBar({
 
       {/* End year label */}
       <span className="mt-1 text-[10px] font-medium text-gray-400">
-        {MAX_YEAR}
+        {minYear + totalYears}
       </span>
     </div>
   );

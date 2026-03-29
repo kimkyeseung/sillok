@@ -39,6 +39,7 @@ export default function AgeFlowPage() {
     visiblePersons,
     allPersons,
     events,
+    currentKing,
     isLoading,
     totalHeight,
     minYear,
@@ -245,6 +246,7 @@ export default function AgeFlowPage() {
         currentYear={currentYear}
         currentEra={currentEra}
         aliveCount={aliveCount}
+        currentKing={currentKing}
         onYearChange={scrollToYear}
       />
 

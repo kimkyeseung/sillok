@@ -73,6 +73,7 @@ export interface UseAgeFlowReturn {
   visiblePersons: AgeFlowPerson[];
   allPersons: AgeFlowPerson[];
   events: AgeFlowEvent[];
+  currentKing: AgeFlowPerson | null;
   isLoading: boolean;
   totalHeight: number;
   minYear: number;
@@ -88,6 +89,10 @@ export interface UseAgeFlowReturn {
 
 export const SCROLL_PER_YEAR = 100;
 export const MAX_YEAR = 2026;
+
+// Age-flow is currently limited to Joseon dynasty
+export const JOSEON_START = 1335; // Taejo's birth year
+export const JOSEON_END = 1910;   // End of Joseon/Korean Empire
 
 export const ERA_RANGES: Record<Era, { start: number; label: string }> = {
   'Ancient':        { start: -2333, label: 'Ancient' },
@@ -207,7 +212,9 @@ export function useAgeFlow(): UseAgeFlowReturn {
           const items = personsJson.data.items ?? personsJson.data ?? [];
           const transformed = (items as Record<string, unknown>[])
             .map(transformPerson)
-            .filter((p): p is AgeFlowPerson => p !== null);
+            .filter((p): p is AgeFlowPerson => p !== null)
+            // Limit to Joseon era range
+            .filter((p) => p.birth_year >= JOSEON_START && p.birth_year <= JOSEON_END);
           setAllPersons(transformed);
         }
 
@@ -224,27 +231,23 @@ export function useAgeFlow(): UseAgeFlowReturn {
     load();
   }, []);
 
-  // ── 2. Computed values ──
-  const minYear = useMemo(() => {
-    if (allPersons.length === 0) return 0;
-    return Math.min(...allPersons.map((p) => p.birth_year));
-  }, [allPersons]);
+  // ── 2. Computed values (Joseon-limited) ──
+  const minYear = JOSEON_START;
+  const maxYear = JOSEON_END;
 
   const totalHeight = useMemo(
-    () => (MAX_YEAR - minYear) * SCROLL_PER_YEAR,
-    [minYear]
+    () => (maxYear - minYear) * SCROLL_PER_YEAR,
+    [maxYear]
   );
 
   // ── 3. Scroll → year ──
   useEffect(() => {
-    if (minYear === 0) return;
-
     let rafId: number;
     const onScroll = () => {
       rafId = requestAnimationFrame(() => {
         const scrollY = window.scrollY;
         const year = minYear + Math.floor(scrollY / SCROLL_PER_YEAR);
-        setCurrentYear(Math.max(minYear, Math.min(year, MAX_YEAR)));
+        setCurrentYear(Math.max(minYear, Math.min(year, maxYear)));
       });
     };
 
@@ -271,6 +274,16 @@ export function useAgeFlow(): UseAgeFlowReturn {
 
   const aliveCount = visiblePersons.length;
 
+  // ── 4b. Current king (Royalty tag, alive in currentYear) ──
+  const currentKing = useMemo(() => {
+    // Find the Royalty person born latest but still alive in currentYear
+    // This approximates "the reigning king" for the given year
+    const royals = visiblePersons
+      .filter((p) => p.tags.some((t) => t.name_en === 'Royalty'))
+      .sort((a, b) => b.birth_year - a.birth_year);
+    return royals[0] ?? null;
+  }, [visiblePersons]);
+
   // ── 5. URL ?year= sync ──
   useEffect(() => {
     if (currentYear > 0 && initialScrollDone.current) {
@@ -280,7 +293,7 @@ export function useAgeFlow(): UseAgeFlowReturn {
 
   // ── 6. Initial ?year= parameter ──
   useEffect(() => {
-    if (minYear === 0 || initialScrollDone.current) return;
+    if (initialScrollDone.current) return;
 
     const params = new URLSearchParams(window.location.search);
     const yearParam = params.get('year');
@@ -296,8 +309,6 @@ export function useAgeFlow(): UseAgeFlowReturn {
 
   // ── 7. Keyboard navigation ──
   useEffect(() => {
-    if (minYear === 0) return;
-
     const onKeyDown = (e: KeyboardEvent) => {
       // Don't handle when focused on input elements
       if (
@@ -323,13 +334,13 @@ export function useAgeFlow(): UseAgeFlowReturn {
 
   // ── 8. Density map ──
   const densityMap = useMemo(() => {
-    if (minYear === 0 || allPersons.length === 0) return [];
-    const totalYears = MAX_YEAR - minYear + 1;
+    if (allPersons.length === 0) return [];
+    const totalYears = maxYear - minYear + 1;
     const map = new Array(totalYears).fill(0);
     allPersons.forEach((p) => {
       const start = p.birth_year - minYear;
       const end =
-        (p.is_alive ? MAX_YEAR : (p.death_year ?? p.birth_year)) - minYear;
+        (p.is_alive ? maxYear : (p.death_year ?? p.birth_year)) - minYear;
       for (
         let i = Math.max(0, start);
         i <= Math.min(totalYears - 1, end);
@@ -344,7 +355,6 @@ export function useAgeFlow(): UseAgeFlowReturn {
   // ── Actions ──
   const scrollToYear = useCallback(
     (year: number) => {
-      if (minYear === 0) return;
       const targetScroll = (year - minYear) * SCROLL_PER_YEAR;
       window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
     },
@@ -364,10 +374,11 @@ export function useAgeFlow(): UseAgeFlowReturn {
     visiblePersons,
     allPersons,
     events,
+    currentKing,
     isLoading,
     totalHeight,
     minYear,
-    maxYear: MAX_YEAR,
+    maxYear,
     aliveCount,
     densityMap,
     scrollToYear,

@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Era, formatCount } from './useAgeFlow';
+import Image from 'next/image';
+import { Era, AgeFlowPerson, formatCount, getAge } from './useAgeFlow';
+import PersonAvatar, { getPrimaryFieldTag } from '@/components/common/PersonAvatar';
 
 interface YearCounterProps {
   currentYear: number;
   currentEra: Era;
   aliveCount: number;
+  currentKing: AgeFlowPerson | null;
   onYearChange: (year: number) => void;
 }
 
@@ -14,6 +17,7 @@ export default function YearCounter({
   currentYear,
   currentEra,
   aliveCount,
+  currentKing,
   onYearChange,
 }: YearCounterProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -50,7 +54,8 @@ export default function YearCounter({
 
   return (
     <div className="fixed right-3 top-20 z-40 md:right-6 md:top-24">
-      <div className="rounded-lg bg-gray-900/80 px-4 py-3 text-center backdrop-blur-md">
+      <div className="w-36 rounded-lg bg-gray-900/80 px-3 py-3 text-center backdrop-blur-md md:w-40">
+        {/* Year */}
         {isEditing ? (
           <input
             ref={inputRef}
@@ -59,24 +64,56 @@ export default function YearCounter({
             onChange={(e) => setInputValue(e.target.value)}
             onBlur={handleSubmit}
             onKeyDown={handleKeyDown}
-            className="w-24 bg-transparent text-center font-mono text-xl font-bold text-amber-400 outline-none md:text-3xl"
+            className="w-full bg-transparent text-center font-mono text-xl font-bold text-amber-400 outline-none md:text-3xl"
           />
         ) : (
           <button
             onClick={handleClick}
-            className="font-mono text-xl font-bold tracking-wider text-amber-400 transition-colors hover:text-amber-300 md:text-3xl"
+            className="w-full font-mono text-xl font-bold tracking-wider text-amber-400 transition-colors hover:text-amber-300 md:text-3xl"
           >
             {yearPrefix}{yearDisplay}
           </button>
         )}
 
-        <div className="my-1.5 border-t border-gray-700" />
+        <p className="mt-1 text-[10px] text-gray-500 md:text-xs">{currentEra}</p>
 
-        <p className="text-xs text-gray-400 md:text-sm">{currentEra}</p>
+        {/* Current King */}
+        {currentKing && (
+          <>
+            <div className="my-2 border-t border-gray-700" />
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-amber-500/40">
+                {currentKing.thumbnail ? (
+                  <Image
+                    src={currentKing.thumbnail}
+                    alt={currentKing.name_en || currentKing.name_ko}
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <PersonAvatar
+                    name={currentKing.name_ko}
+                    fieldTag={getPrimaryFieldTag(currentKing.tags)}
+                    size="sm"
+                  />
+                )}
+              </div>
+              <div className="min-w-0 text-left">
+                <p className="truncate text-[10px] font-medium text-gray-200 md:text-xs">
+                  {currentKing.name_en || currentKing.name_ko}
+                </p>
+                <p className="text-[9px] text-gray-500">
+                  Age {getAge(currentKing.birth_year, currentYear)}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
 
-        <div className="my-1.5 border-t border-gray-700" />
+        <div className="mt-2 border-t border-gray-700" />
 
-        <p className="text-[10px] text-gray-500 md:text-xs">
+        <p className="mt-1.5 text-[10px] text-gray-500 md:text-xs">
           {formatCount(aliveCount)} alive
         </p>
       </div>
