@@ -10,7 +10,7 @@ interface PersonAvatarProps {
   /** Primary FIELD tag name_en (e.g. 'Royalty', 'Scholar', 'General') */
   fieldTag?: string | null;
   /** Size variant */
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
@@ -80,6 +80,7 @@ const DEFAULT_STYLE: FieldStyle = {
 };
 
 const SIZE_MAP = {
+  xs: { container: 'h-full w-full', initial: 'text-[8px]', icon: 'h-2.5 w-2.5' },
   sm: { container: 'h-full w-full', initial: 'text-xs', icon: 'h-3.5 w-3.5' },
   md: { container: 'h-full w-full', initial: 'text-sm', icon: 'h-4 w-4' },
   lg: { container: 'h-full w-full', initial: 'text-2xl md:text-3xl', icon: 'h-6 w-6 md:h-8 md:w-8' },
@@ -99,7 +100,7 @@ export default function PersonAvatar({
     <div
       className={`flex items-center justify-center ${style.bg} ${sizes.container} ${className}`}
     >
-      {size === 'sm' ? (
+      {(size === 'xs' || size === 'sm') ? (
         /* Small: icon only */
         <svg
           className={`${style.text} h-5 w-5`}

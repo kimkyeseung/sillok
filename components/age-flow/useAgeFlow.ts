@@ -55,6 +55,14 @@ export interface AgeFlowPersonDetail {
   tags: AgeFlowTag[];
 }
 
+export interface AgeFlowEventPerson {
+  id: string;
+  slug: string;
+  name_ko: string;
+  name_en: string | null;
+  thumbnail: string | null;
+}
+
 export interface AgeFlowEvent {
   id: string;
   slug: string;
@@ -63,6 +71,7 @@ export interface AgeFlowEvent {
     start_year?: number;
     [key: string]: unknown;
   };
+  person_node_links?: Array<{ persons: AgeFlowEventPerson | null }>;
 }
 
 export type Era = 'Ancient' | 'Three Kingdoms' | 'Goryeo' | 'Joseon' | 'Modern';

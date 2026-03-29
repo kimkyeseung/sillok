@@ -22,7 +22,8 @@ export async function GET(request: Request) {
 
   let query = supabaseAdmin
     .from('nodes')
-    .select('id, slug, node_type, title, description, thumbnail, metadata, view_count, follow_count, created_at')
+    .select(`id, slug, node_type, title, description, thumbnail, metadata, view_count, follow_count, created_at,
+       person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`)
     .eq('is_deleted', false)
     .eq('is_published', true)
     .order('created_at', { ascending: false });
