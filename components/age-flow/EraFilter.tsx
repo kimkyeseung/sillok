@@ -31,9 +31,13 @@ export default function EraFilter({
 }: EraFilterProps) {
   return (
     <div className="sticky top-14 z-30 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
-      <div className="mx-auto max-w-5xl px-2">
+      <div className="relative mx-auto max-w-5xl">
+        {/* Left/right fade edges */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-white/90 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-white/90 to-transparent" />
+
         {/* Era tabs */}
-        <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+        <div className="flex gap-1 overflow-x-auto px-4 py-2 scrollbar-hide">
           {ERA_LIST.map((era) => {
             const isActive = selectedEra === era;
             const isCurrent = era !== 'All' && era === currentEra;
