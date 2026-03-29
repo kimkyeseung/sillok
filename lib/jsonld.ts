@@ -64,6 +64,38 @@ export function ageFlowJsonLd() {
   };
 }
 
+export function eventJsonLd(event: {
+  title: string;
+  title_ko?: string;
+  description?: string | null;
+  thumbnail?: string | null;
+  start_year?: number;
+  slug: string;
+  persons?: Array<{ name_en: string; slug: string }>;
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: event.title,
+    ...(event.title_ko && { alternateName: event.title_ko }),
+    ...(event.description && { description: event.description.slice(0, 300) }),
+    ...(event.thumbnail && { image: event.thumbnail }),
+    ...(event.start_year && { startDate: String(event.start_year) }),
+    url: `${BASE_URL}/nodes/${event.slug}`,
+    location: {
+      '@type': 'Place',
+      name: 'Korean Peninsula',
+    },
+    ...(event.persons && event.persons.length > 0 && {
+      performer: event.persons.map((p) => ({
+        '@type': 'Person',
+        name: p.name_en,
+        url: `${BASE_URL}/persons/${p.slug}`,
+      })),
+    }),
+  };
+}
+
 export function articleJsonLd(article: {
   title: string;
   summary?: string | null;

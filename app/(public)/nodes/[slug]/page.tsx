@@ -1,16 +1,26 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { NodeActions, CommentActions, CommentFormWrapper } from '@/components/thread/NodeInteractions';
+import { eventJsonLd } from '@/lib/jsonld';
 
 interface Props {
   params: { slug: string };
 }
 
+interface LinkedPerson {
+  id: string;
+  slug: string;
+  name_ko: string;
+  name_en: string | null;
+  thumbnail: string | null;
+}
+
 async function getNode(slug: string) {
   const { data } = await supabaseAdmin
     .from('nodes')
-    .select('*')
+    .select(`*, person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`)
     .eq('slug', slug)
     .eq('is_deleted', false)
     .single();
@@ -21,17 +31,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const node = await getNode(params.slug);
   if (!node) return {};
 
-  const description = node.description?.slice(0, 160) ?? `${node.title} info`;
+  const titleKo = node.metadata?.title_ko as string | undefined;
+  const startYear = node.metadata?.start_year as number | undefined;
+  const yearPrefix = startYear ? `[${startYear}] ` : '';
+  const description = node.description?.slice(0, 160)
+    ?? `${yearPrefix}${node.title} — historical event on Sillok`;
 
   return {
-    title: `${node.title}`,
+    title: `${yearPrefix}${node.title}`,
     description,
     alternates: { canonical: `/nodes/${params.slug}` },
     openGraph: {
-      title: `${node.title} - Sillok`,
+      title: `${yearPrefix}${node.title} - Sillok`,
       description,
       ...(node.thumbnail && { images: [node.thumbnail] }),
     },
+    // title_ko in keywords only — helps Korean search without showing in UI
+    keywords: [
+      node.title,
+      ...(titleKo ? [titleKo] : []),
+      ...(startYear ? [String(startYear)] : []),
+      'Korean history', 'Joseon',
+    ],
   };
 }
 
@@ -50,6 +71,14 @@ function timeAgo(dateStr: string) {
 export default async function NodeDetailPage({ params }: Props) {
   const node = await getNode(params.slug);
   if (!node) notFound();
+
+  const linkedPersons: LinkedPerson[] = (node.person_node_links ?? [])
+    .map((l: { persons: LinkedPerson | null }) => l.persons)
+    .filter((p: LinkedPerson | null): p is LinkedPerson => p !== null);
+
+  const isEvent = node.node_type === 'EVENT';
+  const titleKo = node.metadata?.title_ko as string | undefined;
+  const startYear = node.metadata?.start_year as number | undefined;
 
   const { data: comments } = await supabaseAdmin
     .from('node_comments')
@@ -78,6 +107,28 @@ export default async function NodeDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      {/* JSON-LD */}
+      {isEvent && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              eventJsonLd({
+                title: node.title,
+                title_ko: titleKo,
+                description: node.description,
+                thumbnail: node.thumbnail,
+                start_year: startYear,
+                slug: node.slug,
+                persons: linkedPersons
+                  .filter((p) => p.name_en)
+                  .map((p) => ({ name_en: p.name_en!, slug: p.slug })),
+              })
+            ),
+          }}
+        />
+      )}
+
       {/* Node Info Card */}
       <div className="card-flat overflow-hidden">
         {node.thumbnail && (
@@ -95,8 +146,12 @@ export default async function NodeDetailPage({ params }: Props) {
           <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${typeColor[node.node_type] ?? 'badge-gray'}`}>
             {typeLabel[node.node_type] ?? node.node_type}
           </span>
-          <h1 className="mt-2 text-2xl font-bold text-gray-900">{node.title}</h1>
-
+          <h1 className="mt-2 text-2xl font-bold text-gray-900">
+            {startYear && (
+              <span className="mr-2 text-lg font-medium text-gray-400">{startYear}</span>
+            )}
+            {node.title}
+          </h1>
           {node.description && (
             <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
               {node.description}
@@ -114,6 +169,31 @@ export default async function NodeDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Linked Persons */}
+      {linkedPersons.length > 0 && (
+        <div className="card-flat p-5">
+          <h2 className="text-sm font-semibold text-gray-900">Related Figures</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {linkedPersons.map((person) => (
+              <Link
+                key={person.id}
+                href={`/persons/${person.slug}`}
+                className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50"
+              >
+                {person.thumbnail ? (
+                  <img src={person.thumbnail} alt="" className="h-6 w-6 rounded-full object-cover" />
+                ) : (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">
+                    {person.name_ko.slice(0, 1)}
+                  </div>
+                )}
+                <span className="font-medium text-gray-700">{person.name_en || person.name_ko}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Comments Section */}
       <div className="card-flat">

@@ -62,7 +62,6 @@ function EventToastCard({
             </p>
             <p className="mt-0.5 text-xs text-gray-400">
               <span className="font-medium text-gray-500">{event.metadata?.start_year}</span>
-              {event.metadata?.title_ko ? ` · ${event.metadata.title_ko}` : ''}
             </p>
           </div>
         </Link>

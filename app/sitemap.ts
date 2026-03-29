@@ -18,7 +18,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     supabaseAdmin
       .from('nodes')
       .select('slug, updated_at')
-      .eq('is_deleted', false),
+      .eq('is_deleted', false)
+      .eq('is_published', true),
     supabaseAdmin
       .from('articles')
       .select('slug, updated_at')
