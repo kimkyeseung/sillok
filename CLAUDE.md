@@ -28,7 +28,7 @@ cd batch && npx ts-node bulk-upload.ts
 
 ```
 app/
-├── (public)/           정적 SSG + ISR 페이지 (인물, 노드, 메인)
+├── (public)/           정적 SSG + ISR 페이지 (인물, 노드, 메인) + CSR 페이지 (age-flow)
 ├── (auth)/             로그인/회원가입 페이지
 ├── admin/              어드민 SSR 페이지 (로그인 필수)
 └── api/                API Routes — 인증/쓰기 전용
@@ -45,7 +45,10 @@ app/
 components/
 ├── person/
 ├── thread/
-├── relation-graph/
+├── age-flow/          Age Flow 시대 흐름 시각화 (8 컴포넌트 + useAgeFlow 훅)
+├── collection/
+├── common/            공통 (Header, Modal, Toast, PersonAvatar 등)
+├── ranking/
 ├── search/
 └── admin/
 lib/
@@ -329,6 +332,8 @@ requireAdmin(request)  // JWT + profiles.role === 'ADMIN' 검증
 | 댓글 depth DB 저장 | 렌더링 시 재계산 불필요, MIN(depth,3) UI 처리 |
 | 관계 양방향 1건 저장 | FAMILY·ALLY·RIVAL은 단방향 저장 후 OR 조건 쿼리 |
 | 번역 저장 안 함 (커뮤니티) | 스레드/댓글은 DB 저장 없이 클라이언트 실시간 번역만 |
+| age-flow 전체 인물 메모리 로드 | ~1,000명 이하 문제없음. 2,000명 이상 시 구간 로드 전환 필요 (코드 내 SCALABILITY NOTE 참조) |
+| PersonAvatar 태그별 스타일 | FIELD 태그(Royalty, Scholar, General 등)에 따라 placeholder 배경색·아이콘 분기. `components/common/PersonAvatar.tsx` |
 
 ---
 
