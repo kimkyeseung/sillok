@@ -271,23 +271,52 @@ export function useAgeFlow(): UseAgeFlowReturn {
     [maxYear]
   );
 
-  // ── 3. Scroll → year ──
+  // ── 3. Scroll → year (smoothed with lerp) ──
+  // Instead of jumping directly to the scroll-derived year, interpolate
+  // toward it so trackpad inertia doesn't skip years too abruptly.
+  const displayYearRef = useRef(0); // fractional, smoothed
+  const targetYearRef = useRef(0);  // raw from scroll position
+
   useEffect(() => {
     let rafId: number;
-    const onScroll = () => {
-      rafId = requestAnimationFrame(() => {
-        const scrollY = window.scrollY;
-        const year = minYear + Math.floor(scrollY / SCROLL_PER_YEAR);
-        setCurrentYear(Math.max(minYear, Math.min(year, maxYear)));
-      });
+    let running = true;
+
+    const LERP_SPEED = 0.04; // 0-1, lower = smoother / slower catch-up
+    const MAX_STEP = 1.5;   // cap how many years can change per frame
+    const SNAP_THRESHOLD = 0.3; // snap when close enough
+
+    const tick = () => {
+      if (!running) return;
+
+      // Update target from current scroll position
+      const scrollY = window.scrollY;
+      targetYearRef.current = minYear + scrollY / SCROLL_PER_YEAR;
+
+      // Initialise display on first frame
+      if (displayYearRef.current === 0) {
+        displayYearRef.current = targetYearRef.current;
+      }
+
+      // Lerp toward target, clamped to MAX_STEP per frame
+      const diff = targetYearRef.current - displayYearRef.current;
+      if (Math.abs(diff) < SNAP_THRESHOLD) {
+        displayYearRef.current = targetYearRef.current;
+      } else {
+        const step = diff * LERP_SPEED;
+        const clamped_step = Math.sign(step) * Math.min(Math.abs(step), MAX_STEP);
+        displayYearRef.current += clamped_step;
+      }
+
+      const year = Math.floor(displayYearRef.current);
+      const clamped = Math.max(minYear, Math.min(year, maxYear));
+      setCurrentYear((prev) => (prev !== clamped ? clamped : prev));
+
+      rafId = requestAnimationFrame(tick);
     };
 
-    // Set initial year
-    onScroll();
-
-    window.addEventListener('scroll', onScroll, { passive: true });
+    rafId = requestAnimationFrame(tick);
     return () => {
-      window.removeEventListener('scroll', onScroll);
+      running = false;
       cancelAnimationFrame(rafId);
     };
   }, [minYear]);

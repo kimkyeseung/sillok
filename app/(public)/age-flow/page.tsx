@@ -80,103 +80,66 @@ export default function AgeFlowPage() {
     );
   }, [visiblePersons, selectedFieldTags]);
 
-  // Track newborn/dying with timer-based persistence so animations
-  // aren't cancelled by rapid re-renders during fast scrolling.
-  const prevFilteredIdsRef = useRef<Set<string> | null>(null); // null = first render
-  const prevYearRef = useRef(currentYear);
-  const [stickyNewbornIds, setStickyNewbornIds] = useState<Set<string>>(new Set());
-  const [stickyDyingIds, setStickyDyingIds] = useState<Set<string>>(new Set());
+  // Track newborn/dying with state for re-renders, but gate the
+  // effect on a stable ID key so it doesn't fire every lerp frame.
+  // Skip animation entirely when many cards change at once (fast scroll).
+  const prevFilteredIdsRef = useRef<Set<string> | null>(null);
+  const [newbornIds, setNewbornIds] = useState<Set<string>>(new Set());
+  const [dyingIds, setDyingIds] = useState<Set<string>>(new Set());
   const newbornTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const dyingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const ANIMATION_THRESHOLD = 6; // skip animation if more cards changed
+
+  // Stable key: only changes when the actual set of visible IDs changes
+  const filteredIdKey = useMemo(
+    () => filteredPersons.map((p) => p.id).join(','),
+    [filteredPersons]
+  );
 
   useEffect(() => {
     const prevIds = prevFilteredIdsRef.current;
     const currentIds = new Set(filteredPersons.map((p) => p.id));
-    const prevYear = prevYearRef.current;
 
-    // Skip first render — don't animate all initially visible persons
     if (prevIds !== null) {
-      // Newborns: appeared in this render
-      const freshNewborns: string[] = [];
+      // Count how many cards entered
+      const entered: string[] = [];
       filteredPersons.forEach((p) => {
-        if (!prevIds.has(p.id) && !newbornTimersRef.current.has(p.id)) {
-          freshNewborns.push(p.id);
-        }
+        if (!prevIds.has(p.id)) entered.push(p.id);
       });
 
-      // Dying: still visible but will die within the year-jump range
-      const freshDying: string[] = [];
-      if (prevYear !== currentYear) {
-        const jump = Math.max(1, Math.abs(currentYear - prevYear));
-        filteredPersons.forEach((p) => {
-          if (
-            p.death_year !== null &&
-            p.death_year > currentYear &&
-            p.death_year <= currentYear + jump &&
-            !dyingTimersRef.current.has(p.id)
-          ) {
-            freshDying.push(p.id);
-          }
-        });
-      }
-
-      // Add newborns with auto-clear after animation duration (400ms)
-      if (freshNewborns.length > 0) {
-        setStickyNewbornIds((prev) => {
-          const next = new Set(prev);
-          freshNewborns.forEach((id) => next.add(id));
-          return next;
-        });
-        freshNewborns.forEach((id) => {
-          const timer = setTimeout(() => {
-            setStickyNewbornIds((prev) => {
-              const next = new Set(prev);
-              next.delete(id);
-              return next;
-            });
-            newbornTimersRef.current.delete(id);
-          }, 400);
-          newbornTimersRef.current.set(id, timer);
-        });
-      }
-
-      // Add dying with auto-clear after animation duration (300ms)
-      if (freshDying.length > 0) {
-        setStickyDyingIds((prev) => {
-          const next = new Set(prev);
-          freshDying.forEach((id) => next.add(id));
-          return next;
-        });
-        freshDying.forEach((id) => {
-          const timer = setTimeout(() => {
-            setStickyDyingIds((prev) => {
-              const next = new Set(prev);
-              next.delete(id);
-              return next;
-            });
-            dyingTimersRef.current.delete(id);
-          }, 300);
-          dyingTimersRef.current.set(id, timer);
-        });
+      // Only animate when a small batch enters (slow scroll)
+      if (entered.length > 0 && entered.length <= ANIMATION_THRESHOLD) {
+        const fresh = entered.filter((id) => !newbornTimersRef.current.has(id));
+        if (fresh.length > 0) {
+          setNewbornIds((prev) => {
+            const next = new Set(prev);
+            fresh.forEach((id) => next.add(id));
+            return next;
+          });
+          fresh.forEach((id) => {
+            const timer = setTimeout(() => {
+              setNewbornIds((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+              });
+              newbornTimersRef.current.delete(id);
+            }, 400);
+            newbornTimersRef.current.set(id, timer);
+          });
+        }
       }
     }
 
     prevFilteredIdsRef.current = currentIds;
-    prevYearRef.current = currentYear;
-  }, [filteredPersons, currentYear]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredIdKey]);
 
   // Cleanup timers on unmount
   useEffect(() => {
-    const newbornTimers = newbornTimersRef.current;
-    const dyingTimers = dyingTimersRef.current;
-    return () => {
-      newbornTimers.forEach((t) => clearTimeout(t));
-      dyingTimers.forEach((t) => clearTimeout(t));
-    };
+    const timers = newbornTimersRef.current;
+    return () => { timers.forEach((t) => clearTimeout(t)); };
   }, []);
-
-  const newbornIds = stickyNewbornIds;
-  const dyingIds = stickyDyingIds;
 
   // Find hovered person's slug for hover panel
   const hoveredPerson = useMemo(
@@ -301,7 +264,7 @@ export default function AgeFlowPage() {
                     person={person}
                     currentYear={currentYear}
                     isNewborn={newbornIds.has(person.id)}
-                    isDying={dyingIds.has(person.id)}
+                    isDying={false}
                     isDimmed={
                       hoveredPersonId !== null &&
                       hoveredPersonId !== person.id
@@ -335,9 +298,6 @@ export default function AgeFlowPage() {
         onYearChange={scrollToYear}
       />
 
-      {/* Event marker */}
-      <EventMarker events={events} currentYear={currentYear} />
-
       {/* Density bar */}
       <DensityBar
         densityMap={densityMap}
@@ -352,6 +312,9 @@ export default function AgeFlowPage() {
         personSlug={hoveredPerson?.slug ?? null}
         anchorRect={hoveredCardRect}
       />
+
+      {/* Event toasts — fixed bottom-left */}
+      <EventMarker events={events} currentYear={currentYear} />
     </div>
   );
 }

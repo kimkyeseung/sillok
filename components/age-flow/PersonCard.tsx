@@ -32,11 +32,11 @@ export default function PersonCard({
   const fieldTags = person.tags.filter((t) => t.type === 'FIELD').slice(0, 2);
 
   const commonClasses = `
-    rounded-lg border bg-white overflow-hidden
-    transition-all duration-200 cursor-pointer
+    rounded-lg border bg-white overflow-hidden cursor-pointer
+    transition-[box-shadow,border-color,opacity] duration-200
     ${isNewborn ? 'animate-card-appear' : ''}
     ${isDying ? 'animate-card-disappear' : ''}
-    ${isDimmed ? 'opacity-30' : 'opacity-100'}
+    ${isDimmed ? 'opacity-30' : ''}
     ${isHighlighted ? 'ring-2 ring-brand-400 border-brand-300' : 'border-gray-200'}
     hover:shadow-md
   `;
