@@ -12,6 +12,7 @@ interface PersonCardProps {
   isDying: boolean;
   isDimmed: boolean;
   isHighlighted: boolean;
+  isKing: boolean;
   onHover: (personId: string | null) => void;
   cardRef: (el: HTMLElement | null) => void;
 }
@@ -23,6 +24,7 @@ export default function PersonCard({
   isDying,
   isDimmed,
   isHighlighted,
+  isKing,
   onHover,
   cardRef,
 }: PersonCardProps) {
@@ -32,12 +34,16 @@ export default function PersonCard({
   const fieldTags = person.tags.filter((t) => t.type === 'FIELD').slice(0, 2);
 
   const commonClasses = `
-    rounded-lg border bg-white overflow-hidden cursor-pointer
+    rounded-lg overflow-hidden cursor-pointer
     transition-[box-shadow,border-color,opacity] duration-200
     ${isNewborn ? 'animate-card-appear' : ''}
     ${isDying ? 'animate-card-disappear' : ''}
     ${isDimmed ? 'opacity-30' : ''}
-    ${isHighlighted ? 'ring-2 ring-brand-400 border-brand-300' : 'border-gray-200'}
+    ${isKing
+      ? 'card-king-border bg-amber-50/50 shadow-sm'
+      : isHighlighted
+        ? 'border ring-2 ring-brand-400 border-brand-300 bg-white'
+        : 'border border-gray-200 bg-white'}
     hover:shadow-md
   `;
 
@@ -68,6 +74,11 @@ export default function PersonCard({
               fieldTag={getPrimaryFieldTag(person.tags)}
               size="lg"
             />
+          )}
+          {isKing && (
+            <span className="absolute left-0.5 top-0.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
+              King
+            </span>
           )}
         </div>
 
@@ -113,6 +124,11 @@ export default function PersonCard({
               fieldTag={getPrimaryFieldTag(person.tags)}
               size="lg"
             />
+          )}
+          {isKing && (
+            <span className="absolute left-1 top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm">
+              King
+            </span>
           )}
         </div>
 

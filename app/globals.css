@@ -107,6 +107,36 @@
   pointer-events: none;
 }
 
+/* Age Flow — golden king card border */
+.card-king-border {
+  border: 2px solid #d4a017;
+  position: relative;
+}
+
+.card-king-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    #d4a017 0%,
+    #f5d76e 20%,
+    #fff4b8 40%,
+    #f5d76e 55%,
+    #d4a017 70%,
+    #b8860b 100%
+  );
+  background-size: 200% 200%;
+  animation: gold-shimmer 3s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes gold-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 /* Age Flow — event toast entrance */
 @keyframes toast-in {
   from {

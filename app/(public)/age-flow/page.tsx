@@ -270,6 +270,7 @@ export default function AgeFlowPage() {
                       hoveredPersonId !== person.id
                     }
                     isHighlighted={false}
+                    isKing={currentKing?.id === person.id}
                     onHover={handleHover}
                     cardRef={setCardRef(person.id)}
                   />
