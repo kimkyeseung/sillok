@@ -31,6 +31,7 @@ const UpdateNodeSchema = z.object({
   thumbnail: z.string().url().optional().nullable(),
   metadata: z.record(z.unknown()).optional().nullable(),
   is_published: z.boolean().optional(),
+  person_ids: z.array(z.string().uuid()).optional(),
 });
 
 export async function PUT(
@@ -52,9 +53,11 @@ export async function PUT(
   if (!result.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
+  const { person_ids, ...updateData } = result.data;
+
   const { data: updated, error } = await supabaseAdmin
     .from('nodes')
-    .update(result.data)
+    .update(updateData)
     .eq('slug', params.slug)
     .eq('is_deleted', false)
     .select()
@@ -62,6 +65,22 @@ export async function PUT(
 
   if (error || !updated)
     return apiError('NODE_NOT_FOUND', 'Node not found.', 404);
+
+  // Replace person links if provided
+  if (person_ids !== undefined) {
+    await supabaseAdmin
+      .from('person_node_links')
+      .delete()
+      .eq('node_id', updated.id);
+
+    if (person_ids.length > 0) {
+      const links = person_ids.map((pid) => ({
+        person_id: pid,
+        node_id: updated.id,
+      }));
+      await supabaseAdmin.from('person_node_links').insert(links);
+    }
+  }
 
   return apiSuccess(updated);
 }

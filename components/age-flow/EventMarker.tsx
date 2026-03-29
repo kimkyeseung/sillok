@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { AgeFlowEvent } from './useAgeFlow';
 
@@ -23,17 +23,8 @@ const EVENT_STYLES: Record<EventType, { icon: string; bg: string; border: string
 
 const DEFAULT_STYLE = EVENT_STYLES.politics;
 
-// Show events within ±3 years to survive fast scrolling
 const YEAR_RANGE = 3;
-// Keep toast visible for 4 seconds after leaving range
-const LINGER_MS = 4000;
-// Max toasts shown at once
 const MAX_TOASTS = 5;
-
-interface ToastEvent {
-  event: AgeFlowEvent;
-  phase: 'entering' | 'visible' | 'exiting';
-}
 
 export default function EventMarker({ events, currentYear }: EventMarkerProps) {
   const inRangeEvents = useMemo(
@@ -45,11 +36,30 @@ export default function EventMarker({ events, currentYear }: EventMarkerProps) {
     [events, currentYear]
   );
 
-  const [toasts, setToasts] = useState<Map<string, ToastEvent>>(new Map());
-  const lingerTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const exitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // Toasts persist until manually dismissed via X button
+  const [toasts, setToasts] = useState<Map<string, AgeFlowEvent>>(new Map());
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
-  const removeToast = useCallback((id: string) => {
+  useEffect(() => {
+    const inRangeIds = new Set(inRangeEvents.map((e) => e.id));
+
+    setToasts((prev) => {
+      let changed = false;
+      const next = new Map(prev);
+
+      inRangeEvents.forEach((e) => {
+        if (!next.has(e.id) && !dismissedIds.has(e.id)) {
+          next.set(e.id, e);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [inRangeEvents, dismissedIds]);
+
+  const dismiss = useCallback((id: string) => {
+    setDismissedIds((prev) => new Set(prev).add(id));
     setToasts((prev) => {
       const next = new Map(prev);
       next.delete(id);
@@ -57,131 +67,52 @@ export default function EventMarker({ events, currentYear }: EventMarkerProps) {
     });
   }, []);
 
-  const startExit = useCallback((id: string) => {
-    // Mark as exiting, then remove after animation
-    setToasts((prev) => {
-      const existing = prev.get(id);
-      if (!existing) return prev;
-      const next = new Map(prev);
-      next.set(id, { ...existing, phase: 'exiting' });
-      return next;
-    });
-    const timer = setTimeout(() => {
-      removeToast(id);
-      exitTimersRef.current.delete(id);
-    }, 300); // matches CSS exit animation
-    exitTimersRef.current.set(id, timer);
-  }, [removeToast]);
-
-  useEffect(() => {
-    const inRangeIds = new Set(inRangeEvents.map((e) => e.id));
-
-    setToasts((prev) => {
-      const next = new Map(prev);
-
-      // Add new events as entering, then transition to visible
-      inRangeEvents.forEach((e) => {
-        if (!next.has(e.id)) {
-          next.set(e.id, { event: e, phase: 'entering' });
-          // Transition to visible after enter animation
-          requestAnimationFrame(() => {
-            setToasts((curr) => {
-              const item = curr.get(e.id);
-              if (!item || item.phase !== 'entering') return curr;
-              const updated = new Map(curr);
-              updated.set(e.id, { ...item, phase: 'visible' });
-              return updated;
-            });
-          });
-        }
-
-        // Cancel any pending exit/linger
-        const lingerTimer = lingerTimersRef.current.get(e.id);
-        if (lingerTimer) {
-          clearTimeout(lingerTimer);
-          lingerTimersRef.current.delete(e.id);
-        }
-        const exitTimer = exitTimersRef.current.get(e.id);
-        if (exitTimer) {
-          clearTimeout(exitTimer);
-          exitTimersRef.current.delete(e.id);
-          // Restore to visible if it was exiting
-          const existing = next.get(e.id);
-          if (existing?.phase === 'exiting') {
-            next.set(e.id, { ...existing, phase: 'visible' });
-          }
-        }
-      });
-
-      // Schedule linger → exit for events that left range
-      prev.forEach((toast, id) => {
-        if (
-          !inRangeIds.has(id) &&
-          toast.phase !== 'exiting' &&
-          !lingerTimersRef.current.has(id)
-        ) {
-          const timer = setTimeout(() => {
-            startExit(id);
-            lingerTimersRef.current.delete(id);
-          }, LINGER_MS);
-          lingerTimersRef.current.set(id, timer);
-        }
-      });
-
-      return next;
-    });
-  }, [inRangeEvents, startExit]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    const lTimers = lingerTimersRef.current;
-    const eTimers = exitTimersRef.current;
-    return () => {
-      lTimers.forEach((t) => clearTimeout(t));
-      eTimers.forEach((t) => clearTimeout(t));
-    };
-  }, []);
-
   const toastList = Array.from(toasts.values())
-    .sort(
-      (a, b) =>
-        (a.event.metadata?.start_year ?? 0) - (b.event.metadata?.start_year ?? 0)
-    )
+    .sort((a, b) => (a.metadata?.start_year ?? 0) - (b.metadata?.start_year ?? 0))
     .slice(-MAX_TOASTS);
 
   if (toastList.length === 0) return null;
 
   return (
     <div className="fixed bottom-4 left-3 z-50 flex flex-col gap-2 md:bottom-6 md:left-6">
-      {toastList.map(({ event, phase }) => {
+      {toastList.map((event) => {
         const eventType = (event.metadata?.event_type as EventType) || 'politics';
         const style = EVENT_STYLES[eventType] || DEFAULT_STYLE;
 
         return (
-          <Link
+          <div
             key={event.id}
-            href={`/nodes/${event.slug}`}
             className={`
               flex items-center gap-2.5 rounded-lg border px-3 py-2.5
-              shadow-lg backdrop-blur-sm
-              transition-all duration-300
+              shadow-lg backdrop-blur-sm animate-toast-in
               ${style.bg} ${style.border}
-              ${phase === 'entering' ? 'translate-y-2 opacity-0' : ''}
-              ${phase === 'visible' ? 'translate-y-0 opacity-100' : ''}
-              ${phase === 'exiting' ? '-translate-y-1 opacity-0' : ''}
-              hover:shadow-xl
             `}
           >
-            <span className="shrink-0 text-lg leading-none">{style.icon}</span>
-            <div className="min-w-0">
-              <p className={`text-xs font-semibold leading-tight ${style.text} md:text-sm`}>
-                {event.title}
-              </p>
-              <p className="mt-0.5 text-[10px] text-gray-400">
-                {event.metadata?.start_year}
-              </p>
-            </div>
-          </Link>
+            <Link
+              href={`/nodes/${event.slug}`}
+              className="flex min-w-0 flex-1 items-center gap-2.5 hover:opacity-80"
+            >
+              <span className="shrink-0 text-lg leading-none">{style.icon}</span>
+              <div className="min-w-0">
+                <p className={`text-xs font-semibold leading-tight ${style.text} md:text-sm`}>
+                  {event.title}
+                </p>
+                <p className="mt-0.5 text-[10px] text-gray-400">
+                  {event.metadata?.start_year}
+                  {event.metadata?.title_ko ? ` · ${event.metadata.title_ko}` : ''}
+                </p>
+              </div>
+            </Link>
+            <button
+              onClick={() => dismiss(event.id)}
+              className="shrink-0 rounded p-0.5 text-gray-400 transition-colors hover:bg-gray-200/60 hover:text-gray-600"
+              aria-label="Dismiss"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" />
+              </svg>
+            </button>
+          </div>
         );
       })}
     </div>
