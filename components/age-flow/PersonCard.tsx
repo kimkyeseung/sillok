@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { AgeFlowPerson, AgeFlowTag, getAge, getInitials, getEra } from './useAgeFlow';
+import { AgeFlowPerson, AgeFlowTag, getAge, getInitials } from './useAgeFlow';
+import PersonAvatar, { getPrimaryFieldTag } from '@/components/common/PersonAvatar';
 
 interface PersonCardProps {
   person: AgeFlowPerson;
@@ -14,13 +15,6 @@ interface PersonCardProps {
   cardRef: (el: HTMLDivElement | null) => void;
 }
 
-const ERA_PLACEHOLDER_COLORS: Record<string, string> = {
-  'Ancient':        'from-slate-200 to-slate-100',
-  'Three Kingdoms': 'from-blue-200 to-blue-100',
-  'Goryeo':         'from-emerald-200 to-emerald-100',
-  'Joseon':         'from-amber-200 to-amber-100',
-  'Modern':         'from-gray-200 to-gray-100',
-};
 
 export default function PersonCard({
   person,
@@ -34,7 +28,6 @@ export default function PersonCard({
 }: PersonCardProps) {
   const age = getAge(person.birth_year, currentYear);
   const displayName = person.name_en || person.name_ko;
-  const era = getEra(person.birth_year);
   const eraTag = person.tags.find((t) => t.type === 'ERA');
   const fieldTags = person.tags.filter((t) => t.type === 'FIELD').slice(0, 2);
 
@@ -67,13 +60,11 @@ export default function PersonCard({
             loading="lazy"
           />
         ) : (
-          <div
-            className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${ERA_PLACEHOLDER_COLORS[era] || 'from-gray-200 to-gray-100'}`}
-          >
-            <span className="text-2xl font-bold text-gray-400 md:text-3xl">
-              {getInitials(person.name_ko)}
-            </span>
-          </div>
+          <PersonAvatar
+            name={person.name_ko}
+            fieldTag={getPrimaryFieldTag(person.tags)}
+            size="lg"
+          />
         )}
       </div>
 
