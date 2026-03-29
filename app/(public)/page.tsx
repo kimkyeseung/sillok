@@ -276,8 +276,8 @@ export default async function HomePage() {
         <div className="px-2 text-xs text-gray-400">
           <p>&copy; 2026 Sillok. Korean Historical Figures Archive.</p>
           <div className="mt-1 flex gap-3">
-            <span className="cursor-pointer hover:text-gray-600">Terms of Service</span>
-            <span className="cursor-pointer hover:text-gray-600">Privacy Policy</span>
+            <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
           </div>
         </div>
       </aside>
