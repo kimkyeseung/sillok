@@ -99,22 +99,36 @@ export default function PersonAvatar({
     <div
       className={`flex items-center justify-center ${style.bg} ${sizes.container} ${className}`}
     >
-      <div className="flex flex-col items-center gap-0.5">
-        <span className={`font-bold ${style.text} ${sizes.initial} leading-none`}>
-          {initials}
-        </span>
-        {size === 'lg' && (
-          <svg
-            className={`${style.text} ${sizes.icon} opacity-40`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d={style.icon} />
-          </svg>
-        )}
-      </div>
+      {size === 'sm' ? (
+        /* Small: icon only */
+        <svg
+          className={`${style.text} h-4 w-4`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d={style.icon} />
+        </svg>
+      ) : (
+        /* Medium / Large: initials + icon */
+        <div className="flex flex-col items-center gap-0.5">
+          <span className={`font-bold ${style.text} ${sizes.initial} leading-none`}>
+            {initials}
+          </span>
+          {size === 'lg' && (
+            <svg
+              className={`${style.text} ${sizes.icon} opacity-40`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d={style.icon} />
+            </svg>
+          )}
+        </div>
+      )}
     </div>
   );
 }
