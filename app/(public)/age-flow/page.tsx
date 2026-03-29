@@ -24,6 +24,7 @@ import {
   AgeFlowPerson,
   AgeFlowTag,
 } from '@/components/age-flow/useAgeFlow';
+import { useToast } from '@/components/common/Toast';
 import PersonCard from '@/components/age-flow/PersonCard';
 import YearCounter from '@/components/age-flow/YearCounter';
 import EraFilter from '@/components/age-flow/EraFilter';
@@ -50,6 +51,7 @@ export default function AgeFlowPage() {
     containerRef,
   } = useAgeFlow();
 
+  const { toast } = useToast();
   const [selectedEra, setSelectedEra] = useState<Era | 'All'>('All');
   const [selectedFieldTags, setSelectedFieldTags] = useState<Set<string>>(new Set());
   const [hoveredPersonId, setHoveredPersonId] = useState<string | null>(null);
@@ -114,12 +116,16 @@ export default function AgeFlowPage() {
 
   const handleEraSelect = useCallback(
     (era: Era | 'All') => {
+      if (era !== 'All' && era !== 'Joseon') {
+        toast('Only the Joseon dynasty is available for now');
+        return;
+      }
       setSelectedEra(era);
       if (era !== 'All') {
         scrollToEra(era);
       }
     },
-    [scrollToEra]
+    [scrollToEra, toast]
   );
 
   const handleFieldTagToggle = useCallback((tagId: string) => {
