@@ -80,8 +80,8 @@ const DEFAULT_STYLE: FieldStyle = {
 };
 
 const SIZE_MAP = {
-  sm: { container: 'h-8 w-8', initial: 'text-xs', icon: 'h-3.5 w-3.5' },
-  md: { container: 'h-10 w-10', initial: 'text-sm', icon: 'h-4 w-4' },
+  sm: { container: 'h-full w-full', initial: 'text-xs', icon: 'h-3.5 w-3.5' },
+  md: { container: 'h-full w-full', initial: 'text-sm', icon: 'h-4 w-4' },
   lg: { container: 'h-full w-full', initial: 'text-2xl md:text-3xl', icon: 'h-6 w-6 md:h-8 md:w-8' },
 };
 
