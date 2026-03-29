@@ -24,7 +24,24 @@ export async function GET(
   if (error || !person)
     return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
-  return apiSuccess(person);
+  // relation_count + thread_count (for age-flow hover panel etc.)
+  const [relResult, threadResult] = await Promise.all([
+    supabaseAdmin
+      .from('person_relations')
+      .select('*', { count: 'exact', head: true })
+      .or(`from_person_id.eq.${person.id},to_person_id.eq.${person.id}`),
+    supabaseAdmin
+      .from('threads')
+      .select('*', { count: 'exact', head: true })
+      .eq('person_id', person.id)
+      .eq('is_deleted', false),
+  ]);
+
+  return apiSuccess({
+    ...person,
+    relation_count: relResult.count ?? 0,
+    thread_count: threadResult.count ?? 0,
+  });
 }
 
 // ─── PUT /api/persons/:slug — Update person [ADMIN] ───

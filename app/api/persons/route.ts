@@ -6,12 +6,13 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 // ─── GET /api/persons — Person list (public) ───
 
 const ListQuerySchema = z.object({
-  limit: z.coerce.number().min(1).max(100).default(20),
+  limit: z.coerce.number().min(1).max(1000).default(20),
   cursor: z.string().optional(),
   era: z.string().optional(),
   field: z.string().optional(),
-  sort: z.enum(['name', 'popular', 'recent']).default('recent'),
+  sort: z.enum(['name', 'popular', 'recent', 'birth_year']).default('recent'),
   q: z.string().optional(),
+  include_tags: z.enum(['true', 'false']).optional(),
 });
 
 export async function GET(request: Request) {
@@ -20,17 +21,25 @@ export async function GET(request: Request) {
   if (!parsed.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { limit, cursor, era, field, sort, q } = parsed.data;
+  const { limit, cursor, era, field, sort, q, include_tags } = parsed.data;
 
   let query = supabaseAdmin
     .from('persons')
     .select(
-      `
-      id, slug, name_ko, name_hanja, name_en,
-      birth_year, death_year, summary, thumbnail,
-      is_controversial, is_alive, view_count, follow_count,
-      created_at
-    `
+      include_tags === 'true'
+        ? `
+          id, slug, name_ko, name_hanja, name_en,
+          birth_year, death_year, summary, thumbnail,
+          is_controversial, is_alive, view_count, follow_count,
+          created_at,
+          person_tags ( tag_id, tags ( id, name_en, type ) )
+        `
+        : `
+          id, slug, name_ko, name_hanja, name_en,
+          birth_year, death_year, summary, thumbnail,
+          is_controversial, is_alive, view_count, follow_count,
+          created_at
+        `
     )
     .eq('is_deleted', false)
     .eq('is_published', true);
@@ -83,6 +92,11 @@ export async function GET(request: Request) {
   } else if (sort === 'popular') {
     query = query.order('view_count', { ascending: false });
     if (cursor) query = query.lt('view_count', Number(cursor));
+  } else if (sort === 'birth_year') {
+    query = query
+      .not('birth_year', 'is', null)
+      .order('birth_year', { ascending: true });
+    if (cursor) query = query.gt('birth_year', Number(cursor));
   } else {
     // recent (default)
     query = query.order('created_at', { ascending: false });
@@ -95,14 +109,17 @@ export async function GET(request: Request) {
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  const hasNext = (data?.length ?? 0) > limit;
-  const items = hasNext ? data!.slice(0, limit) : (data ?? []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = (data ?? []) as any[];
+  const hasNext = rows.length > limit;
+  const items = hasNext ? rows.slice(0, limit) : rows;
   const lastItem = items[items.length - 1];
 
   let nextCursor: string | null = null;
   if (hasNext && lastItem) {
     if (sort === 'name') nextCursor = lastItem.name_ko;
     else if (sort === 'popular') nextCursor = String(lastItem.view_count);
+    else if (sort === 'birth_year') nextCursor = String(lastItem.birth_year);
     else nextCursor = lastItem.created_at;
   }
 
