@@ -56,7 +56,7 @@ export default function AgeFlowPage() {
   const [selectedFieldTags, setSelectedFieldTags] = useState<Set<string>>(new Set());
   const [hoveredPersonId, setHoveredPersonId] = useState<string | null>(null);
   const [hoveredCardRect, setHoveredCardRect] = useState<DOMRect | null>(null);
-  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Extract unique FIELD tags from all persons
@@ -141,7 +141,7 @@ export default function AgeFlowPage() {
   }, []);
 
   const setCardRef = useCallback(
-    (personId: string) => (el: HTMLDivElement | null) => {
+    (personId: string) => (el: HTMLElement | null) => {
       if (el) {
         cardRefs.current.set(personId, el);
       } else {

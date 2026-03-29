@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
 import type { AgeFlowPersonDetail } from './useAgeFlow';
 import { formatCount, getAge } from './useAgeFlow';
 
@@ -188,12 +187,6 @@ export default function PersonHoverPanel({
             ))}
           </div>
 
-          <Link
-            href={`/person/${detail.slug}`}
-            className="mt-3 block text-xs font-medium text-brand-600 hover:text-brand-700"
-          >
-            View Profile &rarr;
-          </Link>
         </>
       ) : null}
     </div>

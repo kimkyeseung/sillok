@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { AgeFlowPerson, AgeFlowTag, getAge, getInitials } from './useAgeFlow';
 import PersonAvatar, { getPrimaryFieldTag } from '@/components/common/PersonAvatar';
 
@@ -12,7 +13,7 @@ interface PersonCardProps {
   isDimmed: boolean;
   isHighlighted: boolean;
   onHover: (personId: string | null) => void;
-  cardRef: (el: HTMLDivElement | null) => void;
+  cardRef: (el: HTMLElement | null) => void;
 }
 
 export default function PersonCard({
@@ -41,7 +42,8 @@ export default function PersonCard({
   `;
 
   return (
-    <div
+    <Link
+      href={`/persons/${person.slug}`}
       ref={cardRef}
       data-person-id={person.id}
       onMouseEnter={() => onHover(person.id)}
@@ -136,6 +138,6 @@ export default function PersonCard({
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

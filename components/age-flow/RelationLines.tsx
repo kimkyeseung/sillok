@@ -18,7 +18,7 @@ interface RelationLinesProps {
   hoveredPersonId: string | null;
   hoveredPersonSlug: string | null;
   visiblePersons: AgeFlowPerson[];
-  cardRefs: Map<string, HTMLDivElement>;
+  cardRefs: Map<string, HTMLElement>;
   gridRef: React.RefObject<HTMLDivElement | null>;
 }
 
