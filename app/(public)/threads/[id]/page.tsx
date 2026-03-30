@@ -56,6 +56,51 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US');
 }
 
+function getYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'youtu.be') return u.pathname.slice(1);
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+  } catch { /* ignore */ }
+  return null;
+}
+
+function VideoEmbed({ url }: { url: string }) {
+  const ytId = getYouTubeId(url);
+
+  if (ytId) {
+    return (
+      <div className="mt-4 overflow-hidden rounded-lg">
+        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${ytId}`}
+            title="Video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 h-full w-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for non-YouTube (Naver TV etc.)
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+    >
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      Watch Video
+    </a>
+  );
+}
+
 export default async function ThreadDetailPage({ params }: Props) {
   const thread = await getThread(params.id);
   if (!thread) notFound();
@@ -99,8 +144,12 @@ export default async function ThreadDetailPage({ params }: Props) {
         <div className="p-5">
           {/* Author Info */}
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700">
-              {authorName.charAt(0)}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-sm font-bold text-brand-700">
+              {author?.avatar_url ? (
+                <img src={author.avatar_url as string} alt="" className="h-full w-full object-cover" />
+              ) : (
+                authorName.charAt(0)
+              )}
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-900">{authorName}</p>
@@ -130,20 +179,9 @@ export default async function ThreadDetailPage({ params }: Props) {
             </div>
           )}
 
-          {/* Video Link */}
+          {/* Video Embed */}
           {thread.video_url && (
-            <a
-              href={thread.video_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Watch Video
-            </a>
+            <VideoEmbed url={thread.video_url} />
           )}
 
           {/* Interaction Bar */}
@@ -177,8 +215,12 @@ export default async function ThreadDetailPage({ params }: Props) {
                 style={{ paddingLeft: `${20 + depth * 24}px` }}
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">
-                    {replyName.charAt(0)}
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xs font-bold text-gray-500">
+                    {replyAuthor?.avatar_url ? (
+                      <img src={replyAuthor.avatar_url as string} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      replyName.charAt(0)
+                    )}
                   </div>
                   <span className="text-sm font-medium text-gray-900">
                     {replyName}

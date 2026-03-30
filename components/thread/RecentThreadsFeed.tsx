@@ -6,12 +6,23 @@ import Link from 'next/link';
 interface Thread {
   id: string;
   title: string;
+  video_url: string | null;
   like_count: number;
   reply_count: number;
   created_at: string;
   profiles: { nickname: string; avatar_url: string | null } | null;
   persons: { slug: string; name_en: string } | null;
   thread_images: { url: string; sort_order: number }[];
+}
+
+function getYouTubeThumbnail(url: string): string | null {
+  try {
+    const u = new URL(url);
+    let id: string | null = null;
+    if (u.hostname === 'youtu.be') id = u.pathname.slice(1);
+    else if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v');
+    return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+  } catch { return null; }
 }
 
 function timeAgo(dateStr: string) {
@@ -71,26 +82,43 @@ export default function RecentThreadsFeed() {
               (a, b) => a.sort_order - b.sort_order
             );
             const firstImage = images[0];
+            const videoThumb = !firstImage && thread.video_url
+              ? getYouTubeThumbnail(thread.video_url)
+              : null;
+            const hasMedia = !!firstImage || !!videoThumb;
 
             return (
               <Link
                 key={thread.id}
                 href={`/threads/${thread.id}`}
-                className={`block transition-colors hover:bg-gray-50 ${firstImage ? 'px-4 py-4' : 'flex gap-3 px-4 py-3.5'}`}
+                className={`block transition-colors hover:bg-gray-50 ${hasMedia ? 'px-4 py-4' : 'flex gap-3 px-4 py-3.5'}`}
               >
-                {firstImage && (
-                  <div className="mb-3 overflow-hidden rounded-lg">
+                {hasMedia && (
+                  <div className="relative mb-3 overflow-hidden rounded-lg">
                     <img
-                      src={firstImage.url}
+                      src={firstImage?.url ?? videoThumb!}
                       alt=""
                       className="h-40 w-full object-cover"
                     />
+                    {videoThumb && !firstImage && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white">
+                          <svg className="ml-0.5 h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-                <div className={firstImage ? '' : 'flex gap-3'}>
-                  {!firstImage && (
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600">
-                      {(profile?.nickname ?? '?').charAt(0)}
+                <div className={hasMedia ? '' : 'flex gap-3'}>
+                  {!hasMedia && (
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 text-xs font-bold text-brand-600">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        (profile?.nickname ?? '?').charAt(0)
+                      )}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -100,14 +128,18 @@ export default function RecentThreadsFeed() {
                           {person.name_en}
                         </span>
                       )}
-                      <p className={`font-medium text-gray-900 line-clamp-1 ${firstImage ? 'text-base' : 'text-sm'}`}>
+                      <p className={`font-medium text-gray-900 line-clamp-1 ${hasMedia ? 'text-base' : 'text-sm'}`}>
                         {thread.title}
                       </p>
                     </div>
                     <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
-                      {firstImage && (
-                        <div className="mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[9px] font-bold text-brand-600">
-                          {(profile?.nickname ?? '?').charAt(0)}
+                      {hasMedia && (
+                        <div className="mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 text-[9px] font-bold text-brand-600">
+                          {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            (profile?.nickname ?? '?').charAt(0)
+                          )}
                         </div>
                       )}
                       <span>{profile?.nickname ?? 'Anonymous'}</span>

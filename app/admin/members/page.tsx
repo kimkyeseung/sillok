@@ -119,8 +119,12 @@ export default function AdminMembersPage() {
                 <tr key={m.id} className="transition-colors hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">
-                        {(m.nickname ?? 'U').charAt(0).toUpperCase()}
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xs font-bold text-gray-500">
+                        {m.avatar_url ? (
+                          <img src={m.avatar_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          (m.nickname ?? 'U').charAt(0).toUpperCase()
+                        )}
                       </div>
                       <span className="font-medium text-gray-900">
                         {m.nickname ?? m.id.slice(0, 8)}

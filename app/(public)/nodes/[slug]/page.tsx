@@ -208,8 +208,12 @@ export default async function NodeDetailPage({ params }: Props) {
             return (
               <div key={comment.id as string} className="px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500">
-                    {commentName.charAt(0)}
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xs font-bold text-gray-500">
+                    {author?.avatar_url ? (
+                      <img src={author.avatar_url as string} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      commentName.charAt(0)
+                    )}
                   </div>
                   <span className="text-sm font-medium text-gray-900">
                     {commentName}
