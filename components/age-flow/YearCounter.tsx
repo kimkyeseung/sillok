@@ -119,8 +119,8 @@ export default function YearCounter({
         </div>
       </div>
 
-      {/* ── Desktop: top-right panel ── */}
-      <div className="fixed right-6 top-24 z-40 hidden md:block">
+      {/* ── Desktop: top-left panel ── */}
+      <div className="fixed left-6 top-24 z-40 hidden md:block">
         <div className="w-44 rounded-lg bg-gray-900/90 px-3 py-3 text-center backdrop-blur-md">
           {/* Year */}
           {isEditing ? (
