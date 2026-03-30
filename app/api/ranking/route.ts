@@ -21,9 +21,9 @@ export async function GET(request: Request) {
   }
 
   const { tag, cursor, limit } = parsed.data;
-  const sevenDaysAgo = new Date(
-    Date.now() - 7 * 24 * 60 * 60 * 1000
-  ).toISOString();
+  const now = Date.now();
+  const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const GRAVITY = 1.5; // decay exponent — higher = faster decay
 
   // 1) 태그 필터가 있으면 해당 태그의 person_id 목록 조회
   let personIds: string[] | null = null;
@@ -51,12 +51,12 @@ export async function GET(request: Request) {
     }
   }
 
-  // 2) 최근 7일 스레드 조회 (person_id, reply_count, like_count)
+  // 2) 최근 30일 스레드 조회 (gravity decay에서 자연 감소하므로 넉넉히)
   let threadsQuery = supabaseAdmin
     .from('threads')
-    .select('id, person_id, reply_count, like_count')
+    .select('id, person_id, reply_count, like_count, created_at')
     .eq('is_deleted', false)
-    .gte('created_at', sevenDaysAgo);
+    .gte('created_at', thirtyDaysAgo);
 
   if (personIds) {
     threadsQuery = threadsQuery.in('person_id', personIds);
@@ -64,30 +64,14 @@ export async function GET(request: Request) {
 
   const { data: threads } = await threadsQuery;
 
-  // 3) 최근 7일 스레드 좋아요 추가 집계 (스레드 자체 like_count는 전체 기간이므로, 7일 내 좋아요만 별도 집계)
-  // threads 테이블의 like_count는 누적값이라 7일 필터 불가 → likes 테이블에서 직접 집계
-  const threadIds = (threads ?? []).map((t) => t.id);
-
-  let recentLikesByThread: Record<string, number> = {};
-
-  if (threadIds.length > 0) {
-    const { data: likes } = await supabaseAdmin
-      .from('likes')
-      .select('target_id')
-      .eq('target_type', 'thread')
-      .in('target_id', threadIds)
-      .gte('created_at', sevenDaysAgo);
-
-    for (const like of likes ?? []) {
-      recentLikesByThread[like.target_id] =
-        (recentLikesByThread[like.target_id] || 0) + 1;
-    }
-  }
-
-  // 4) 인물별 점수 계산
+  // 3) Gravity decay scoring
+  // Formula per thread: (1 + reply_count * 0.5 + like_count) / (age_days + 2) ^ GRAVITY
+  // - Newer threads score much higher than older ones
+  // - No hard cutoff; old threads naturally approach 0
+  // - like_count on thread is cumulative, which is fine for decay
   const scoreMap = new Map<
     string,
-    { score: number; threadCount: number; hotCount: number; likeCount: number }
+    { score: number; threadCount: number; hotCount: number; likeCount: number; latestAt: string }
   >();
 
   for (const thread of threads ?? []) {
@@ -98,23 +82,28 @@ export async function GET(request: Request) {
         threadCount: 0,
         hotCount: 0,
         likeCount: 0,
+        latestAt: '',
       });
     }
     const entry = scoreMap.get(pid)!;
 
-    const isHot = (thread.reply_count ?? 0) >= 10;
-    const threadScore = isHot ? 10 : 3;
-    const likeScore = recentLikesByThread[thread.id] || 0;
+    const ageDays = (now - new Date(thread.created_at).getTime()) / (24 * 60 * 60 * 1000);
+    const replyCount = thread.reply_count ?? 0;
+    const likeCount = thread.like_count ?? 0;
+    const points = 1 + replyCount * 0.5 + likeCount;
+    const decay = Math.pow(ageDays + 2, GRAVITY);
+    const threadScore = points / decay;
 
-    entry.score += threadScore + likeScore;
+    entry.score += threadScore;
     entry.threadCount += 1;
-    if (isHot) entry.hotCount += 1;
-    entry.likeCount += likeScore;
+    if (replyCount >= 10) entry.hotCount += 1;
+    entry.likeCount += likeCount;
+    if (thread.created_at > entry.latestAt) entry.latestAt = thread.created_at;
   }
 
-  // 0점 인물 제외, 점수 내림차순 정렬
+  // Filter out near-zero scores, sort descending
   const ranked = Array.from(scoreMap.entries())
-    .filter(([, v]) => v.score > 0)
+    .filter(([, v]) => v.score > 0.01)
     .sort((a, b) => b[1].score - a[1].score);
 
   const hasNext = ranked.length > cursor + limit;

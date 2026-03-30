@@ -40,31 +40,17 @@ export default async function PersonsPage({
 
   const { data: persons } = await query;
 
-  // ── Trending Figures: SSR fetch (no cache) ──
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // ── Trending Figures: gravity decay scoring ──
+  // score = Σ (1 + replies*0.5 + likes) / (age_days + 2)^1.5
+  const now = Date.now();
+  const GRAVITY = 1.5;
+  const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: recentThreads } = await supabaseAdmin
     .from('threads')
-    .select('id, person_id, reply_count, like_count')
+    .select('id, person_id, reply_count, like_count, created_at')
     .eq('is_deleted', false)
-    .gte('created_at', sevenDaysAgo);
-
-  const threadIds = (recentThreads ?? []).map((t) => t.id);
-  let recentLikesByThread: Record<string, number> = {};
-
-  if (threadIds.length > 0) {
-    const { data: likes } = await supabaseAdmin
-      .from('likes')
-      .select('target_id')
-      .eq('target_type', 'thread')
-      .in('target_id', threadIds)
-      .gte('created_at', sevenDaysAgo);
-
-    for (const like of likes ?? []) {
-      recentLikesByThread[like.target_id] =
-        (recentLikesByThread[like.target_id] || 0) + 1;
-    }
-  }
+    .gte('created_at', thirtyDaysAgo);
 
   const scoreMap = new Map<
     string,
@@ -77,17 +63,19 @@ export default async function PersonsPage({
       scoreMap.set(pid, { score: 0, threadCount: 0, hotCount: 0, likeCount: 0 });
     }
     const entry = scoreMap.get(pid)!;
-    const isHot = (thread.reply_count ?? 0) >= 10;
-    const threadScore = isHot ? 10 : 3;
-    const likeScore = recentLikesByThread[thread.id] || 0;
-    entry.score += threadScore + likeScore;
+    const ageDays = (now - new Date(thread.created_at).getTime()) / (24 * 60 * 60 * 1000);
+    const replyCount = thread.reply_count ?? 0;
+    const likeCount = thread.like_count ?? 0;
+    const points = 1 + replyCount * 0.5 + likeCount;
+    const decay = Math.pow(ageDays + 2, GRAVITY);
+    entry.score += points / decay;
     entry.threadCount += 1;
-    if (isHot) entry.hotCount += 1;
-    entry.likeCount += likeScore;
+    if (replyCount >= 10) entry.hotCount += 1;
+    entry.likeCount += likeCount;
   }
 
   const ranked = Array.from(scoreMap.entries())
-    .filter(([, v]) => v.score > 0)
+    .filter(([, v]) => v.score > 0.01)
     .sort((a, b) => b[1].score - a[1].score)
     .slice(0, 10);
 

@@ -1298,11 +1298,14 @@ GET    /threads/feed              전체 스레드 무한스크롤 피드
   정렬: created_at DESC (최신순 고정)
   -- 논란 인물 스레드 포함, 필터 없음 (Reddit 방식)
 
-GET    /ranking                   핫한 인물 랭킹
+GET    /ranking                   핫한 인물 랭킹 (Gravity Decay)
   Query:
-    period: daily | weekly | monthly  (기본: weekly)
-    limit: 기본 10, 최대 50
-  반환: RankingItem[] { rank, person, thread_count, comment_count, change }
+    tag: ERA 태그 이름 (선택)
+    limit: 기본 100, 최대 100
+    cursor: offset (기본 0)
+  반환: { persons: RankedPerson[], has_next }
+  -- 공식: Σ (1 + replies*0.5 + likes) / (age_days + 2)^1.5
+  -- 최근 30일 스레드 대상, gravity decay로 자연 감소
 
 POST   /persons/:id/vote-today    오늘의 인물 추천 투표 [USER]
 GET    /persons/today-votes       오늘 투표 현황 (상위 10명)
@@ -1647,11 +1650,20 @@ if (person.is_controversial) {
 | SLOT 2 | 운영진 직접 지정 | `운영진 선정` |
 | SLOT 3 | 유저 추천 투표 1위 | `유저 추천` |
 
-**핫한 인물 랭킹 기준**
-- 집계 지표: 해당 기간 내 스레드 수 + 댓글 수
-- 탭별 기간: 일간(오늘 00:00~), 주간(최근 7일), 월간(최근 30일)
+**핫한 인물 랭킹 기준 — Gravity Decay Algorithm**
+- 공식: `person_score = Σ (1 + reply_count × 0.5 + like_count) / (age_days + 2)^1.5`
+  - `age_days`: 스레드 작성 후 경과 일수
+  - `1.5`: gravity exponent (높을수록 빠르게 감소)
+  - 분자: 스레드 기본 1점 + 댓글당 0.5점 + 좋아요 1점
+- 쿼리 범위: 최근 30일 (gravity decay로 자연 감소하므로 하드컷 불필요)
+- 7일 후 점수: day 0 대비 ~10% 수준으로 자연 감소
+- 30일 후 점수: 0.01 미만 → 자동 필터링
+- 동작 특성:
+  - 오늘 스레드 1개 > 7일 전 스레드 3개
+  - 인기 오래된 스레드도 최소 점수 유지 (급락 없음)
+  - 새 스레드 + 댓글/좋아요 → 즉시 랭킹 반영
 - 순위 변동: ▲(상승) / ▼(하락) / –(유지) 표시
-- 5위까지만 표시 (간결함 우선)
+- 10위까지 표시
 
 ### 7-8. 광고 슬롯 배치 가이드 (Google AdSense)
 

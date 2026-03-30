@@ -69,7 +69,7 @@ export default function RankingSection({ initialPersons }: RankingSectionProps) 
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Trending Figures</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          Most discussed figures in the past 7 days
+          Most discussed figures — recent activity weighted
         </p>
       </div>
 
