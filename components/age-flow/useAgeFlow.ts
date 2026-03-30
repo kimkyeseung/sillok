@@ -100,7 +100,7 @@ export const SCROLL_PER_YEAR = 100;
 export const MAX_YEAR = 2026;
 
 // Age-flow covers late Goryeo → Joseon → Korean Empire
-export const JOSEON_START = 1320; // Late Goryeo, before key transitional figures
+export const JOSEON_START = 1336; // Late Goryeo — Taejo born 1335, visible from age 1
 export const JOSEON_END = 1910;   // End of Joseon/Korean Empire
 
 // Kings with reign periods (for YearCounter display)

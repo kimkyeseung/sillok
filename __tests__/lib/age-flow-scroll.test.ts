@@ -16,12 +16,12 @@ function yearToScroll(year: number): number {
 }
 
 describe('scroll ↔ year conversion', () => {
-  it('should start at JOSEON_START (1320) when scrollY is 0', () => {
-    expect(scrollToYear(0)).toBe(1320);
+  it('should start at JOSEON_START (1336) when scrollY is 0', () => {
+    expect(scrollToYear(0)).toBe(1336);
   });
 
-  it('should return 1321 after scrolling 100px', () => {
-    expect(scrollToYear(100)).toBe(1321);
+  it('should return 1337 after scrolling 100px', () => {
+    expect(scrollToYear(100)).toBe(1337);
   });
 
   it('should clamp to maxYear', () => {
@@ -40,7 +40,7 @@ describe('scroll ↔ year conversion', () => {
 
   it('total scroll height should cover full period', () => {
     const totalHeight = (maxYear - minYear) * SCROLL_PER_YEAR;
-    expect(totalHeight).toBe(59000); // (1910 - 1320) * 100
+    expect(totalHeight).toBe(57400); // (1910 - 1336) * 100
   });
 });
 
@@ -196,11 +196,11 @@ describe('person range filter (isInRange)', () => {
   });
 
   it('should include person born before range who dies exactly at START', () => {
-    expect(isInRange({ birth_year: 1200, death_year: 1320, is_alive: false }, START, END)).toBe(true);
+    expect(isInRange({ birth_year: 1200, death_year: START, is_alive: false }, START, END)).toBe(true);
   });
 
   it('should NOT include person who dies before range starts', () => {
-    expect(isInRange({ birth_year: 1200, death_year: 1319, is_alive: false }, START, END)).toBe(false);
+    expect(isInRange({ birth_year: 1200, death_year: START - 1, is_alive: false }, START, END)).toBe(false);
   });
 
   it('should include person born during range', () => {
