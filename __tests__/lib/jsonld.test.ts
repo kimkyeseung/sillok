@@ -48,9 +48,9 @@ describe('eventJsonLd', () => {
     });
 
     expect(result.performer).toHaveLength(2);
-    expect(result.performer[0].name).toBe('Yi Sun-sin');
-    expect(result.performer[0]['@type']).toBe('Person');
-    expect(result.performer[0].url).toContain('/persons/yi-sun-sin');
+    expect(result.performer![0].name).toBe('Yi Sun-sin');
+    expect(result.performer![0]['@type']).toBe('Person');
+    expect(result.performer![0].url).toContain('/persons/yi-sun-sin');
   });
 
   it('should omit performer when persons is empty', () => {
