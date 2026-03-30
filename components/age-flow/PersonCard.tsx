@@ -37,10 +37,9 @@ export default function PersonCard({
 
   const commonClasses = `
     rounded-lg overflow-hidden cursor-pointer
-    transition-[box-shadow,border-color,opacity] duration-200
+    transition-[box-shadow,border-color] duration-200
     ${isNewborn ? 'animate-card-appear' : ''}
     ${isDying ? 'animate-card-disappear' : ''}
-    ${isDimmed ? 'opacity-30' : ''}
     ${isKing
       ? 'card-king-border bg-amber-50/50 shadow-sm'
       : isAtWar
@@ -56,9 +55,17 @@ export default function PersonCard({
       href={`/persons/${person.slug}`}
       ref={cardRef}
       data-person-id={person.id}
+      className="relative"
       onMouseEnter={() => onHover(person.id)}
       onMouseLeave={() => onHover(null)}
     >
+      {/* Dim overlay — sits above everything including ::before border glow */}
+      <div
+        className={`pointer-events-none absolute -inset-[3px] z-20 rounded-lg bg-white/60 transition-opacity duration-200 ${
+          isDimmed ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
       {/* ── Mobile: horizontal card ── */}
       <div className={`flex md:hidden ${commonClasses}`}>
         {/* Thumbnail — left side */}
