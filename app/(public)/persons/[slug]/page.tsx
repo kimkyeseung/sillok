@@ -399,7 +399,7 @@ export default async function PersonDetailPage({ params }: Props) {
               Threads
             </h2>
             <Link
-              href={`/threads/new?person_id=${person.id}`}
+              href={`/threads/new?person_id=${person.id}&person_name=${encodeURIComponent(person.name_en || person.name_ko)}`}
               className="btn-ghost text-xs"
             >
               <svg
