@@ -283,15 +283,15 @@ export function useAgeFlow(): UseAgeFlowReturn {
   // ── 3. Scroll → year (smoothed with lerp) ──
   // Instead of jumping directly to the scroll-derived year, interpolate
   // toward it so trackpad inertia doesn't skip years too abruptly.
-  const displayYearRef = useRef(0); // fractional, smoothed
-  const targetYearRef = useRef(0);  // raw from scroll position
+  const displayYearRef = useRef(-1); // -1 = not initialised
+  const targetYearRef = useRef(0);   // raw from scroll position
 
   useEffect(() => {
     let rafId: number;
     let running = true;
 
     const LERP_SPEED = 0.04; // 0-1, lower = smoother / slower catch-up
-    const MAX_STEP = 1.5;   // cap how many years can change per frame
+    const MAX_STEP = 1.5;    // cap how many years can change per frame
     const SNAP_THRESHOLD = 0.3; // snap when close enough
 
     const tick = () => {
@@ -301,8 +301,8 @@ export function useAgeFlow(): UseAgeFlowReturn {
       const scrollY = window.scrollY;
       targetYearRef.current = minYear + scrollY / SCROLL_PER_YEAR;
 
-      // Initialise display on first frame
-      if (displayYearRef.current === 0) {
+      // On first frame (mount or back-nav), snap immediately — no lerp
+      if (displayYearRef.current < 0) {
         displayYearRef.current = targetYearRef.current;
       }
 
@@ -363,9 +363,9 @@ export function useAgeFlow(): UseAgeFlowReturn {
     }
   }, [currentYear]);
 
-  // ── 6. Initial ?year= parameter ──
+  // ── 6. Initial ?year= parameter (after data loads) ──
   useEffect(() => {
-    if (initialScrollDone.current) return;
+    if (initialScrollDone.current || isLoading) return;
 
     const params = new URLSearchParams(window.location.search);
     const yearParam = params.get('year');
@@ -373,11 +373,13 @@ export function useAgeFlow(): UseAgeFlowReturn {
       const targetYear = parseInt(yearParam, 10);
       if (!isNaN(targetYear)) {
         const targetScroll = (targetYear - minYear) * SCROLL_PER_YEAR;
+        // Reset lerp so it snaps to the restored position
+        displayYearRef.current = -1;
         window.scrollTo(0, Math.max(0, targetScroll));
       }
     }
     initialScrollDone.current = true;
-  }, [minYear]);
+  }, [minYear, isLoading]);
 
   // ── 7. Keyboard navigation ──
   useEffect(() => {
