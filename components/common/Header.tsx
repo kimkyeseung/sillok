@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { fetcher } from '@/lib/fetcher';
+import { createSupabaseBrowser } from '@/lib/supabase-browser';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
@@ -21,6 +22,20 @@ export default function Header() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [profile, setProfile] = useState<{ nickname: string | null; avatar_url: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!user) { setProfile(null); return; }
+    const supabase = createSupabaseBrowser();
+    supabase
+      .from('profiles')
+      .select('nickname, avatar_url')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setProfile(data);
+      });
+  }, [user]);
   const { data: unreadData } = useSWR<{ count: number }>(
     user ? '/api/notifications/unread-count' : null,
     fetcher,
@@ -118,9 +133,19 @@ export default function Header() {
               </button>
               <Link
                 href="/profile"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700"
+                className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-xs font-bold text-brand-700"
               >
-                {user.email?.charAt(0).toUpperCase() ?? 'U'}
+                {profile?.avatar_url ? (
+                  <Image
+                    src={profile.avatar_url}
+                    alt="Profile"
+                    fill
+                    sizes="32px"
+                    className="object-cover"
+                  />
+                ) : (
+                  user.email?.charAt(0).toUpperCase() ?? 'U'
+                )}
               </Link>
             </>
           ) : (

@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 import { createSupabaseBrowser } from '@/lib/supabase-browser';
+import ImageCropModal from '@/components/admin/ImageCropModal';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -15,6 +16,7 @@ export default function ProfileClient() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -49,7 +51,7 @@ export default function ProfileClient() {
     );
   }
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -62,9 +64,14 @@ export default function ProfileClient() {
       return;
     }
 
+    setCropSrc(URL.createObjectURL(file));
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleCropComplete = async (croppedFile: File) => {
+    setCropSrc(null);
     setUploading(true);
     try {
-      // 1. Get presigned URL
       const { upload_url, path } = await apiFetch<{
         upload_url: string;
         path: string;
@@ -72,20 +79,18 @@ export default function ProfileClient() {
         method: 'POST',
         body: JSON.stringify({
           bucket: 'avatars',
-          content_type: file.type,
-          file_size: file.size,
+          content_type: croppedFile.type,
+          file_size: croppedFile.size,
         }),
       });
 
-      // 2. Upload file
       const uploadRes = await fetch(upload_url, {
         method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
+        headers: { 'Content-Type': croppedFile.type },
+        body: croppedFile,
       });
       if (!uploadRes.ok) throw new Error('Upload failed');
 
-      // 3. Build public URL & update profile
       const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
       const supabase = createSupabaseBrowser();
       const { error } = await supabase
@@ -101,7 +106,6 @@ export default function ProfileClient() {
       toast('Failed to upload', 'error');
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
     }
   };
 
@@ -179,7 +183,7 @@ export default function ProfileClient() {
             ref={fileRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            onChange={handleAvatarUpload}
+            onChange={handleFileSelect}
             className="hidden"
           />
           <div>
@@ -219,6 +223,15 @@ export default function ProfileClient() {
           {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
+
+      {cropSrc && (
+        <ImageCropModal
+          open={!!cropSrc}
+          imageSrc={cropSrc}
+          onClose={() => setCropSrc(null)}
+          onComplete={handleCropComplete}
+        />
+      )}
     </div>
   );
 }
