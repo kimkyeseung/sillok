@@ -13,6 +13,7 @@ interface PersonCardProps {
   isDimmed: boolean;
   isHighlighted: boolean;
   isKing: boolean;
+  isAtWar: boolean;
   onHover: (personId: string | null) => void;
   cardRef: (el: HTMLElement | null) => void;
 }
@@ -25,6 +26,7 @@ export default function PersonCard({
   isDimmed,
   isHighlighted,
   isKing,
+  isAtWar,
   onHover,
   cardRef,
 }: PersonCardProps) {
@@ -41,9 +43,11 @@ export default function PersonCard({
     ${isDimmed ? 'opacity-30' : ''}
     ${isKing
       ? 'card-king-border bg-amber-50/50 shadow-sm'
-      : isHighlighted
-        ? 'border ring-2 ring-brand-400 border-brand-300 bg-white'
-        : 'border border-gray-200 bg-white'}
+      : isAtWar
+        ? 'card-war-border bg-red-50/40 shadow-sm'
+        : isHighlighted
+          ? 'border ring-2 ring-brand-400 border-brand-300 bg-white'
+          : 'border border-gray-200 bg-white'}
     hover:shadow-md
   `;
 
@@ -78,6 +82,13 @@ export default function PersonCard({
           {isKing && (
             <span className="absolute left-0.5 top-0.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
               King
+            </span>
+          )}
+          {isAtWar && (
+            <span className="absolute left-0.5 top-0.5 flex items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white shadow-sm"
+              style={isKing ? { top: '1.25rem' } : undefined}
+            >
+              ⚔ War
             </span>
           )}
         </div>
@@ -129,6 +140,13 @@ export default function PersonCard({
           {isKing && (
             <span className="absolute left-1 top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm">
               King
+            </span>
+          )}
+          {isAtWar && (
+            <span className="absolute left-1 flex items-center gap-0.5 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm"
+              style={{ top: isKing ? '1.75rem' : '0.25rem' }}
+            >
+              ⚔ War
             </span>
           )}
         </div>

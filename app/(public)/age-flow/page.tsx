@@ -26,7 +26,7 @@ import {
 } from '@/components/age-flow/useAgeFlow';
 import { useToast } from '@/components/common/Toast';
 import PersonCard from '@/components/age-flow/PersonCard';
-import YearCounter from '@/components/age-flow/YearCounter';
+import TimelinePanel from '@/components/age-flow/TimelinePanel';
 import EraFilter from '@/components/age-flow/EraFilter';
 import PersonHoverPanel from '@/components/age-flow/PersonHoverPanel';
 import RelationLines from '@/components/age-flow/RelationLines';
@@ -41,6 +41,8 @@ export default function AgeFlowPage() {
     allPersons,
     events,
     currentKing,
+    currentWars,
+    warParticipantSlugs,
     isLoading,
     totalHeight,
     minYear,
@@ -53,7 +55,7 @@ export default function AgeFlowPage() {
 
   const { toast } = useToast();
   const [selectedEra, setSelectedEra] = useState<Era | 'All'>('All');
-  const [selectedFieldTags, setSelectedFieldTags] = useState<Set<string>>(new Set());
+  const [hiddenFieldTags, setHiddenFieldTags] = useState<Set<string>>(new Set());
   const [hoveredPersonId, setHoveredPersonId] = useState<string | null>(null);
   const [hoveredCardRect, setHoveredCardRect] = useState<DOMRect | null>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -72,13 +74,15 @@ export default function AgeFlowPage() {
     );
   }, [allPersons]);
 
-  // Filter visible persons by selected field tags
+  // Filter out persons whose field tags are all hidden
   const filteredPersons = useMemo(() => {
-    if (selectedFieldTags.size === 0) return visiblePersons;
-    return visiblePersons.filter((p) =>
-      p.tags.some((t) => t.type === 'FIELD' && selectedFieldTags.has(t.id))
-    );
-  }, [visiblePersons, selectedFieldTags]);
+    if (hiddenFieldTags.size === 0) return visiblePersons;
+    return visiblePersons.filter((p) => {
+      const personFieldTags = p.tags.filter((t) => t.type === 'FIELD');
+      if (personFieldTags.length === 0) return true;
+      return personFieldTags.some((t) => !hiddenFieldTags.has(t.id));
+    });
+  }, [visiblePersons, hiddenFieldTags]);
 
   // Track newborn/dying with state for re-renders, but gate the
   // effect on a stable ID key so it doesn't fire every lerp frame.
@@ -174,7 +178,7 @@ export default function AgeFlowPage() {
   );
 
   const handleFieldTagToggle = useCallback((tagId: string) => {
-    setSelectedFieldTags((prev) => {
+    setHiddenFieldTags((prev) => {
       const next = new Set(prev);
       if (next.has(tagId)) {
         next.delete(tagId);
@@ -227,9 +231,6 @@ export default function AgeFlowPage() {
         currentEra={currentEra}
         selectedEra={selectedEra}
         onEraSelect={handleEraSelect}
-        fieldTags={fieldTags}
-        selectedFieldTags={selectedFieldTags}
-        onFieldTagToggle={handleFieldTagToggle}
       />
 
       {/* Scroll container — total height for all years */}
@@ -248,7 +249,7 @@ export default function AgeFlowPage() {
             {filteredPersons.length === 0 ? (
               <div className="flex min-h-[50vh] items-center justify-center">
                 <p className="text-sm text-gray-400">
-                  {selectedFieldTags.size > 0
+                  {hiddenFieldTags.size > 0
                     ? 'No matching figures in this year'
                     : `No figures alive in ${currentYear}`}
                 </p>
@@ -271,6 +272,7 @@ export default function AgeFlowPage() {
                     }
                     isHighlighted={false}
                     isKing={currentKing?.id === person.id}
+                    isAtWar={warParticipantSlugs.has(person.slug)}
                     onHover={handleHover}
                     cardRef={setCardRef(person.id)}
                   />
@@ -290,12 +292,16 @@ export default function AgeFlowPage() {
         </div>
       </div>
 
-      {/* Year counter HUD */}
-      <YearCounter
+      {/* Timeline panel (sidebar HUD) */}
+      <TimelinePanel
         currentYear={currentYear}
         currentEra={currentEra}
         aliveCount={aliveCount}
         currentKing={currentKing}
+        currentWars={currentWars}
+        fieldTags={fieldTags}
+        hiddenFieldTags={hiddenFieldTags}
+        onFieldTagToggle={handleFieldTagToggle}
         onYearChange={scrollToYear}
       />
 

@@ -191,7 +191,7 @@ export default function EventMarker({ events, currentYear }: EventMarkerProps) {
       </div>
 
       {/* ── Mobile: FAB + expandable panel ── */}
-      {/* bottom-14 clears the YearCounter mobile bar (bottom-0, ~48px) */}
+      {/* bottom-14 clears the TimelinePanel mobile bar (bottom-0, ~48px) */}
       <div className="fixed bottom-14 left-3 right-3 z-50 md:hidden">
         {/* Expanded panel */}
         {mobileOpen && (

@@ -83,6 +83,8 @@ export interface UseAgeFlowReturn {
   allPersons: AgeFlowPerson[];
   events: AgeFlowEvent[];
   currentKing: AgeFlowPerson | null;
+  currentWars: War[];
+  warParticipantSlugs: Set<string>;
   isLoading: boolean;
   totalHeight: number;
   minYear: number;
@@ -166,6 +168,117 @@ export const RELATION_STYLES: Record<string, { color: string; dashed: boolean }>
   FOUNDED:    { color: '#eab308', dashed: false },
   AFFILIATED: { color: '#64748b', dashed: true },
 };
+
+// ── Wars ──
+
+export interface War {
+  name: string;
+  startYear: number;
+  endYear: number;
+  participants: string[]; // person slugs
+}
+
+const WARS: War[] = [
+  {
+    name: 'Red Turban Invasions',
+    startYear: 1359,
+    endYear: 1362,
+    participants: [
+      'gongmin-wang-wang-jeon',
+      'choe-yeong',
+      'taejo-yi-seong-gye',
+      'jeong-se-un',
+      'an-u',
+      'yi-bang-sil',
+    ],
+  },
+  {
+    name: 'Imjin War',
+    startYear: 1592,
+    endYear: 1598,
+    participants: [
+      'seonjo-yi-yeon',
+      'yi-sun-sin',
+      'gwon-yul',
+      'ryu-seong-ryong',
+      'gwak-jae-u',
+      'yi-eok-gi',
+      'won-gyun',
+      'shin-rip',
+      'kim-si-min',
+      'go-gyeong-myeong',
+      'jeong-gi-ryong',
+      'jo-heon',
+      'yeong-gyu',
+      'kim-cheon-il',
+      'gwak-jun',
+      'jeong-in-hong',
+    ],
+  },
+  {
+    name: 'First Manchu Invasion',
+    startYear: 1627,
+    endYear: 1627,
+    participants: [
+      'injo-yi-jong',
+      'jeong-bong-su',
+      'yi-gwi',
+      'jang-man',
+    ],
+  },
+  {
+    name: 'Second Manchu Invasion',
+    startYear: 1636,
+    endYear: 1637,
+    participants: [
+      'injo-yi-jong',
+      'choe-myeong-gil',
+      'kim-sang-heon',
+      'yun-jip',
+      'oh-dal-je',
+      'im-gyeong-eop',
+    ],
+  },
+  {
+    name: 'Shinmiyangyo',
+    startYear: 1871,
+    endYear: 1871,
+    participants: [
+      'gojong-yi-myeong-bok',
+      'heungseon-daewongun',
+      'eo-jae-yeon',
+    ],
+  },
+  {
+    name: 'Donghak Revolution',
+    startYear: 1894,
+    endYear: 1895,
+    participants: [
+      'gojong-yi-myeong-bok',
+      'jeon-bong-jun',
+      'kim-gae-nam',
+      'son-hwa-jung',
+    ],
+  },
+  {
+    name: 'Russo-Japanese War',
+    startYear: 1904,
+    endYear: 1905,
+    participants: [
+      'gojong-yi-myeong-bok',
+    ],
+  },
+];
+
+export function getActiveWars(year: number): War[] {
+  return WARS.filter((w) => year >= w.startYear && year <= w.endYear);
+}
+
+export function getWarParticipantSlugs(wars: War[]): Set<string> {
+  const slugs = new Set<string>();
+  wars.forEach((w) => w.participants.forEach((s) => slugs.add(s)));
+  return slugs;
+}
 
 export const ERA_BG_COLORS: Record<Era, string> = {
   'Ancient':        'bg-slate-100/50',
@@ -368,6 +481,13 @@ export function useAgeFlow(): UseAgeFlowReturn {
     return allPersons.find((p) => p.slug === reign.slug) ?? null;
   }, [allPersons, currentYear]);
 
+  // ── 4c. Current wars ──
+  const currentWars = useMemo(() => getActiveWars(currentYear), [currentYear]);
+  const warParticipantSlugs = useMemo(
+    () => getWarParticipantSlugs(currentWars),
+    [currentWars]
+  );
+
   // ── 5. URL ?year= sync (throttled to avoid Safari SecurityError) ──
   const lastReplaceRef = useRef(0);
   useEffect(() => {
@@ -465,6 +585,8 @@ export function useAgeFlow(): UseAgeFlowReturn {
     allPersons,
     events,
     currentKing,
+    currentWars,
+    warParticipantSlugs,
     isLoading,
     totalHeight,
     minYear,
