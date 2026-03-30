@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SCROLL_PER_YEAR, JOSEON_START, JOSEON_END } from '@/components/age-flow/useAgeFlow';
+import { SCROLL_PER_YEAR, JOSEON_START, JOSEON_END, type AgeFlowPerson } from '@/components/age-flow/useAgeFlow';
 
 // Test the scroll ↔ year conversion logic used in useAgeFlow
 
@@ -16,12 +16,12 @@ function yearToScroll(year: number): number {
 }
 
 describe('scroll ↔ year conversion', () => {
-  it('should start at JOSEON_START (1335) when scrollY is 0', () => {
-    expect(scrollToYear(0)).toBe(1335);
+  it('should start at JOSEON_START (1320) when scrollY is 0', () => {
+    expect(scrollToYear(0)).toBe(1320);
   });
 
-  it('should return 1336 after scrolling 100px', () => {
-    expect(scrollToYear(100)).toBe(1336);
+  it('should return 1321 after scrolling 100px', () => {
+    expect(scrollToYear(100)).toBe(1321);
   });
 
   it('should clamp to maxYear', () => {
@@ -38,9 +38,9 @@ describe('scroll ↔ year conversion', () => {
     expect(scrollToYear(scroll)).toBe(year);
   });
 
-  it('total scroll height should cover full Joseon period', () => {
+  it('total scroll height should cover full period', () => {
     const totalHeight = (maxYear - minYear) * SCROLL_PER_YEAR;
-    expect(totalHeight).toBe(57500); // (1910 - 1335) * 100
+    expect(totalHeight).toBe(59000); // (1910 - 1320) * 100
   });
 });
 
@@ -113,5 +113,126 @@ describe('newborn animation threshold', () => {
   it('threshold boundary: 7 should not animate', () => {
     const entered = Array.from({ length: 7 }, (_, i) => String(i));
     expect(entered.length <= ANIMATION_THRESHOLD).toBe(false);
+  });
+});
+
+// ── Person visibility logic (mirrors useAgeFlow visiblePersons filter) ──
+
+function isVisible(person: Pick<AgeFlowPerson, 'birth_year' | 'death_year' | 'is_alive'>, currentYear: number): boolean {
+  return (
+    person.birth_year <= currentYear &&
+    (person.is_alive || (person.death_year !== null && person.death_year >= currentYear))
+  );
+}
+
+function isInRange(person: Pick<AgeFlowPerson, 'birth_year' | 'death_year' | 'is_alive'>, start: number, end: number): boolean {
+  const deathYear = person.is_alive ? end : (person.death_year ?? person.birth_year);
+  return person.birth_year <= end && deathYear >= start;
+}
+
+describe('person visibility (isVisible)', () => {
+  it('should show person born before current year', () => {
+    expect(isVisible({ birth_year: 1335, death_year: 1408, is_alive: false }, 1392)).toBe(true);
+  });
+
+  it('should show person born in current year', () => {
+    expect(isVisible({ birth_year: 1400, death_year: 1450, is_alive: false }, 1400)).toBe(true);
+  });
+
+  it('should NOT show person born after current year', () => {
+    expect(isVisible({ birth_year: 1400, death_year: 1450, is_alive: false }, 1399)).toBe(false);
+  });
+
+  it('should show person in their death year', () => {
+    // This was the bug: death_year > currentYear excluded death year
+    expect(isVisible({ birth_year: 1294, death_year: 1339, is_alive: false }, 1339)).toBe(true);
+  });
+
+  it('should NOT show person after death year', () => {
+    expect(isVisible({ birth_year: 1294, death_year: 1339, is_alive: false }, 1340)).toBe(false);
+  });
+
+  it('should show alive person regardless of year', () => {
+    expect(isVisible({ birth_year: 1970, death_year: null, is_alive: true }, 2026)).toBe(true);
+  });
+
+  it('should NOT show person with null death_year and not alive', () => {
+    expect(isVisible({ birth_year: 1400, death_year: null, is_alive: false }, 1450)).toBe(false);
+  });
+
+  // Edge cases: kings at reign boundaries
+  it('Chungsuk (1294-1339) should be visible at 1339', () => {
+    expect(isVisible({ birth_year: 1294, death_year: 1339, is_alive: false }, 1339)).toBe(true);
+  });
+
+  it('Chungsuk (1294-1339) should NOT be visible at 1340', () => {
+    expect(isVisible({ birth_year: 1294, death_year: 1339, is_alive: false }, 1340)).toBe(false);
+  });
+
+  it('Chunghye (1315-1344) should be visible at 1320', () => {
+    expect(isVisible({ birth_year: 1315, death_year: 1344, is_alive: false }, 1320)).toBe(true);
+  });
+
+  it('Chunghye (1315-1344) should be visible at 1343', () => {
+    expect(isVisible({ birth_year: 1315, death_year: 1344, is_alive: false }, 1343)).toBe(true);
+  });
+
+  it('Chunghye (1315-1344) should be visible at 1344 (death year)', () => {
+    expect(isVisible({ birth_year: 1315, death_year: 1344, is_alive: false }, 1344)).toBe(true);
+  });
+
+  it('Taejo (1335-1408) should be visible at 1335 (birth year)', () => {
+    expect(isVisible({ birth_year: 1335, death_year: 1408, is_alive: false }, 1335)).toBe(true);
+  });
+});
+
+describe('person range filter (isInRange)', () => {
+  const START = JOSEON_START;
+  const END = JOSEON_END;
+
+  it('should include person born before range but alive during range', () => {
+    // Chungsuk: born 1294, died 1339 — alive at 1320 (START)
+    expect(isInRange({ birth_year: 1294, death_year: 1339, is_alive: false }, START, END)).toBe(true);
+  });
+
+  it('should include person born before range who dies exactly at START', () => {
+    expect(isInRange({ birth_year: 1200, death_year: 1320, is_alive: false }, START, END)).toBe(true);
+  });
+
+  it('should NOT include person who dies before range starts', () => {
+    expect(isInRange({ birth_year: 1200, death_year: 1319, is_alive: false }, START, END)).toBe(false);
+  });
+
+  it('should include person born during range', () => {
+    expect(isInRange({ birth_year: 1397, death_year: 1450, is_alive: false }, START, END)).toBe(true);
+  });
+
+  it('should include person born at END', () => {
+    expect(isInRange({ birth_year: 1910, death_year: 1970, is_alive: false }, START, END)).toBe(true);
+  });
+
+  it('should NOT include person born after range', () => {
+    expect(isInRange({ birth_year: 1911, death_year: 1970, is_alive: false }, START, END)).toBe(false);
+  });
+
+  it('should include alive person born before range', () => {
+    expect(isInRange({ birth_year: 1200, death_year: null, is_alive: true }, START, END)).toBe(true);
+  });
+
+  it('should include person whose lifespan exactly matches range', () => {
+    expect(isInRange({ birth_year: 1320, death_year: 1910, is_alive: false }, START, END)).toBe(true);
+  });
+
+  // The old bug: birth_year >= START filter excluded persons born before START
+  it('Chunghye (1315) should be in range even though born before 1320', () => {
+    expect(isInRange({ birth_year: 1315, death_year: 1344, is_alive: false }, START, END)).toBe(true);
+  });
+
+  it('Chungsuk (1294) should be in range even though born before 1320', () => {
+    expect(isInRange({ birth_year: 1294, death_year: 1339, is_alive: false }, START, END)).toBe(true);
+  });
+
+  it('Jumong (-58) should NOT be in range (dies long before)', () => {
+    expect(isInRange({ birth_year: -58, death_year: -19, is_alive: false }, START, END)).toBe(false);
   });
 });

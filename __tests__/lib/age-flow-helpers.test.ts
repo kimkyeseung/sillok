@@ -95,8 +95,8 @@ describe('constants', () => {
     expect(SCROLL_PER_YEAR).toBe(100);
   });
 
-  it('JOSEON_START should be 1335', () => {
-    expect(JOSEON_START).toBe(1335);
+  it('JOSEON_START should be 1320', () => {
+    expect(JOSEON_START).toBe(1320);
   });
 
   it('JOSEON_END should be 1910', () => {

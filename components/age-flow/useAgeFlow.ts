@@ -99,12 +99,25 @@ export interface UseAgeFlowReturn {
 export const SCROLL_PER_YEAR = 100;
 export const MAX_YEAR = 2026;
 
-// Age-flow is currently limited to Joseon dynasty
-export const JOSEON_START = 1335; // Taejo's birth year
+// Age-flow covers late Goryeo → Joseon → Korean Empire
+export const JOSEON_START = 1320; // Late Goryeo, before key transitional figures
 export const JOSEON_END = 1910;   // End of Joseon/Korean Empire
 
-// Joseon kings with reign periods (for YearCounter display)
+// Kings with reign periods (for YearCounter display)
+// Includes late Goryeo kings for smooth transition
 const JOSEON_KINGS: Array<{ slug: string; reignStart: number; reignEnd: number }> = [
+  // Late Goryeo
+  { slug: 'chungsuk-wang-wang-man',    reignStart: 1313, reignEnd: 1330 },
+  { slug: 'chung-hye-wang-wang-jeong', reignStart: 1330, reignEnd: 1332 },
+  { slug: 'chungsuk-wang-wang-man',    reignStart: 1332, reignEnd: 1339 }, // 충숙왕 복위
+  { slug: 'chung-hye-wang-wang-jeong', reignStart: 1339, reignEnd: 1344 }, // 충혜왕 복위
+  { slug: 'chungmok-wang-wang-heun',   reignStart: 1344, reignEnd: 1348 },
+  { slug: 'chungjeong-wang-wang-jeo',  reignStart: 1349, reignEnd: 1351 },
+  { slug: 'gongmin-wang-wang-jeon',    reignStart: 1351, reignEnd: 1374 },
+  { slug: 'u-wang-wang-u',            reignStart: 1374, reignEnd: 1388 },
+  { slug: 'chang-wang-wang-chang',     reignStart: 1388, reignEnd: 1389 },
+  { slug: 'gongyang-wang-wang-yo',     reignStart: 1389, reignEnd: 1392 },
+  // Joseon
   { slug: 'taejo-yi-seong-gye',    reignStart: 1392, reignEnd: 1398 },
   { slug: 'jeongjong-yi-bang-gwa',  reignStart: 1399, reignEnd: 1400 },
   { slug: 'taejong-yi-bang-won',    reignStart: 1400, reignEnd: 1418 },
@@ -253,8 +266,11 @@ export function useAgeFlow(): UseAgeFlowReturn {
           const transformed = (items as Record<string, unknown>[])
             .map(transformPerson)
             .filter((p): p is AgeFlowPerson => p !== null)
-            // Limit to Joseon era range
-            .filter((p) => p.birth_year >= JOSEON_START && p.birth_year <= JOSEON_END);
+            // Include persons alive during the age-flow range
+            .filter((p) => {
+              const deathYear = p.is_alive ? JOSEON_END : (p.death_year ?? p.birth_year);
+              return p.birth_year <= JOSEON_END && deathYear >= JOSEON_START;
+            });
           setAllPersons(transformed);
         }
 
@@ -336,7 +352,7 @@ export function useAgeFlow(): UseAgeFlowReturn {
       allPersons.filter(
         (p) =>
           p.birth_year <= currentYear &&
-          (p.is_alive || (p.death_year !== null && p.death_year > currentYear))
+          (p.is_alive || (p.death_year !== null && p.death_year >= currentYear))
       ),
     [allPersons, currentYear]
   );
