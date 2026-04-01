@@ -14,8 +14,13 @@ describe('eventJsonLd', () => {
     expect(result['@type']).toBe('Event');
     expect(result.name).toBe('Imjin War');
     expect(result.startDate).toBe('1592');
+    expect(result.endDate).toBe('1592');
     expect(result.url).toContain('/nodes/imjin-war');
     expect(result.description).toBe('Japan invades Korea.');
+    expect(result.eventStatus).toBe('https://schema.org/EventScheduled');
+    expect(result.image).toContain('og-default.png');
+    expect(result.location.address['@type']).toBe('PostalAddress');
+    expect(result.offers['@type']).toBe('Offer');
   });
 
   it('should include alternateName when title_ko is provided', () => {

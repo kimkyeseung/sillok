@@ -70,6 +70,7 @@ export function eventJsonLd(event: {
   description?: string | null;
   thumbnail?: string | null;
   start_year?: number;
+  end_year?: number | null;
   slug: string;
   persons?: Array<{ name_en: string; slug: string }>;
 }) {
@@ -79,12 +80,25 @@ export function eventJsonLd(event: {
     name: event.title,
     ...(event.title_ko && { alternateName: event.title_ko }),
     ...(event.description && { description: event.description.slice(0, 300) }),
-    ...(event.thumbnail && { image: event.thumbnail }),
+    image: event.thumbnail || `${BASE_URL}/og-default.png`,
     ...(event.start_year && { startDate: String(event.start_year) }),
+    endDate: String(event.end_year ?? event.start_year ?? ''),
     url: `${BASE_URL}/nodes/${event.slug}`,
+    eventStatus: 'https://schema.org/EventScheduled',
     location: {
       '@type': 'Place',
       name: 'Korean Peninsula',
+      address: {
+        '@type': 'PostalAddress',
+        addressCountry: 'KR',
+      },
+    },
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      url: `${BASE_URL}/nodes/${event.slug}`,
     },
     ...(event.persons && event.persons.length > 0 && {
       performer: event.persons.map((p) => ({

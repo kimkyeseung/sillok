@@ -79,6 +79,7 @@ export default async function NodeDetailPage({ params }: Props) {
   const isEvent = node.node_type === 'EVENT';
   const titleKo = node.metadata?.title_ko as string | undefined;
   const startYear = node.metadata?.start_year as number | undefined;
+  const endYear = node.metadata?.end_year as number | undefined;
 
   const { data: comments } = await supabaseAdmin
     .from('node_comments')
@@ -119,6 +120,7 @@ export default async function NodeDetailPage({ params }: Props) {
                 description: node.description,
                 thumbnail: node.thumbnail,
                 start_year: startYear,
+                end_year: endYear,
                 slug: node.slug,
                 persons: linkedPersons
                   .filter((p) => p.name_en)
