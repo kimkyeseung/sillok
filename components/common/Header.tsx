@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/persons', label: 'Figures' },
   { href: '/age-flow', label: 'Age Flow' },
+  { href: '/artifacts', label: 'Artifacts' },
   { href: '/articles', label: 'Articles' },
 ];
 
@@ -112,9 +113,6 @@ export default function Header() {
             <div className="h-8 w-20 animate-pulse rounded-lg bg-gray-100" />
           ) : user ? (
             <>
-              <Link href="/collections" className="btn-ghost">
-                Collections
-              </Link>
               <Link
                 href="/notifications"
                 className="relative flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
@@ -238,13 +236,6 @@ export default function Header() {
               <div className="h-10 animate-pulse rounded-lg bg-gray-100" />
             ) : user ? (
               <div className="space-y-1">
-                <Link
-                  href="/collections"
-                  onClick={() => setMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                >
-                  Collections
-                </Link>
                 <Link
                   href="/notifications"
                   onClick={() => setMenuOpen(false)}
