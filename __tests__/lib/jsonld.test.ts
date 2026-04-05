@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { eventJsonLd, personJsonLd } from '@/lib/jsonld';
 
 describe('eventJsonLd', () => {
-  it('should generate valid Event schema', () => {
+  it('should generate valid Article schema for historical events', () => {
     const result = eventJsonLd({
       title: 'Imjin War',
       slug: 'imjin-war',
@@ -11,16 +11,24 @@ describe('eventJsonLd', () => {
     });
 
     expect(result['@context']).toBe('https://schema.org');
-    expect(result['@type']).toBe('Event');
-    expect(result.name).toBe('Imjin War');
-    expect(result.startDate).toBe('1592');
-    expect(result.endDate).toBe('1592');
+    expect(result['@type']).toBe('Article');
+    expect(result.headline).toBe('Imjin War');
+    expect(result.temporalCoverage).toBe('1592');
     expect(result.url).toContain('/nodes/imjin-war');
     expect(result.description).toBe('Japan invades Korea.');
-    expect(result.eventStatus).toBe('https://schema.org/EventScheduled');
     expect(result.image).toContain('og-default.png');
-    expect(result.location.address['@type']).toBe('PostalAddress');
-    expect(result.offers['@type']).toBe('Offer');
+    expect(result.publisher.name).toBe('Sillok');
+  });
+
+  it('should show year range when end_year differs', () => {
+    const result = eventJsonLd({
+      title: 'Imjin War',
+      slug: 'imjin-war',
+      start_year: 1592,
+      end_year: 1598,
+    });
+
+    expect(result.temporalCoverage).toBe('1592–1598');
   });
 
   it('should include alternateName when title_ko is provided', () => {
@@ -42,7 +50,7 @@ describe('eventJsonLd', () => {
     expect(result).not.toHaveProperty('alternateName');
   });
 
-  it('should include performers when persons are provided', () => {
+  it('should include about when persons are provided', () => {
     const result = eventJsonLd({
       title: 'Imjin War',
       slug: 'imjin-war',
@@ -52,20 +60,20 @@ describe('eventJsonLd', () => {
       ],
     });
 
-    expect(result.performer).toHaveLength(2);
-    expect(result.performer![0].name).toBe('Yi Sun-sin');
-    expect(result.performer![0]['@type']).toBe('Person');
-    expect(result.performer![0].url).toContain('/persons/yi-sun-sin');
+    expect(result.about).toHaveLength(2);
+    expect(result.about![0].name).toBe('Yi Sun-sin');
+    expect(result.about![0]['@type']).toBe('Person');
+    expect(result.about![0].url).toContain('/persons/yi-sun-sin');
   });
 
-  it('should omit performer when persons is empty', () => {
+  it('should omit about when persons is empty', () => {
     const result = eventJsonLd({
       title: 'Test',
       slug: 'test',
       persons: [],
     });
 
-    expect(result).not.toHaveProperty('performer');
+    expect(result).not.toHaveProperty('about');
   });
 
   it('should truncate description to 300 chars', () => {

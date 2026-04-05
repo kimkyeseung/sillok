@@ -90,3 +90,12 @@ db/schema.sql           전체 DB 스키마 (27 테이블)
 | 관계 양방향 1건 저장 | OR 쿼리로 양방향 조회 |
 | age-flow 전체 메모리 로드 | ~1,000명 OK. 2,000명 이상 시 구간 로드 전환 (SCALABILITY NOTE 참조) |
 | PersonAvatar 태그별 스타일 | FIELD 태그별 배경색·아이콘 분기 (`components/common/PersonAvatar.tsx`) |
+
+---
+
+## Skill 자동 매핑
+
+| 키워드 | 스킬 |
+|--------|------|
+| 스레드 작성, 스레드 써줘, write thread | `/write-thread` 스킬 사용 |
+| 아티클 작성, 아티클 써줘, write article | `/write-article` 스킬 사용 |

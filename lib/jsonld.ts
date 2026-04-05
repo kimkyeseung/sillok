@@ -74,34 +74,28 @@ export function eventJsonLd(event: {
   slug: string;
   persons?: Array<{ name_en: string; slug: string }>;
 }) {
+  const yearRange = event.start_year
+    ? event.end_year && event.end_year !== event.start_year
+      ? `${event.start_year}–${event.end_year}`
+      : String(event.start_year)
+    : undefined;
+
   return {
     '@context': 'https://schema.org',
-    '@type': 'Event',
-    name: event.title,
+    '@type': 'Article',
+    headline: event.title,
     ...(event.title_ko && { alternateName: event.title_ko }),
     ...(event.description && { description: event.description.slice(0, 300) }),
     image: event.thumbnail || `${BASE_URL}/og-default.png`,
-    ...(event.start_year && { startDate: String(event.start_year) }),
-    endDate: String(event.end_year ?? event.start_year ?? ''),
+    ...(yearRange && { temporalCoverage: yearRange }),
     url: `${BASE_URL}/nodes/${event.slug}`,
-    eventStatus: 'https://schema.org/EventScheduled',
-    location: {
-      '@type': 'Place',
-      name: 'Korean Peninsula',
-      address: {
-        '@type': 'PostalAddress',
-        addressCountry: 'KR',
-      },
-    },
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'USD',
-      availability: 'https://schema.org/InStock',
-      url: `${BASE_URL}/nodes/${event.slug}`,
+    publisher: {
+      '@type': 'Organization',
+      name: 'Sillok',
+      url: BASE_URL,
     },
     ...(event.persons && event.persons.length > 0 && {
-      performer: event.persons.map((p) => ({
+      about: event.persons.map((p) => ({
         '@type': 'Person',
         name: p.name_en,
         url: `${BASE_URL}/persons/${p.slug}`,
