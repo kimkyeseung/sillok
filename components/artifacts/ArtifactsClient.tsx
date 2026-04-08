@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ArtifactItem } from '@/app/(public)/artifacts/page';
 
 /* ── Category config ── */
@@ -121,10 +122,12 @@ export default function ArtifactsClient({ artifacts }: { artifacts: ArtifactItem
               {/* Thumbnail */}
               {artifact.thumbnail ? (
                 <div className="relative h-40 w-full overflow-hidden bg-gray-100">
-                  <img
+                  <Image
                     src={artifact.thumbnail}
                     alt={artifact.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />

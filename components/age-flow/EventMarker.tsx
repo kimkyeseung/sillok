@@ -184,7 +184,8 @@ export default function EventMarker({ events, currentYear }: EventMarkerProps) {
   return (
     <>
       {/* ── Desktop: always-visible toasts ── */}
-      <div className="fixed bottom-6 left-6 z-50 hidden max-w-[320px] flex-col gap-2 md:flex">
+      {/* bottom-[244px] = ArtifactTimeline (h-44 cards 176px + h-8 dial 32px + 36px buffer) */}
+      <div className="fixed bottom-[244px] left-6 z-50 hidden max-w-[320px] flex-col gap-2 md:flex">
         {toastList.map((event) => (
           <EventToastCard key={event.id} event={event} onDismiss={dismiss} />
         ))}

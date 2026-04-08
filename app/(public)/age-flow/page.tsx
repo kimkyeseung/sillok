@@ -32,6 +32,7 @@ import PersonHoverPanel from '@/components/age-flow/PersonHoverPanel';
 import RelationLines from '@/components/age-flow/RelationLines';
 import EventMarker from '@/components/age-flow/EventMarker';
 import DensityBar from '@/components/age-flow/DensityBar';
+import ArtifactTimeline from '@/components/age-flow/ArtifactTimeline';
 
 export default function AgeFlowPage() {
   const {
@@ -40,12 +41,14 @@ export default function AgeFlowPage() {
     visiblePersons,
     allPersons,
     events,
+    artifacts,
     currentKing,
     currentWars,
     warParticipantSlugs,
     isLoading,
     totalHeight,
     minYear,
+    maxYear,
     aliveCount,
     densityMap,
     scrollToYear,
@@ -245,7 +248,8 @@ export default function AgeFlowPage() {
           className={`sticky top-[96px] min-h-[calc(100vh-96px)] transition-colors duration-1000 ${ERA_BG_COLORS[currentEra]}`}
         >
           {/* Card grid */}
-          <div className="mx-auto max-w-5xl px-4 pb-8 pt-6">
+          {/* pb-60 (240px) clears ArtifactTimeline (h-44 cards 176px + h-8 dial 32px + 32px buffer). md only — mobile uses TimelinePanel bar */}
+          <div className="mx-auto max-w-5xl px-4 pb-24 pt-6 md:pb-60">
             {filteredPersons.length === 0 ? (
               <div className="flex min-h-[50vh] items-center justify-center">
                 <p className="text-sm text-gray-400">
@@ -322,6 +326,15 @@ export default function AgeFlowPage() {
 
       {/* Event toasts — fixed bottom-left */}
       <EventMarker events={events} currentYear={currentYear} />
+
+      {/* Artifact timeline — radio tuner at bottom */}
+      <ArtifactTimeline
+        artifacts={artifacts}
+        currentYear={currentYear}
+        minYear={minYear}
+        maxYear={maxYear}
+        onYearClick={scrollToYear}
+      />
     </div>
   );
 }

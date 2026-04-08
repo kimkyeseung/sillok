@@ -76,12 +76,28 @@ export interface AgeFlowEvent {
 
 export type Era = 'Ancient' | 'Three Kingdoms' | 'Goryeo' | 'Joseon' | 'Modern';
 
+export interface AgeFlowArtifact {
+  id: string;
+  slug: string;
+  title: string;
+  thumbnail: string | null;
+  metadata: {
+    designation?: string;
+    designation_ko?: string;
+    created_year?: number;
+    created_period?: string;
+    category?: string;
+    material?: string;
+  } | null;
+}
+
 export interface UseAgeFlowReturn {
   currentYear: number;
   currentEra: Era;
   visiblePersons: AgeFlowPerson[];
   allPersons: AgeFlowPerson[];
   events: AgeFlowEvent[];
+  artifacts: AgeFlowArtifact[];
   currentKing: AgeFlowPerson | null;
   currentWars: War[];
   warParticipantSlugs: Set<string>;
@@ -357,6 +373,7 @@ function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
 export function useAgeFlow(): UseAgeFlowReturn {
   const [allPersons, setAllPersons] = useState<AgeFlowPerson[]>([]);
   const [events, setEvents] = useState<AgeFlowEvent[]>([]);
+  const [artifacts, setArtifacts] = useState<AgeFlowArtifact[]>([]);
   const [currentYear, setCurrentYear] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -366,13 +383,15 @@ export function useAgeFlow(): UseAgeFlowReturn {
   useEffect(() => {
     async function load() {
       try {
-        const [personsRes, eventsRes] = await Promise.all([
+        const [personsRes, eventsRes, artifactsRes] = await Promise.all([
           fetch('/api/persons?sort=birth_year&limit=1000&include_tags=true'),
           fetch('/api/nodes?type=EVENT&limit=100'),
+          fetch('/api/nodes?type=ARTIFACT&limit=100'),
         ]);
 
         const personsJson = await personsRes.json();
         const eventsJson = await eventsRes.json();
+        const artifactsJson = await artifactsRes.json();
 
         if (personsJson.success) {
           const items = personsJson.data.items ?? personsJson.data ?? [];
@@ -390,6 +409,15 @@ export function useAgeFlow(): UseAgeFlowReturn {
         if (eventsJson.success) {
           const items = eventsJson.data.items ?? eventsJson.data ?? [];
           setEvents(items as AgeFlowEvent[]);
+        }
+
+        if (artifactsJson.success) {
+          const items = artifactsJson.data.items ?? artifactsJson.data ?? [];
+          setArtifacts(
+            (items as AgeFlowArtifact[]).filter(
+              (a) => a.metadata?.created_year != null
+            )
+          );
         }
       } catch (err) {
         console.error('Failed to load age-flow data:', err);
@@ -584,6 +612,7 @@ export function useAgeFlow(): UseAgeFlowReturn {
     visiblePersons,
     allPersons,
     events,
+    artifacts,
     currentKing,
     currentWars,
     warParticipantSlugs,
