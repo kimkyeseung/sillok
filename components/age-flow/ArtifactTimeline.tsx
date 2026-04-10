@@ -243,11 +243,11 @@ export default function ArtifactTimeline({
               <Link
                 key={artifact.id}
                 href={`/nodes/${artifact.slug}`}
-                className="absolute bottom-0 transition-opacity duration-500 ease-out"
+                className="absolute bottom-0 transition-all duration-[400ms] ease-out"
                 style={{
-                  left: x,
+                  left: 0,
                   opacity: isHovered ? 1 : isCenter ? 0.95 : Math.max(0.5, 1 - dist * 0.03),
-                  transform: 'translateX(-50%)',
+                  transform: `translateX(${x}px) translateX(-50%)`,
                   zIndex: isHovered ? 20 : isCenter ? 10 : 1,
                 }}
                 onMouseEnter={() => setHoveredArtifact(artifact.id)}
@@ -274,10 +274,10 @@ export default function ArtifactTimeline({
           return (
             <div
               key={`cluster-${cluster.centerYear}`}
-              className="absolute bottom-0"
+              className="absolute bottom-0 transition-transform duration-[400ms] ease-out"
               style={{
-                left: x,
-                transform: 'translateX(-50%)',
+                left: 0,
+                transform: `translateX(${x}px) translateX(-50%)`,
                 zIndex: isExpanded ? 30 : isCenter ? 10 : 1,
               }}
             >

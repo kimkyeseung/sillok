@@ -5,6 +5,8 @@ import type { Metadata } from 'next';
 import { NodeActions, CommentActions, CommentFormWrapper } from '@/components/thread/NodeInteractions';
 import { eventJsonLd } from '@/lib/jsonld';
 
+export const revalidate = 0;
+
 interface Props {
   params: { slug: string };
 }
