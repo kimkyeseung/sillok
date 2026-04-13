@@ -1,0 +1,438 @@
+{
+  "description": "Foreign figures with significant connections to Joseon Korea",
+  "persons": [
+    {
+      "slug": "toyotomi-hideyoshi",
+      "name_ko": "도요토미 히데요시",
+      "name_hanja": "豊臣秀吉",
+      "name_en": "Toyotomi Hideyoshi",
+      "birth_year": 1537,
+      "birth_date": "1537-03-17",
+      "death_year": 1598,
+      "death_date": "1598-09-18",
+      "birth_place": "Owari Province, Japan",
+      "summary": "Japanese warlord who unified Japan and launched two devastating invasions of Korea (Imjin War, 1592–1598). His campaigns reshaped East Asian geopolitics and left deep scars on Joseon society.",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "general",
+        "politician"
+      ]
+    },
+    {
+      "slug": "hendrik-hamel",
+      "name_ko": "헨드릭 하멜",
+      "name_hanja": null,
+      "name_en": "Hendrik Hamel",
+      "birth_year": 1630,
+      "birth_date": "1630-08-20",
+      "death_year": 1692,
+      "death_date": "1692-02-12",
+      "birth_place": "Gorinchem, Dutch Republic",
+      "summary": "Dutch sailor shipwrecked on Jeju Island in 1653. Spent 13 years in Joseon before escaping to Japan. His journal, 'Hamel's Journal,' became the first Western account of Korea.",
+      "is_controversial": false,
+      "tags": [
+        "joseon"
+      ]
+    },
+    {
+      "slug": "konishi-yukinaga",
+      "name_ko": "고니시 유키나가",
+      "name_hanja": "小西行長",
+      "name_en": "Konishi Yukinaga",
+      "birth_year": 1555,
+      "birth_date": null,
+      "death_year": 1600,
+      "death_date": "1600-11-06",
+      "birth_place": "Sakai, Japan",
+      "summary": "Japanese Christian daimyo who led the first division of Hideyoshi's invasion force in 1592. Captured Busan and Seoul within weeks. Later executed after the Battle of Sekigahara.",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "general"
+      ]
+    },
+    {
+      "slug": "kato-kiyomasa",
+      "name_ko": "가토 기요마사",
+      "name_hanja": "加藤清正",
+      "name_en": "Kato Kiyomasa",
+      "birth_year": 1562,
+      "birth_date": "1562-07-25",
+      "death_year": 1611,
+      "death_date": "1611-08-02",
+      "birth_place": "Owari Province, Japan",
+      "summary": "Japanese general who led the second division during the Imjin War. Pushed deep into the northern provinces, reaching Manchuria. Known for brutal campaigns in Hamgyeong Province.",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "general"
+      ]
+    },
+    {
+      "slug": "nurhaci",
+      "name_ko": "누르하치",
+      "name_hanja": "努爾哈赤",
+      "name_en": "Nurhaci",
+      "birth_year": 1559,
+      "birth_date": "1559-02-21",
+      "death_year": 1626,
+      "death_date": "1626-09-30",
+      "birth_place": "Hetuala, Manchuria",
+      "summary": "Founder of the Later Jin dynasty (predecessor of the Qing). United the Jurchen tribes and defeated a joint Joseon-Ming force at the Battle of Sarhu (1619), shifting the balance of power in East Asia.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "king",
+        "general"
+      ]
+    },
+    {
+      "slug": "hong-taiji",
+      "name_ko": "홍타이지",
+      "name_hanja": "皇太極",
+      "name_en": "Hong Taiji",
+      "birth_year": 1592,
+      "birth_date": "1592-11-28",
+      "death_year": 1643,
+      "death_date": "1643-09-21",
+      "birth_place": "Hetuala, Manchuria",
+      "summary": "Qing emperor who invaded Joseon twice — the Jeongmyo (1627) and Byeongja (1636) Invasions. Forced King Injo to surrender at Namhansanseong and accept Qing suzerainty.",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "king"
+      ]
+    },
+    {
+      "slug": "dorgon",
+      "name_ko": "도르곤",
+      "name_hanja": "多爾袞",
+      "name_en": "Dorgon",
+      "birth_year": 1612,
+      "birth_date": "1612-11-17",
+      "death_year": 1650,
+      "death_date": "1650-12-31",
+      "birth_place": "Hetuala, Manchuria",
+      "summary": "Qing prince regent who commanded the 1636 invasion of Joseon. Negotiated the humiliating surrender terms at Samjeondo, where King Injo performed three kneelings and nine prostrations.",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "general",
+        "politician"
+      ]
+    },
+    {
+      "slug": "jan-janse-weltevree",
+      "name_ko": "박연 (벨테브레)",
+      "name_hanja": "朴燕",
+      "name_en": "Jan Janse Weltevree",
+      "birth_year": 1595,
+      "birth_date": null,
+      "death_year": 1657,
+      "death_date": null,
+      "birth_place": "De Rijp, Dutch Republic",
+      "summary": "Dutch sailor who drifted to Joseon in 1627 and was never allowed to leave. Took the Korean name Park Yeon, married a Korean woman, and served as a weapons instructor. The first known Western resident of Korea.",
+      "is_controversial": false,
+      "tags": [
+        "joseon"
+      ]
+    },
+    {
+      "slug": "matteo-ricci",
+      "name_ko": "마테오 리치",
+      "name_hanja": "利瑪竇",
+      "name_en": "Matteo Ricci",
+      "birth_year": 1552,
+      "birth_date": "1552-10-06",
+      "death_year": 1610,
+      "death_date": "1610-05-11",
+      "birth_place": "Macerata, Papal States",
+      "summary": "Italian Jesuit missionary in Ming China whose world map (Kunyu Wanguo Quantu) and scientific texts reached Joseon. Profoundly influenced Silhak scholars and introduced Western astronomy, geography, and Catholicism to Korean intellectuals.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "scholar",
+        "religious"
+      ]
+    },
+    {
+      "slug": "wanli-emperor",
+      "name_ko": "만력제 (명 신종)",
+      "name_hanja": "萬曆帝",
+      "name_en": "Wanli Emperor",
+      "birth_year": 1563,
+      "birth_date": "1563-09-04",
+      "death_year": 1620,
+      "death_date": "1620-08-18",
+      "birth_place": "Beijing, Ming China",
+      "summary": "Ming dynasty emperor who sent military aid to Joseon during the Imjin War. His intervention was decisive in repelling the Japanese, and Joseon remembered the 'grace of Wanli' (再造之恩) for centuries.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "king"
+      ]
+    },
+    {
+      "slug": "li-rusong",
+      "name_ko": "이여송",
+      "name_hanja": "李如松",
+      "name_en": "Li Rusong",
+      "birth_year": 1549,
+      "birth_date": null,
+      "death_year": 1598,
+      "death_date": "1598-05-18",
+      "birth_place": "Tieling, Liaodong, Ming China",
+      "summary": "Ming general who led 40,000 troops into Joseon to fight the Japanese. Recaptured Pyongyang in the Battle of Pyongyang (1593) but suffered setbacks at Byeokjegwan. A controversial but pivotal figure in the Imjin War.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "general"
+      ]
+    },
+    {
+      "slug": "chen-weijing",
+      "name_ko": "심유경",
+      "name_hanja": "沈惟敬",
+      "name_en": "Chen Weijing (Shen Weijing)",
+      "birth_year": null,
+      "birth_date": null,
+      "death_year": 1597,
+      "death_date": null,
+      "birth_place": "Ming China",
+      "summary": "Ming diplomat who conducted peace negotiations between Ming China and Japan during the Imjin War. Fabricated terms to both sides, leading to the collapse of negotiations and the second Japanese invasion (1597).",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "politician"
+      ]
+    },
+    {
+      "slug": "ernst-oppert",
+      "name_ko": "에른스트 오페르트",
+      "name_hanja": null,
+      "name_en": "Ernst Oppert",
+      "birth_year": 1832,
+      "birth_date": null,
+      "death_year": 1903,
+      "death_date": null,
+      "birth_place": "Hamburg, Germany",
+      "summary": "German merchant who attempted to rob the tomb of Heungseon Daewongun's father in 1868 to use the remains as leverage to force Korea to open trade. The grave-robbing plot failed and hardened Korea's isolationist policy.",
+      "is_controversial": true,
+      "tags": [
+        "joseon"
+      ]
+    },
+    {
+      "slug": "karl-gutzlaff",
+      "name_ko": "카를 귀츨라프",
+      "name_hanja": null,
+      "name_en": "Karl Gutzlaff",
+      "birth_year": 1803,
+      "birth_date": "1803-07-08",
+      "death_year": 1851,
+      "death_date": "1851-08-09",
+      "birth_place": "Pyritz, Prussia",
+      "summary": "Prussian missionary who visited the coast of Joseon in 1832 aboard the Lord Amherst. Distributed Chinese Bibles, potatoes, and Western goods. One of the earliest Protestant contacts with Korea.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "religious"
+      ]
+    },
+    {
+      "slug": "horace-allen",
+      "name_ko": "호러스 알렌",
+      "name_hanja": null,
+      "name_en": "Horace Newton Allen",
+      "birth_year": 1858,
+      "birth_date": "1858-04-23",
+      "death_year": 1932,
+      "death_date": "1932-12-11",
+      "birth_place": "Delaware, Ohio, USA",
+      "summary": "American missionary doctor who saved Min Yeong-ik's life during the Gapsin Coup (1884). Founded Gwanghyewon (later Severance Hospital), Korea's first modern Western hospital. Later served as US Minister to Korea.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "modern"
+      ]
+    },
+    {
+      "slug": "horace-underwood",
+      "name_ko": "호러스 언더우드",
+      "name_hanja": null,
+      "name_en": "Horace Grant Underwood",
+      "birth_year": 1859,
+      "birth_date": "1859-07-19",
+      "death_year": 1916,
+      "death_date": "1916-10-12",
+      "birth_place": "London, England",
+      "summary": "American Presbyterian missionary who arrived in Joseon in 1885. Founded Yonsei University (originally Chosun Christian College) and played a major role in spreading Christianity and modern education in Korea.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "modern",
+        "religious",
+        "scholar"
+      ]
+    },
+    {
+      "slug": "henry-appenzeller",
+      "name_ko": "헨리 아펜젤러",
+      "name_hanja": null,
+      "name_en": "Henry Gerhard Appenzeller",
+      "birth_year": 1858,
+      "birth_date": "1858-02-06",
+      "death_year": 1902,
+      "death_date": "1902-06-11",
+      "birth_place": "Souderton, Pennsylvania, USA",
+      "summary": "American Methodist missionary who arrived in Joseon in 1885 on the same ship as Underwood. Founded Baejae Hakdang, Korea's first modern school for boys, and contributed to the Korean Bible translation.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "modern",
+        "religious",
+        "scholar"
+      ]
+    },
+    {
+      "slug": "isabelle-bird-bishop",
+      "name_ko": "이사벨라 버드 비숍",
+      "name_hanja": null,
+      "name_en": "Isabella Bird Bishop",
+      "birth_year": 1831,
+      "birth_date": "1831-10-15",
+      "death_year": 1904,
+      "death_date": "1904-10-07",
+      "birth_place": "Boroughbridge, England",
+      "summary": "British explorer and writer who visited Joseon four times (1894-1897). Her book 'Korea and Her Neighbours' remains one of the most detailed Western accounts of late Joseon society, documenting everything from royal politics to street life.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "modern"
+      ]
+    },
+    {
+      "slug": "miura-goro",
+      "name_ko": "미우라 고로",
+      "name_hanja": "三浦梧楼",
+      "name_en": "Miura Goro",
+      "birth_year": 1847,
+      "birth_date": "1847-01-01",
+      "death_year": 1926,
+      "death_date": "1926-01-28",
+      "birth_place": "Choshu Domain, Japan",
+      "summary": "Japanese minister to Korea who masterminded the assassination of Empress Myeongseong (Queen Min) in 1895. Led Japanese soldiers and ronin into Gyeongbokgung Palace in the Eulmi Incident. Acquitted in a sham trial in Hiroshima.",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "modern",
+        "politician"
+      ]
+    },
+    {
+      "slug": "ito-hirobumi",
+      "name_ko": "이토 히로부미",
+      "name_hanja": "伊藤博文",
+      "name_en": "Ito Hirobumi",
+      "birth_year": 1841,
+      "birth_date": "1841-10-16",
+      "death_year": 1909,
+      "death_date": "1909-10-26",
+      "birth_place": "Choshu Domain, Japan",
+      "summary": "Japan's first Prime Minister and first Resident-General of Korea. Forced the Eulsa Treaty (1905) that stripped Korea of diplomatic sovereignty. Assassinated by Ahn Jung-geun at Harbin Station in 1909.",
+      "is_controversial": true,
+      "tags": [
+        "joseon",
+        "modern",
+        "politician"
+      ]
+    },
+    {
+      "slug": "terauchi-masatake",
+      "name_ko": "데라우치 마사타케",
+      "name_hanja": "寺內正毅",
+      "name_en": "Terauchi Masatake",
+      "birth_year": 1852,
+      "birth_date": "1852-02-24",
+      "death_year": 1919,
+      "death_date": "1919-11-03",
+      "birth_place": "Choshu Domain, Japan",
+      "summary": "First Japanese Governor-General of Korea who oversaw the Japan-Korea Annexation Treaty of 1910. Implemented military rule, suppressed Korean press and assembly, and initiated the colonial land survey that dispossessed many Korean farmers.",
+      "is_controversial": true,
+      "tags": [
+        "modern",
+        "politician",
+        "general"
+      ]
+    },
+    {
+      "slug": "homer-hulbert",
+      "name_ko": "호머 헐버트",
+      "name_hanja": null,
+      "name_en": "Homer Bezaleel Hulbert",
+      "birth_year": 1863,
+      "birth_date": "1863-01-26",
+      "death_year": 1949,
+      "death_date": "1949-08-05",
+      "birth_place": "New Haven, Vermont, USA",
+      "summary": "American missionary, educator, and journalist who became one of Korea's greatest Western advocates. Secretly carried Emperor Gojong's letter to the Hague Peace Conference (1907) protesting Japanese occupation. Buried in Yanghwajin Foreign Missionary Cemetery per his dying wish: 'I would rather be buried in Korea than in Westminster Abbey.'",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "modern",
+        "scholar"
+      ]
+    },
+    {
+      "slug": "bethell-ernest",
+      "name_ko": "어니스트 베델",
+      "name_hanja": null,
+      "name_en": "Ernest Thomas Bethell",
+      "birth_year": 1872,
+      "birth_date": "1872-11-03",
+      "death_year": 1909,
+      "death_date": "1909-05-01",
+      "birth_place": "Bristol, England",
+      "summary": "British journalist who founded the Daehan Maeil Sinbo (Korea Daily News) in 1904, one of the few newspapers the Japanese couldn't censor due to his British nationality. A fearless voice for Korean sovereignty during the protectorate period.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "modern"
+      ]
+    },
+    {
+      "slug": "rodrigo-de-vivero",
+      "name_ko": "로드리고 데 비베로",
+      "name_hanja": null,
+      "name_en": "Rodrigo de Vivero",
+      "birth_year": 1564,
+      "birth_date": null,
+      "death_year": 1636,
+      "death_date": null,
+      "birth_place": "Spain",
+      "summary": "Spanish colonial governor of the Philippines who was shipwrecked in Japan (1609) and left one of the earliest European references to Joseon Korea in his memoir, describing it as a kingdom that Japan had recently tried to conquer.",
+      "is_controversial": false,
+      "tags": [
+        "joseon"
+      ]
+    },
+    {
+      "slug": "father-zhou-wenmo",
+      "name_ko": "주문모 신부",
+      "name_hanja": "周文謨",
+      "name_en": "Father Zhou Wenmo",
+      "birth_year": 1752,
+      "birth_date": null,
+      "death_year": 1801,
+      "death_date": "1801-04-19",
+      "birth_place": "Jiangsu, Qing China",
+      "summary": "Chinese Catholic priest who secretly entered Joseon in 1794 as the first ordained priest on Korean soil. Ministered to the growing Catholic community until the Sinyu Persecution (1801), when he surrendered to protect his flock and was executed.",
+      "is_controversial": false,
+      "tags": [
+        "joseon",
+        "religious"
+      ]
+    }
+  ]
+}
