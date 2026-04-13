@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: '/persons', label: 'Figures' },
   { href: '/age-flow', label: 'Age Flow' },
   { href: '/artifacts', label: 'Artifacts' },
+  { href: '/threads', label: 'Threads' },
   { href: '/articles', label: 'Articles' },
 ];
 
