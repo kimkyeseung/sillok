@@ -3,6 +3,7 @@
 import { useMemo, useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import type { AgeFlowEvent } from './useAgeFlow';
 
 // ── Types ──
 
@@ -23,11 +24,26 @@ export interface AgeFlowArtifact {
 
 interface ArtifactTimelineProps {
   artifacts: AgeFlowArtifact[];
+  events: AgeFlowEvent[];
   currentYear: number;
   minYear: number;
   maxYear: number;
   onYearClick: (year: number) => void;
 }
+
+// ── Event type colors for dial dots ──
+
+type EventType = 'war' | 'purge' | 'revolt' | 'politics' | 'diplomacy' | 'culture' | 'dynasty';
+
+const EVENT_DOT_COLORS: Record<EventType, string> = {
+  war:       'bg-red-400',
+  purge:     'bg-purple-400',
+  revolt:    'bg-orange-400',
+  politics:  'bg-slate-400',
+  diplomacy: 'bg-blue-400',
+  culture:   'bg-emerald-400',
+  dynasty:   'bg-yellow-400',
+};
 
 // ── Constants ──
 
@@ -111,6 +127,7 @@ function buildClusters(
 
 export default function ArtifactTimeline({
   artifacts,
+  events,
   currentYear,
   minYear,
   maxYear,
@@ -144,6 +161,19 @@ export default function ArtifactTimeline({
     () => Array.from(artifactsByYear.keys()).sort((a, b) => a - b),
     [artifactsByYear]
   );
+
+  // year → events map (for dial dot markers)
+  const eventsByYear = useMemo(() => {
+    const map = new Map<number, AgeFlowEvent[]>();
+    events.forEach((e) => {
+      const year = e.metadata?.start_year;
+      if (year == null) return;
+      const list = map.get(year) ?? [];
+      list.push(e);
+      map.set(year, list);
+    });
+    return map;
+  }, [events]);
 
   // Build clusters + cluster year set for dial bar
   const clusters = useMemo(
@@ -446,6 +476,8 @@ export default function ArtifactTimeline({
             const isHalf = year % 25 === 0;
             const isMid = year % 10 === 0;
             const hasArtifact = artifactsByYear.has(year);
+            const yearEvents = eventsByYear.get(year);
+            const hasEvent = !!yearEvents;
 
             return (
               <div
@@ -457,20 +489,36 @@ export default function ArtifactTimeline({
                   className={`mx-auto ${
                     hasArtifact
                       ? 'w-[1.5px] bg-amber-400/90'
-                      : isMajor
-                        ? 'w-px bg-gray-400/50'
-                        : isHalf
-                          ? 'w-px bg-gray-400/35'
-                          : isMid
-                            ? 'w-px bg-gray-500/25'
-                            : 'w-px bg-gray-600/15'
+                      : hasEvent
+                        ? 'w-[1.5px] bg-gray-300/70'
+                        : isMajor
+                          ? 'w-px bg-gray-400/50'
+                          : isHalf
+                            ? 'w-px bg-gray-400/35'
+                            : isMid
+                              ? 'w-px bg-gray-500/25'
+                              : 'w-px bg-gray-600/15'
                   }`}
                   style={{
-                    height: hasArtifact ? 20 : isMajor ? 16 : isHalf ? 13 : isMid ? 10 : 5,
+                    height: hasArtifact ? 20 : hasEvent ? 18 : isMajor ? 16 : isHalf ? 13 : isMid ? 10 : 5,
                   }}
                 />
                 {hasArtifact && (
                   <div className="absolute bottom-[20px] left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-amber-400 shadow-[0_0_4px_rgba(251,191,36,0.5)]" />
+                )}
+                {hasEvent && (
+                  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-px" style={{ bottom: hasArtifact ? 24 : 20 }}>
+                    {yearEvents!.slice(0, 3).map((evt) => {
+                      const evtType = (evt.metadata?.event_type as EventType) || 'politics';
+                      const dotColor = EVENT_DOT_COLORS[evtType] || EVENT_DOT_COLORS.politics;
+                      return (
+                        <div
+                          key={evt.id}
+                          className={`h-[3px] w-[3px] rounded-full ${dotColor} shadow-[0_0_3px_rgba(255,255,255,0.3)]`}
+                        />
+                      );
+                    })}
+                  </div>
                 )}
                 {(isMajor || isHalf) && (
                   <p

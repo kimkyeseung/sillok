@@ -330,6 +330,7 @@ export default function AgeFlowPage() {
       {/* Artifact timeline — radio tuner at bottom */}
       <ArtifactTimeline
         artifacts={artifacts}
+        events={events}
         currentYear={currentYear}
         minYear={minYear}
         maxYear={maxYear}
