@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { ThreadActions, ReplyActions, ReplyFormWrapper } from '@/components/thread/ThreadInteractions';
 import ViewLogger from '@/components/thread/ViewLogger';
@@ -146,7 +147,7 @@ export default async function ThreadDetailPage({ params }: Props) {
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-sm font-bold text-brand-700">
               {author?.avatar_url ? (
-                <img src={author.avatar_url as string} alt="" className="h-full w-full object-cover" />
+                <Image src={author.avatar_url as string} alt="" width={40} height={40} className="h-full w-full object-cover" />
               ) : (
                 authorName.charAt(0)
               )}
@@ -169,12 +170,15 @@ export default async function ThreadDetailPage({ params }: Props) {
           {images.length > 0 && (
             <div className="mt-4 flex gap-2 overflow-x-auto">
               {images.map((img) => (
-                <img
-                  key={img.id as string}
-                  src={img.url as string}
-                  alt=""
-                  className="max-h-64 rounded-lg object-cover"
-                />
+                <div key={img.id as string} className="relative h-64 min-w-[200px] shrink-0">
+                  <Image
+                    src={img.url as string}
+                    alt=""
+                    fill
+                    sizes="(max-width: 640px) 80vw, 300px"
+                    className="rounded-lg object-cover"
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -217,7 +221,7 @@ export default async function ThreadDetailPage({ params }: Props) {
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xs font-bold text-gray-500">
                     {replyAuthor?.avatar_url ? (
-                      <img src={replyAuthor.avatar_url as string} alt="" className="h-full w-full object-cover" />
+                      <Image src={replyAuthor.avatar_url as string} alt="" width={28} height={28} className="h-full w-full object-cover" />
                     ) : (
                       replyName.charAt(0)
                     )}

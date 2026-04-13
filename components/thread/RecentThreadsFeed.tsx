@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Thread {
   id: string;
@@ -115,7 +116,7 @@ export default function RecentThreadsFeed() {
                   {!hasMedia && (
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 text-xs font-bold text-brand-600">
                       {profile?.avatar_url ? (
-                        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                        <Image src={profile.avatar_url} alt="" width={36} height={36} className="h-full w-full object-cover" />
                       ) : (
                         (profile?.nickname ?? '?').charAt(0)
                       )}
@@ -136,7 +137,7 @@ export default function RecentThreadsFeed() {
                       {hasMedia && (
                         <div className="mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 text-[9px] font-bold text-brand-600">
                           {profile?.avatar_url ? (
-                            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                            <Image src={profile.avatar_url} alt="" width={36} height={36} className="h-full w-full object-cover" />
                           ) : (
                             (profile?.nickname ?? '?').charAt(0)
                           )}

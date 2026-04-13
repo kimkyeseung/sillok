@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { NodeActions, CommentActions, CommentFormWrapper } from '@/components/thread/NodeInteractions';
 import { eventJsonLd } from '@/lib/jsonld';
@@ -186,7 +187,7 @@ export default async function NodeDetailPage({ params }: Props) {
                 className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50"
               >
                 {person.thumbnail ? (
-                  <img src={person.thumbnail} alt="" className="h-6 w-6 rounded-full object-cover" />
+                  <Image src={person.thumbnail} alt="" width={24} height={24} className="h-6 w-6 rounded-full object-cover" />
                 ) : (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">
                     {person.name_ko.slice(0, 1)}
@@ -214,7 +215,7 @@ export default async function NodeDetailPage({ params }: Props) {
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xs font-bold text-gray-500">
                     {author?.avatar_url ? (
-                      <img src={author.avatar_url as string} alt="" className="h-full w-full object-cover" />
+                      <Image src={author.avatar_url as string} alt="" width={28} height={28} className="h-full w-full object-cover" />
                     ) : (
                       commentName.charAt(0)
                     )}
