@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: 'Sillok',
     locale: 'en_US',
     type: 'website',
-    images: ['/og-image.png'],
+    images: ['/og-default.png'],
   },
   twitter: {
     card: 'summary_large_image',

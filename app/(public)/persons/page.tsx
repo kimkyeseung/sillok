@@ -8,8 +8,17 @@ import { getPrimaryFieldTag } from '@/lib/person-utils';
 
 export const metadata: Metadata = {
   title: 'Figures',
-  description: 'Explore Korean historical figures from Dangun to the present',
+  description: 'Explore Korean historical figures from Dangun to the present — kings, scholars, generals, artists, and modern icons.',
   alternates: { canonical: '/persons' },
+  openGraph: {
+    title: 'Figures | Sillok',
+    description: 'Explore Korean historical figures from Dangun to the present.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Figures | Sillok',
+    description: 'Explore Korean historical figures from Dangun to the present.',
+  },
 };
 
 export const dynamic = 'force-dynamic';

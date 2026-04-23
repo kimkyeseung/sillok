@@ -4,8 +4,17 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Articles',
-  description: 'Stories and announcements from the Sillok team',
+  description: 'Stories, deep-dives, and announcements from the Sillok team about Korean history and the archive.',
   alternates: { canonical: '/articles' },
+  openGraph: {
+    title: 'Articles | Sillok',
+    description: 'Stories and announcements from the Sillok team.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Articles | Sillok',
+    description: 'Stories and announcements from the Sillok team.',
+  },
 };
 
 export const dynamic = 'force-dynamic';

@@ -5,8 +5,17 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Threads',
-  description: 'Community discussions about Korean historical figures',
+  description: 'Community discussions about Korean historical figures — share insights, debate, and discover surprising stories.',
   alternates: { canonical: '/threads' },
+  openGraph: {
+    title: 'Threads | Sillok',
+    description: 'Community discussions about Korean historical figures.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Threads | Sillok',
+    description: 'Community discussions about Korean historical figures.',
+  },
 };
 
 export const dynamic = 'force-dynamic';

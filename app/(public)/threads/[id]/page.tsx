@@ -33,6 +33,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = thread.content?.slice(0, 160) ?? thread.title;
 
+  const images = ((thread.thread_images as unknown as { url: string; sort_order: number }[]) ?? [])
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const ogImage = images[0]?.url;
+
   return {
     title: `${thread.title}`,
     description,
@@ -41,6 +45,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${thread.title} - Sillok`,
       description,
       type: 'article',
+      ...(ogImage && { images: [ogImage] }),
+    },
+    twitter: {
+      card: ogImage ? 'summary_large_image' : 'summary',
+      title: thread.title,
+      description,
+      ...(ogImage && { images: [ogImage] }),
     },
   };
 }
