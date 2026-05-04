@@ -67,19 +67,19 @@ export default function ImageLightbox({ images }: ImageLightboxProps) {
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
             onClick={close}
           >
-            {/* Close button */}
+            {/* Close button — pushed down on mobile to avoid header overlap */}
             <button
               onClick={close}
-              className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+              className="absolute right-4 top-16 sm:top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            {/* Counter */}
+            {/* Counter — pushed down on mobile to avoid header overlap */}
             {images.length > 1 && (
-              <div className="absolute left-4 top-4 rounded-full bg-white/10 px-3 py-1 text-sm text-white backdrop-blur-sm">
+              <div className="absolute left-4 top-16 sm:top-4 rounded-full bg-white/10 px-3 py-1 text-sm text-white backdrop-blur-sm">
                 {activeIndex! + 1} / {images.length}
               </div>
             )}
