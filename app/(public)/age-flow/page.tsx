@@ -121,5 +121,7 @@ async function fetchAgeFlowData() {
 
 export default async function AgeFlowPage() {
   const initialData = await fetchAgeFlowData();
-  return <AgeFlowClient initialData={initialData ?? undefined} />;
+  // If SSR returned no persons, pass undefined so client fetches its own data
+  const hasPersons = initialData && initialData.persons.length > 0;
+  return <AgeFlowClient initialData={hasPersons ? initialData : undefined} />;
 }
