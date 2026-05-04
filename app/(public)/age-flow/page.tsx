@@ -9,8 +9,9 @@ import {
 } from '@/components/age-flow/useAgeFlow';
 import AgeFlowClient from './AgeFlowClient';
 
-// Revalidate every 5 minutes — data rarely changes
-export const revalidate = 300;
+// Force dynamic rendering — SSR on every request
+// (ISR cache was serving stale empty data after initial SSR failure)
+export const dynamic = 'force-dynamic';
 
 function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
   const birthYear = raw.birth_year as number | null;
