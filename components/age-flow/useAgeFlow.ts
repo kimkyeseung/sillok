@@ -370,51 +370,51 @@ function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
 
 // ── Hook ──
 
-export function useAgeFlow(): UseAgeFlowReturn {
-  const [allPersons, setAllPersons] = useState<AgeFlowPerson[]>([]);
-  const [events, setEvents] = useState<AgeFlowEvent[]>([]);
-  const [artifacts, setArtifacts] = useState<AgeFlowArtifact[]>([]);
+export interface AgeFlowInitialData {
+  persons: AgeFlowPerson[];
+  events: AgeFlowEvent[];
+  artifacts: AgeFlowArtifact[];
+}
+
+export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
+  const hasInitial = !!initialData;
+  const [allPersons, setAllPersons] = useState<AgeFlowPerson[]>(
+    initialData?.persons ?? []
+  );
+  const [events, setEvents] = useState<AgeFlowEvent[]>(
+    initialData?.events ?? []
+  );
+  const [artifacts, setArtifacts] = useState<AgeFlowArtifact[]>(
+    initialData?.artifacts ?? []
+  );
   const [currentYear, setCurrentYear] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!hasInitial);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const initialScrollDone = useRef(false);
 
-  // ── 1. Initial fetch ──
+  // ── 1. Fetch only when no initial data provided ──
   useEffect(() => {
+    if (hasInitial) return;
+
     async function load() {
       try {
-        const [personsRes, eventsRes, artifactsRes] = await Promise.all([
-          fetch('/api/persons?sort=birth_year&limit=1000&include_tags=true'),
-          fetch('/api/nodes?type=EVENT&limit=100'),
-          fetch('/api/nodes?type=ARTIFACT&limit=100'),
-        ]);
+        const res = await fetch('/api/persons/age-flow');
+        const json = await res.json();
 
-        const personsJson = await personsRes.json();
-        const eventsJson = await eventsRes.json();
-        const artifactsJson = await artifactsRes.json();
+        if (json.success) {
+          const { persons: rawPersons, events: rawEvents, artifacts: rawArtifacts } = json.data;
 
-        if (personsJson.success) {
-          const items = personsJson.data.items ?? personsJson.data ?? [];
-          const transformed = (items as Record<string, unknown>[])
+          const transformed = (rawPersons as Record<string, unknown>[])
             .map(transformPerson)
             .filter((p): p is AgeFlowPerson => p !== null)
-            // Include persons alive during the age-flow range
             .filter((p) => {
               const deathYear = p.is_alive ? JOSEON_END : (p.death_year ?? p.birth_year);
               return p.birth_year <= JOSEON_END && deathYear >= JOSEON_START;
             });
           setAllPersons(transformed);
-        }
-
-        if (eventsJson.success) {
-          const items = eventsJson.data.items ?? eventsJson.data ?? [];
-          setEvents(items as AgeFlowEvent[]);
-        }
-
-        if (artifactsJson.success) {
-          const items = artifactsJson.data.items ?? artifactsJson.data ?? [];
+          setEvents(rawEvents as AgeFlowEvent[]);
           setArtifacts(
-            (items as AgeFlowArtifact[]).filter(
+            (rawArtifacts as AgeFlowArtifact[]).filter(
               (a) => a.metadata?.created_year != null
             )
           );
@@ -426,7 +426,7 @@ export function useAgeFlow(): UseAgeFlowReturn {
       }
     }
     load();
-  }, []);
+  }, [hasInitial]);
 
   // ── 2. Computed values (Joseon-limited) ──
   const minYear = JOSEON_START;
