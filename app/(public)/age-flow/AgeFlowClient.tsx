@@ -31,7 +31,7 @@ import DensityBar from '@/components/age-flow/DensityBar';
 import ArtifactTimeline from '@/components/age-flow/ArtifactTimeline';
 
 interface AgeFlowClientProps {
-  initialData: AgeFlowInitialData;
+  initialData?: AgeFlowInitialData;
 }
 
 export default function AgeFlowClient({ initialData }: AgeFlowClientProps) {

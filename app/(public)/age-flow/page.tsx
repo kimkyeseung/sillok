@@ -49,60 +49,76 @@ function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
 }
 
 async function fetchAgeFlowData() {
-  const [personsResult, eventsResult, artifactsResult] = await Promise.all([
-    supabaseAdmin
-      .from('persons')
-      .select(
-        `id, slug, name_en, name_ko, birth_year, death_year, is_alive,
-         thumbnail, view_count, follow_count,
-         person_tags ( tag_id, tags ( id, name_en, type ) )`
-      )
-      .eq('is_deleted', false)
-      .eq('is_published', true)
-      .not('birth_year', 'is', null)
-      .order('birth_year', { ascending: true })
-      .limit(1000),
+  try {
+    const [personsResult, eventsResult, artifactsResult] = await Promise.all([
+      supabaseAdmin
+        .from('persons')
+        .select(
+          `id, slug, name_en, name_ko, birth_year, death_year, is_alive,
+           thumbnail, view_count, follow_count,
+           person_tags ( tag_id, tags ( id, name_en, type ) )`
+        )
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+        .not('birth_year', 'is', null)
+        .order('birth_year', { ascending: true })
+        .limit(1000),
 
-    supabaseAdmin
-      .from('nodes')
-      .select(
-        `id, slug, title, metadata,
-         person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`
-      )
-      .eq('is_deleted', false)
-      .eq('is_published', true)
-      .eq('node_type', 'EVENT')
-      .order('created_at', { ascending: false })
-      .limit(100),
+      supabaseAdmin
+        .from('nodes')
+        .select(
+          `id, slug, title, metadata,
+           person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`
+        )
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+        .eq('node_type', 'EVENT')
+        .order('created_at', { ascending: false })
+        .limit(100),
 
-    supabaseAdmin
-      .from('nodes')
-      .select('id, slug, title, thumbnail, metadata')
-      .eq('is_deleted', false)
-      .eq('is_published', true)
-      .eq('node_type', 'ARTIFACT')
-      .order('created_at', { ascending: false })
-      .limit(100),
-  ]);
+      supabaseAdmin
+        .from('nodes')
+        .select('id, slug, title, thumbnail, metadata')
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+        .eq('node_type', 'ARTIFACT')
+        .order('created_at', { ascending: false })
+        .limit(100),
+    ]);
 
-  const persons = (personsResult.data ?? [])
-    .map((r) => transformPerson(r as unknown as Record<string, unknown>))
-    .filter((p): p is AgeFlowPerson => p !== null)
-    .filter((p) => {
-      const deathYear = p.is_alive ? JOSEON_END : (p.death_year ?? p.birth_year);
-      return p.birth_year <= JOSEON_END && deathYear >= JOSEON_START;
-    });
+    if (personsResult.error) {
+      console.error('[age-flow] persons fetch error:', personsResult.error.message);
+    }
+    if (eventsResult.error) {
+      console.error('[age-flow] events fetch error:', eventsResult.error.message);
+    }
+    if (artifactsResult.error) {
+      console.error('[age-flow] artifacts fetch error:', artifactsResult.error.message);
+    }
 
-  const events = (eventsResult.data ?? []) as unknown as AgeFlowEvent[];
+    const persons = (personsResult.data ?? [])
+      .map((r) => transformPerson(r as unknown as Record<string, unknown>))
+      .filter((p): p is AgeFlowPerson => p !== null)
+      .filter((p) => {
+        const deathYear = p.is_alive ? JOSEON_END : (p.death_year ?? p.birth_year);
+        return p.birth_year <= JOSEON_END && deathYear >= JOSEON_START;
+      });
 
-  const artifacts = ((artifactsResult.data ?? []) as unknown as AgeFlowArtifact[]).filter(
-    (a) => a.metadata?.created_year != null
-  );
+    const events = (eventsResult.data ?? []) as unknown as AgeFlowEvent[];
 
-  return { persons, events, artifacts };
+    const artifacts = ((artifactsResult.data ?? []) as unknown as AgeFlowArtifact[]).filter(
+      (a) => a.metadata?.created_year != null
+    );
+
+    return { persons, events, artifacts };
+  } catch (err) {
+    console.error('[age-flow] SSR fetch failed:', err);
+    // Return null to let client-side fetch take over
+    return null;
+  }
 }
 
 export default async function AgeFlowPage() {
   const initialData = await fetchAgeFlowData();
-  return <AgeFlowClient initialData={initialData} />;
+  return <AgeFlowClient initialData={initialData ?? undefined} />;
 }
