@@ -18,6 +18,20 @@ interface PersonCardProps {
   cardRef: (el: HTMLElement | null) => void;
 }
 
+// Black mourning ribbon SVG (top-left corner)
+function MourningRibbon({ size = 32 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      className="absolute left-0 top-0 z-30 pointer-events-none"
+    >
+      <polygon points="0,0 32,0 0,32" fill="rgba(0,0,0,0.75)" />
+    </svg>
+  );
+}
+
 export default function PersonCard({
   person,
   currentYear,
@@ -34,6 +48,18 @@ export default function PersonCard({
   const displayName = person.name_en || person.name_ko;
   const eraTag = person.tags.find((t) => t.type === 'ERA');
   const fieldTags = person.tags.filter((t) => t.type === 'FIELD').slice(0, 2);
+
+  // Death proximity effect
+  const deathYear = person.death_year;
+  const isDeathYear = deathYear !== null && currentYear === deathYear;
+  const yearsUntilDeath = deathYear !== null ? deathYear - currentYear : null;
+  // Gradually desaturate: 3 years before → 100% at death
+  const deathProximity =
+    yearsUntilDeath !== null && yearsUntilDeath >= 0 && yearsUntilDeath <= 3
+      ? 1 - yearsUntilDeath / 3
+      : 0;
+  const grayscaleFilter = deathProximity > 0 ? `grayscale(${Math.round(deathProximity * 100)}%)` : undefined;
+  const deathOpacity = isDeathYear ? 'opacity-60' : '';
 
   const commonClasses = `
     rounded-lg overflow-hidden cursor-pointer
@@ -56,6 +82,7 @@ export default function PersonCard({
       ref={cardRef}
       data-person-id={person.id}
       className="relative"
+      style={grayscaleFilter ? { filter: grayscaleFilter } : undefined}
       onMouseEnter={() => onHover(person.id)}
       onMouseLeave={() => onHover(null)}
     >
@@ -66,8 +93,16 @@ export default function PersonCard({
         }`}
       />
 
+      {/* Mourning ribbon on death year */}
+      {isDeathYear && (
+        <>
+          <span className="md:hidden"><MourningRibbon size={24} /></span>
+          <span className="hidden md:block"><MourningRibbon size={32} /></span>
+        </>
+      )}
+
       {/* ── Mobile: horizontal card ── */}
-      <div className={`flex md:hidden ${commonClasses}`}>
+      <div className={`flex md:hidden ${commonClasses} ${deathOpacity}`}>
         {/* Thumbnail — left side */}
         <div className="relative h-20 w-20 shrink-0 overflow-hidden bg-gray-100">
           {person.thumbnail ? (
@@ -125,7 +160,7 @@ export default function PersonCard({
       </div>
 
       {/* ── Desktop: vertical card ── */}
-      <div className={`hidden md:block w-40 ${commonClasses}`}>
+      <div className={`hidden md:block w-40 ${commonClasses} ${deathOpacity}`}>
         {/* Thumbnail */}
         <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
           {person.thumbnail ? (
