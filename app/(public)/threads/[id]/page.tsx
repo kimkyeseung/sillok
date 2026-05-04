@@ -5,6 +5,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { ThreadActions, ReplyActions, ReplyFormWrapper } from '@/components/thread/ThreadInteractions';
 import ViewLogger from '@/components/thread/ViewLogger';
+import ImageLightbox from '@/components/common/ImageLightbox';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -179,19 +180,12 @@ export default async function ThreadDetailPage({ params }: Props) {
 
           {/* Images */}
           {images.length > 0 && (
-            <div className="mt-4 flex gap-2 overflow-x-auto">
-              {images.map((img) => (
-                <div key={img.id as string} className="relative h-64 min-w-[200px] shrink-0">
-                  <Image
-                    src={img.url as string}
-                    alt=""
-                    fill
-                    sizes="(max-width: 640px) 80vw, 300px"
-                    className="rounded-lg object-cover"
-                  />
-                </div>
-              ))}
-            </div>
+            <ImageLightbox
+              images={images.map((img) => ({
+                id: img.id as string,
+                url: img.url as string,
+              }))}
+            />
           )}
 
           {/* Video Embed */}
