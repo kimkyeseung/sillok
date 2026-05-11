@@ -10,7 +10,7 @@ export async function DELETE(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { error } = await supabaseAdmin
     .from('threads')
@@ -18,7 +18,7 @@ export async function DELETE(
     .eq('id', params.id);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ deleted: true });
 }
@@ -31,7 +31,7 @@ export async function PATCH(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
   const { error } = await supabaseAdmin
     .from('threads')
@@ -39,7 +39,7 @@ export async function PATCH(
     .eq('id', params.id);
 
   if (error)
-    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
   return apiSuccess({ restored: true });
 }

@@ -1,12 +1,21 @@
 import { apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── POST /api/threads/:id/view — Log + increment view count ───
+// ─── POST /api/threads/:id/view — Log thread view ───
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { data: thread } = await supabaseAdmin
+    .from('threads')
+    .select('id')
+    .eq('id', params.id)
+    .eq('is_deleted', false)
+    .single();
+
+  if (!thread) return apiSuccess({ logged: false });
+
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
@@ -28,19 +37,11 @@ export async function POST(
     return apiSuccess({ logged: false });
   }
 
-  // view_logs 기록 + view_count +1 (atomic increment via rpc)
-  await Promise.all([
-    supabaseAdmin.from('view_logs').insert({
-      target_type: 'THREAD',
-      target_id: params.id,
-      viewer_ip: ip,
-    }),
-    supabaseAdmin.rpc('increment_counter', {
-      table_name: 'threads',
-      column_name: 'view_count',
-      row_id: params.id,
-    }),
-  ]);
+  await supabaseAdmin.from('view_logs').insert({
+    target_type: 'THREAD',
+    target_id: params.id,
+    viewer_ip: ip,
+  });
 
   return apiSuccess({ logged: true });
 }

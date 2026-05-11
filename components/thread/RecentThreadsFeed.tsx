@@ -13,6 +13,13 @@ interface Thread {
   created_at: string;
   profiles: { nickname: string; avatar_url: string | null } | null;
   persons: { slug: string; name_en: string } | null;
+  figures?: Array<{
+    id: string;
+    slug: string;
+    name_en: string | null;
+    name_ko?: string | null;
+    is_primary: boolean;
+  }>;
   thread_images: { url: string; sort_order: number }[];
 }
 
@@ -79,6 +86,11 @@ export default function RecentThreadsFeed() {
           {threads.map((thread) => {
             const profile = thread.profiles;
             const person = thread.persons;
+            const figures = thread.figures ?? (
+              person
+                ? [{ id: person.slug, slug: person.slug, name_en: person.name_en, is_primary: true }]
+                : []
+            );
             const images = (thread.thread_images ?? []).sort(
               (a, b) => a.sort_order - b.sort_order
             );
@@ -124,9 +136,21 @@ export default function RecentThreadsFeed() {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      {person && (
-                        <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
-                          {person.name_en}
+                      {figures.slice(0, 3).map((figure) => (
+                        <span
+                          key={figure.id}
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            figure.is_primary
+                              ? 'bg-brand-50 text-brand-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {figure.name_en ?? figure.name_ko}
+                        </span>
+                      ))}
+                      {figures.length > 3 && (
+                        <span className="text-[10px] font-medium text-gray-400">
+                          +{figures.length - 3}
                         </span>
                       )}
                       <p className={`font-medium text-gray-900 line-clamp-1 ${hasMedia ? 'text-base' : 'text-sm'}`}>

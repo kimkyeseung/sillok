@@ -36,9 +36,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect /admin/* routes (skip on localhost)
-  const isLocalhost = request.headers.get('host')?.startsWith('localhost');
-  if (!isLocalhost && request.nextUrl.pathname.startsWith('/admin')) {
+  // Protect /admin/* routes. Local bypass is opt-in for development only.
+  const host = request.headers.get('host') ?? '';
+  const allowLocalhostAdmin =
+    process.env.NODE_ENV === 'development' &&
+    process.env.ENABLE_LOCALHOST_ADMIN === 'true' &&
+    (host.startsWith('localhost') || host.startsWith('127.0.0.1'));
+
+  if (!allowLocalhostAdmin && request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';

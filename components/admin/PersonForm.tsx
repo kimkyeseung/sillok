@@ -159,7 +159,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
       router.push('/admin/persons');
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : '오류가 발생했습니다';
+        err instanceof Error ? err.message : 'An error occurred';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -168,7 +168,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
 
   // Group tags by type
   const tagsByType = allTags.reduce<Record<string, Tag[]>>((acc, tag) => {
-    const t = tag.type || '기타';
+    const t = tag.type || 'Other';
     if (!acc[t]) acc[t] = [];
     acc[t].push(tag);
     return acc;
@@ -177,7 +177,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="card-flat p-6 space-y-5">
-        <h2 className="text-sm font-semibold text-gray-900">기본 정보</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Basic Information</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -195,26 +195,26 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
               className="input"
             />
             <p className="mt-1 text-xs text-gray-400">
-              영문 소문자, 숫자, 하이픈만 사용
+              Use lowercase letters, numbers, and hyphens only
             </p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              이름 (한글) *
+              Korean Name *
             </label>
             <input
               type="text"
               name="name_ko"
               value={form.name_ko}
               onChange={handleChange}
-              placeholder="세종대왕"
+              placeholder="King Sejong"
               required
               className="input"
             />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              이름 (한자)
+              Hanja Name
             </label>
             <input
               type="text"
@@ -227,7 +227,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              이름 (영문)
+              English Name
             </label>
             <input
               type="text"
@@ -243,7 +243,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              출생 연도
+              Birth Year
             </label>
             <input
               type="number"
@@ -256,7 +256,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              사망 연도
+              Death Year
             </label>
             <input
               type="number"
@@ -269,14 +269,14 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              출생지
+              Birth Place
             </label>
             <input
               type="text"
               name="birth_place"
               value={form.birth_place}
               onChange={handleChange}
-              placeholder="한양"
+              placeholder="Hanyang"
               className="input"
             />
           </div>
@@ -346,13 +346,13 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            소개
+            Summary
           </label>
           <textarea
             name="summary"
             value={form.summary}
             onChange={handleChange}
-            placeholder="인물에 대한 소개를 작성하세요"
+            placeholder="Write a short profile summary"
             rows={5}
             maxLength={5000}
             className="input resize-none"
@@ -363,14 +363,14 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
         </div>
       </div>
 
-      {/* 태그 선택 */}
+      {/* Tag Selection */}
       <div className="card-flat p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-900">태그</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Tags</h2>
         {Object.keys(tagsByType).length > 0 ? (
           Object.entries(tagsByType).map(([type, typeTags]) => (
             <div key={type}>
               <p className="mb-2 text-xs font-medium text-gray-500">
-                {type === 'ERA' ? '시대' : type === 'FIELD' ? '분야' : type}
+                {type === 'ERA' ? 'Era' : type === 'FIELD' ? 'Field' : type}
               </p>
               <div className="flex flex-wrap gap-2">
                 {typeTags.map((tag) => (
@@ -391,13 +391,13 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
             </div>
           ))
         ) : (
-          <p className="text-xs text-gray-400">태그가 없습니다</p>
+          <p className="text-xs text-gray-400">No tags</p>
         )}
       </div>
 
-      {/* 옵션 */}
+      {/* Options */}
       <div className="card-flat p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-900">옵션</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Options</h2>
         <label className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -407,9 +407,9 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           />
           <div>
-            <span className="text-sm font-medium text-gray-900">공개</span>
+            <span className="text-sm font-medium text-gray-900">Published</span>
             <p className="text-xs text-gray-500">
-              체크하면 목록에 노출됩니다
+              Show this figure in public lists
             </p>
           </div>
         </label>
@@ -422,9 +422,9 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           />
           <div>
-            <span className="text-sm font-medium text-gray-900">논란 인물</span>
+            <span className="text-sm font-medium text-gray-900">Controversial Figure</span>
             <p className="text-xs text-gray-500">
-              체크하면 논란 배지가 표시됩니다
+              Display a controversy badge
             </p>
           </div>
         </label>
@@ -437,15 +437,15 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           />
           <div>
-            <span className="text-sm font-medium text-gray-900">생존 인물</span>
+            <span className="text-sm font-medium text-gray-900">Living Figure</span>
             <p className="text-xs text-gray-500">
-              현재 살아있는 인물
+              This figure is currently alive
             </p>
           </div>
         </label>
       </div>
 
-      {/* 제출 */}
+      {/* Submit */}
       <div className="flex items-center gap-3">
         <button
           type="submit"
@@ -453,17 +453,17 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
           className="btn-primary disabled:opacity-50"
         >
           {saving
-            ? '저장 중...'
+            ? 'Saving...'
             : mode === 'create'
-              ? '인물 등록'
-              : '수정 저장'}
+              ? 'Create Figure'
+              : 'Save Changes'}
         </button>
         <button
           type="button"
           onClick={() => router.push('/admin/persons')}
           className="btn-ghost"
         >
-          취소
+          Cancel
         </button>
       </div>
       {/* Crop modal */}

@@ -233,6 +233,21 @@ CREATE TRIGGER threads_updated_at
   BEFORE UPDATE ON threads
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- Junction: threads can reference multiple figures
+CREATE TABLE thread_persons (
+  thread_id  UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+  person_id  UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (thread_id, person_id)
+);
+
+CREATE UNIQUE INDEX thread_persons_one_primary_idx ON thread_persons (thread_id) WHERE is_primary = TRUE;
+CREATE INDEX thread_persons_person_id_idx ON thread_persons (person_id);
+CREATE INDEX thread_persons_thread_id_idx ON thread_persons (thread_id);
+CREATE INDEX thread_persons_thread_order_idx ON thread_persons (thread_id, sort_order);
+
 -- ============================================================
 -- 9. thread_replies (스레드 댓글)
 -- ============================================================

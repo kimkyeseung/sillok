@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { normalizeThreadFigures, uniqueFigureIds } from '@/lib/thread-figures';
 
 // ─── GET /api/threads/:id — Thread detail (public) ───
 
@@ -15,8 +16,9 @@ export async function GET(
       `
       *,
       profiles!threads_author_id_fkey ( nickname, avatar_url ),
-      persons!threads_person_id_fkey ( slug, name_en, thumbnail ),
-      thread_images ( id, url, sort_order )
+      persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
+      thread_images ( id, url, sort_order ),
+      thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )
     `
     )
     .eq('id', params.id)
@@ -26,12 +28,13 @@ export async function GET(
   if (error || !thread)
     return apiError('THREAD_NOT_FOUND', 'Thread not found.', 404);
 
-  return apiSuccess(thread);
+  return apiSuccess(normalizeThreadFigures(thread));
 }
 
 // ─── PUT /api/threads/:id — Update thread [OWNER] ───
 
 const UpdateThreadSchema = z.object({
+  figures: z.array(z.string().uuid()).min(1).max(6).optional(),
   title: z.string().min(1).max(200).optional(),
   content: z.string().min(1).max(10000).optional(),
   video_url: z.string().url().optional().nullable(),
@@ -69,7 +72,40 @@ export async function PUT(
   if (!result.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { image_ids, ...updateData } = result.data;
+  const { figures, image_ids, ...updateData } = result.data;
+
+  if (figures !== undefined) {
+    const figureIds = uniqueFigureIds(figures);
+    const primaryPersonId = figureIds[0];
+
+    const { data: people } = await supabaseAdmin
+      .from('persons')
+      .select('id')
+      .in('id', figureIds)
+      .eq('is_deleted', false);
+
+    if ((people?.length ?? 0) !== figureIds.length)
+      return apiError('PERSON_NOT_FOUND', 'Figure not found.', 404);
+
+    await supabaseAdmin
+      .from('threads')
+      .update({ person_id: primaryPersonId })
+      .eq('id', params.id);
+
+    await supabaseAdmin
+      .from('thread_persons')
+      .delete()
+      .eq('thread_id', params.id);
+
+    await supabaseAdmin.from('thread_persons').insert(
+      figureIds.map((pid, index) => ({
+        thread_id: params.id,
+        person_id: pid,
+        is_primary: index === 0,
+        sort_order: index,
+      }))
+    );
+  }
 
   if (Object.keys(updateData).length > 0) {
     const { error } = await supabaseAdmin
@@ -98,11 +134,15 @@ export async function PUT(
 
   const { data: updated } = await supabaseAdmin
     .from('threads')
-    .select('*')
+    .select(
+      `*,
+       persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
+       thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )`
+    )
     .eq('id', params.id)
     .single();
 
-  return apiSuccess(updated);
+  return apiSuccess(updated ? normalizeThreadFigures(updated) : updated);
 }
 
 // ─── DELETE /api/threads/:id — Soft delete thread [OWNER|ADMIN] ───

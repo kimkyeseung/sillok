@@ -21,9 +21,9 @@ interface Response {
 }
 
 const typeLabel: Record<string, string> = {
-  thread: '스레드',
-  reply: '댓글',
-  node_comment: '노드 댓글',
+  thread: 'Thread',
+  reply: 'Reply',
+  node_comment: 'Node comment',
 };
 
 const typeColor: Record<string, string> = {
@@ -33,12 +33,12 @@ const typeColor: Record<string, string> = {
 };
 
 const reasonLabel: Record<string, string> = {
-  SPAM: '스팸',
-  ABUSE: '욕설/비방',
-  HATE_SPEECH: '혐오 표현',
-  MISINFORMATION: '허위 정보',
-  OFF_TOPIC: '주제 무관',
-  OTHER: '기타',
+  SPAM: 'Spam',
+  ABUSE: 'Abuse',
+  HATE_SPEECH: 'Hate speech',
+  MISINFORMATION: 'Misinformation',
+  OFF_TOPIC: 'Off topic',
+  OTHER: 'Other',
 };
 
 export default function AdminReportsPage() {
@@ -49,7 +49,7 @@ export default function AdminReportsPage() {
 
   const handleResolve = useCallback(
     async (id: string) => {
-      const action = prompt('처리 방법 (warn / delete / ban):');
+      const action = prompt('Resolution action (warn / delete / ban):');
       if (!action || !['warn', 'delete', 'ban'].includes(action)) return;
       await apiFetch(`/api/reports/${id}/resolve`, {
         method: 'PUT',
@@ -71,22 +71,22 @@ export default function AdminReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">신고 관리</h1>
-        <p className="mt-0.5 text-sm text-gray-500">신고된 콘텐츠를 검토하고 처리하세요</p>
+        <h1 className="text-2xl font-bold text-gray-900">Report Management</h1>
+        <p className="mt-0.5 text-sm text-gray-500">Review and moderate reported content</p>
       </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-8 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">로딩 중...</span>
+          <span className="text-sm">Loading...</span>
         </div>
       ) : (data?.items ?? []).length === 0 ? (
         <div className="card-flat flex flex-col items-center py-16">
           <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="mt-3 text-sm font-medium text-gray-500">대기 중인 신고가 없습니다</p>
-          <p className="text-xs text-gray-400">모든 신고가 처리되었습니다</p>
+          <p className="mt-3 text-sm font-medium text-gray-500">No pending reports</p>
+          <p className="text-xs text-gray-400">All reports have been processed</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -108,8 +108,8 @@ export default function AdminReportsPage() {
                     </p>
                   )}
                   <p className="mt-2 text-xs text-gray-400">
-                    대상 ID: {report.target_id.slice(0, 8)}... &middot;{' '}
-                    {new Date(report.created_at).toLocaleDateString('ko-KR')}
+                    Target ID: {report.target_id.slice(0, 8)}... &middot;{' '}
+                    {new Date(report.created_at).toLocaleDateString('en-US')}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -117,13 +117,13 @@ export default function AdminReportsPage() {
                     onClick={() => handleResolve(report.id)}
                     className="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
                   >
-                    처리
+                    Resolve
                   </button>
                   <button
                     onClick={() => handleDismiss(report.id)}
                     className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
                   >
-                    기각
+                    Dismiss
                   </button>
                 </div>
               </div>

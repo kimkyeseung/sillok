@@ -13,9 +13,9 @@ interface Tag {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  ERA: '시대',
-  FIELD: '분야',
-  CUSTOM: '커스텀',
+  ERA: 'Era',
+  FIELD: 'Field',
+  CUSTOM: 'Custom',
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -69,20 +69,20 @@ export default function AdminTagsPage() {
           method: 'PUT',
           body: JSON.stringify(body),
         });
-        toast('태그가 수정되었습니다');
+        toast('Tag updated');
       } else {
         await apiFetch('/api/admin/tags', {
           method: 'POST',
           body: JSON.stringify(body),
         });
-        toast('태그가 추가되었습니다');
+        toast('Tag added');
       }
 
       resetForm();
       mutate();
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : '오류가 발생했습니다';
+        err instanceof Error ? err.message : 'An error occurred';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -90,15 +90,15 @@ export default function AdminTagsPage() {
   };
 
   const handleDelete = async (tag: Tag) => {
-    if (!confirm(`"${tag.name_ko}" 태그를 삭제하시겠습니까? 연결된 인물 태그도 해제됩니다.`))
+    if (!confirm(`Delete tag "${tag.name_ko}"? Linked figure tags will also be removed.`))
       return;
 
     try {
       await apiFetch(`/api/admin/tags/${tag.id}`, { method: 'DELETE' });
-      toast('태그가 삭제되었습니다');
+      toast('Tag deleted');
       mutate();
     } catch {
-      toast('삭제에 실패했습니다', 'error');
+      toast('Failed to delete', 'error');
     }
   };
 
@@ -113,9 +113,9 @@ export default function AdminTagsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">태그 관리</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Tag Management</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            인물에 부여하는 시대/분야 태그를 관리합니다
+            Manage era and field tags assigned to figures
           </p>
         </div>
         <button
@@ -138,20 +138,20 @@ export default function AdminTagsPage() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          태그 추가
+          Add Tag
         </button>
       </div>
 
-      {/* 태그 추가/수정 폼 */}
+      {/* Tag Form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="card-flat p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-900">
-            {editingTag ? '태그 수정' : '새 태그 추가'}
+            {editingTag ? 'Edit Tag' : 'Add New Tag'}
           </h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                이름 (한글) *
+                Korean Name *
               </label>
               <input
                 type="text"
@@ -159,14 +159,14 @@ export default function AdminTagsPage() {
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, name_ko: e.target.value }))
                 }
-                placeholder="장군"
+                placeholder="General"
                 required
                 className="input"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                이름 (영문)
+                English Name
               </label>
               <input
                 type="text"
@@ -180,7 +180,7 @@ export default function AdminTagsPage() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                유형 *
+                Type *
               </label>
               <select
                 value={form.type}
@@ -189,9 +189,9 @@ export default function AdminTagsPage() {
                 }
                 className="input"
               >
-                <option value="ERA">시대 (ERA)</option>
-                <option value="FIELD">분야 (FIELD)</option>
-                <option value="CUSTOM">커스텀 (CUSTOM)</option>
+                <option value="ERA">Era</option>
+                <option value="FIELD">Field</option>
+                <option value="CUSTOM">Custom</option>
               </select>
             </div>
           </div>
@@ -201,24 +201,24 @@ export default function AdminTagsPage() {
               disabled={saving || !form.name_ko.trim()}
               className="btn-primary text-sm disabled:opacity-50"
             >
-              {saving ? '저장 중...' : editingTag ? '수정' : '추가'}
+              {saving ? 'Saving...' : editingTag ? 'Update' : 'Add'}
             </button>
             <button
               type="button"
               onClick={resetForm}
               className="btn-ghost text-sm"
             >
-              취소
+              Cancel
             </button>
           </div>
         </form>
       )}
 
-      {/* 태그 목록 */}
+      {/* Tag List */}
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">로딩 중...</span>
+          <span className="text-sm">Loading...</span>
         </div>
       ) : (
         <div className="space-y-6">
@@ -236,7 +236,7 @@ export default function AdminTagsPage() {
                     {TYPE_LABELS[type] ?? type}
                   </span>
                   <span className="ml-2 text-xs text-gray-400">
-                    {typeTags.length}개
+                    {typeTags.length}
                   </span>
                 </div>
                 <div className="divide-y divide-gray-50">
@@ -258,7 +258,7 @@ export default function AdminTagsPage() {
                       <button
                         onClick={() => startEdit(tag)}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                        title="수정"
+                        title="Edit"
                       >
                         <svg
                           className="h-4 w-4"
@@ -277,7 +277,7 @@ export default function AdminTagsPage() {
                       <button
                         onClick={() => handleDelete(tag)}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                        title="삭제"
+                        title="Delete"
                       >
                         <svg
                           className="h-4 w-4"
@@ -301,7 +301,7 @@ export default function AdminTagsPage() {
           })}
           {(tags ?? []).length === 0 && (
             <div className="card-flat py-12 text-center text-gray-400">
-              <p className="text-sm">태그가 없습니다</p>
+              <p className="text-sm">No tags</p>
             </div>
           )}
         </div>

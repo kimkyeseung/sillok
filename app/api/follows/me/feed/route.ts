@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { normalizeThreadList } from '@/lib/thread-figures';
 
 // ─── GET /api/follows/me/feed — Follow feed (threads of followed persons) [USER] ───
 
@@ -34,6 +35,12 @@ export async function GET(request: Request) {
 
   const personIds = follows.map((f) => f.target_id);
 
+  const { data: relatedThreadRows } = await supabaseAdmin
+    .from('thread_persons')
+    .select('thread_id')
+    .in('person_id', personIds);
+  const relatedThreadIds = (relatedThreadRows ?? []).map((row) => row.thread_id);
+
   let query = supabaseAdmin
     .from('threads')
     .select(
@@ -41,12 +48,18 @@ export async function GET(request: Request) {
       id, person_id, title, content, video_url, like_count, reply_count, view_count,
       is_pinned, created_at, updated_at, author_id,
       profiles!threads_author_id_fkey ( nickname, avatar_url ),
-      persons!threads_person_id_fkey ( slug, name_en )
+      persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
+      thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )
     `
     )
-    .in('person_id', personIds)
     .eq('is_deleted', false)
     .order('created_at', { ascending: false });
+
+  query = query.or(
+    `person_id.in.(${personIds.join(',')})${
+      relatedThreadIds.length > 0 ? `,id.in.(${relatedThreadIds.join(',')})` : ''
+    }`
+  );
 
   if (cursor) query = query.lt('created_at', cursor);
   query = query.limit(limit + 1);
@@ -55,8 +68,9 @@ export async function GET(request: Request) {
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  const hasNext = (data?.length ?? 0) > limit;
-  const items = hasNext ? data!.slice(0, limit) : (data ?? []);
+  const normalized = normalizeThreadList(data);
+  const hasNext = normalized.length > limit;
+  const items = hasNext ? normalized.slice(0, limit) : normalized;
   const lastItem = items[items.length - 1];
 
   return apiSuccess({

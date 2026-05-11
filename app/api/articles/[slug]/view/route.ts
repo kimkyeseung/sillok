@@ -1,7 +1,7 @@
 import { apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// ─── POST /api/articles/:slug/view — Log article view + increment count ───
+// ─── POST /api/articles/:slug/view — Log article view ───
 
 export async function POST(
   request: Request,
@@ -38,19 +38,11 @@ export async function POST(
     return apiSuccess({ logged: false });
   }
 
-  // Insert view log + increment counter
-  await Promise.all([
-    supabaseAdmin.from('view_logs').insert({
-      target_type: 'ARTICLE',
-      target_id: article.id,
-      viewer_ip: ip,
-    }),
-    supabaseAdmin.rpc('increment_counter', {
-      table_name: 'articles',
-      column_name: 'view_count',
-      row_id: article.id,
-    }),
-  ]);
+  await supabaseAdmin.from('view_logs').insert({
+    target_type: 'ARTICLE',
+    target_id: article.id,
+    viewer_ip: ip,
+  });
 
   return apiSuccess({ logged: true });
 }

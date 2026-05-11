@@ -510,7 +510,7 @@ export default function AdminNodesPage() {
                 type="text"
                 value={form.title_ko}
                 onChange={(e) => setForm((p) => ({ ...p, title_ko: e.target.value }))}
-                placeholder="임진왜란"
+                placeholder="Imjin War"
                 className="input"
               />
             </div>

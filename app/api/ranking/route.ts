@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return apiError('VALIDATION_ERROR', '입력값을 확인해주세요.', 422);
+    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
   }
 
   const { tag, cursor, limit } = parsed.data;

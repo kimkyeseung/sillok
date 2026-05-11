@@ -35,7 +35,7 @@ export default function AdminPersonRequestsPage() {
 
   const handleReject = useCallback(
     async (id: string) => {
-      const note = prompt('반려 사유 (선택):') ?? undefined;
+      const note = prompt('Rejection note (optional):') ?? undefined;
       await apiFetch(`/api/person-requests/${id}/reject`, {
         method: 'PUT',
         body: JSON.stringify({ admin_note: note }),
@@ -48,22 +48,22 @@ export default function AdminPersonRequestsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">인물 추가 요청</h1>
-        <p className="mt-0.5 text-sm text-gray-500">사용자가 등록을 요청한 인물 목록입니다</p>
+        <h1 className="text-2xl font-bold text-gray-900">Figure Requests</h1>
+        <p className="mt-0.5 text-sm text-gray-500">Review figures requested by users</p>
       </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-8 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">로딩 중...</span>
+          <span className="text-sm">Loading...</span>
         </div>
       ) : (data?.items ?? []).length === 0 ? (
         <div className="card-flat flex flex-col items-center py-16">
           <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="mt-3 text-sm font-medium text-gray-500">대기 중인 요청이 없습니다</p>
-          <p className="text-xs text-gray-400">모든 요청이 처리되었습니다</p>
+          <p className="mt-3 text-sm font-medium text-gray-500">No pending requests</p>
+          <p className="text-xs text-gray-400">All requests have been processed</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -88,10 +88,10 @@ export default function AdminPersonRequestsPage() {
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">
                       {(req.profiles?.nickname ?? '?').charAt(0)}
                     </div>
-                    <span>{req.profiles?.nickname ?? '알 수 없음'}</span>
+                    <span>{req.profiles?.nickname ?? 'Unknown'}</span>
                     <span>&middot;</span>
                     <span>
-                      {new Date(req.created_at).toLocaleDateString('ko-KR')}
+                      {new Date(req.created_at).toLocaleDateString('en-US')}
                     </span>
                   </div>
                 </div>
@@ -100,13 +100,13 @@ export default function AdminPersonRequestsPage() {
                     onClick={() => handleApprove(req.id)}
                     className="inline-flex items-center rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
                   >
-                    승인
+                    Approve
                   </button>
                   <button
                     onClick={() => handleReject(req.id)}
                     className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
                   >
-                    반려
+                    Reject
                   </button>
                 </div>
               </div>

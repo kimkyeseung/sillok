@@ -71,6 +71,15 @@ function selectPerson() {
   });
 }
 
+function selectAnotherPerson() {
+  pickerOnChange?.({
+    id: 'person-uuid-2',
+    slug: 'jeong-dojeon',
+    name_en: 'Jeong Do-jeon',
+    thumbnail: null,
+  });
+}
+
 // ── Tests ──
 
 describe('ThreadForm', () => {
@@ -80,12 +89,11 @@ describe('ThreadForm', () => {
   });
 
   describe('when personId is provided (from person detail page)', () => {
-    it('shows fixed person name instead of PersonPicker', () => {
+    it('shows fixed person name and allows adding related persons', () => {
       render(<ThreadForm personId="uuid-1" personName="Sejong" />);
 
       expect(screen.getByText('Sejong')).toBeInTheDocument();
-      expect(screen.getByText('— Thread')).toBeInTheDocument();
-      expect(screen.queryByTestId('person-picker')).not.toBeInTheDocument();
+      expect(screen.getByTestId('person-picker')).toBeInTheDocument();
     });
 
     it('submits with the provided personId', async () => {
@@ -99,7 +107,7 @@ describe('ThreadForm', () => {
         expect(mockApiFetch).toHaveBeenCalledWith('/api/threads', {
           method: 'POST',
           body: JSON.stringify({
-            person_id: 'uuid-1',
+            figures: ['uuid-1'],
             title: 'Test Title',
             content: 'Test content body',
           }),
@@ -134,7 +142,7 @@ describe('ThreadForm', () => {
       fireEvent.submit(form);
 
       expect(mockToast).toHaveBeenCalledWith(
-        'Please select a figure',
+        'Please select at least one figure',
         'error'
       );
       expect(mockApiFetch).not.toHaveBeenCalled();
@@ -172,7 +180,7 @@ describe('ThreadForm', () => {
         expect(mockApiFetch).toHaveBeenCalledWith('/api/threads', {
           method: 'POST',
           body: JSON.stringify({
-            person_id: 'person-uuid-1',
+            figures: ['person-uuid-1'],
             title: 'Discussion about Sejong',
             content: 'Great king',
           }),
@@ -181,6 +189,31 @@ describe('ThreadForm', () => {
 
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith('/threads/thread-2');
+      });
+    });
+
+    it('submits multiple selected persons as figures in order', async () => {
+      mockApiFetch.mockResolvedValueOnce({ id: 'thread-4' });
+      render(<ThreadForm />);
+
+      act(() => {
+        selectPerson();
+      });
+      act(() => {
+        selectAnotherPerson();
+      });
+      fillForm('Discussion about reforms', 'Multiple figures involved');
+      fireEvent.click(screen.getByRole('button', { name: 'Post Thread' }));
+
+      await waitFor(() => {
+        expect(mockApiFetch).toHaveBeenCalledWith('/api/threads', {
+          method: 'POST',
+          body: JSON.stringify({
+            figures: ['person-uuid-1', 'person-uuid-2'],
+            title: 'Discussion about reforms',
+            content: 'Multiple figures involved',
+          }),
+        });
       });
     });
   });
@@ -230,7 +263,7 @@ describe('ThreadForm', () => {
         expect(mockApiFetch).toHaveBeenCalledWith('/api/threads', {
           method: 'POST',
           body: JSON.stringify({
-            person_id: 'uuid-1',
+            figures: ['uuid-1'],
             title: 'Title',
             content: 'Content',
             video_url: 'https://www.youtube.com/watch?v=abc123',

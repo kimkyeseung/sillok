@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { normalizeThreadList } from '@/lib/thread-figures';
 
 // ─── GET /api/persons/:slug/threads — Person threads (public) ───
 
@@ -30,20 +31,30 @@ export async function GET(
   if (!person)
     return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
 
+  // Threads where person is primary OR referenced as related
+  const { data: relatedThreadIds } = await supabaseAdmin
+    .from('thread_persons')
+    .select('thread_id')
+    .eq('person_id', person.id);
+
+  const relatedIds = (relatedThreadIds ?? []).map((r) => r.thread_id);
+
   let query = supabaseAdmin
     .from('threads')
     .select(
       `
       id, title, content, video_url,
-      is_pinned, view_count, reply_count, like_count,
+      person_id, is_pinned, view_count, reply_count, like_count,
       created_at, updated_at,
       author_id,
       profiles!threads_author_id_fkey ( nickname, avatar_url ),
-      thread_images ( id, url, sort_order )
+      persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
+      thread_images ( id, url, sort_order ),
+      thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )
     `
     )
-    .eq('person_id', person.id)
     .eq('is_deleted', false)
+    .or(`person_id.eq.${person.id}${relatedIds.length > 0 ? `,id.in.(${relatedIds.join(',')})` : ''}`)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -57,8 +68,9 @@ export async function GET(
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
-  const hasNext = (data?.length ?? 0) > limit;
-  const items = hasNext ? data!.slice(0, limit) : (data ?? []);
+  const normalized = normalizeThreadList(data);
+  const hasNext = normalized.length > limit;
+  const items = hasNext ? normalized.slice(0, limit) : normalized;
   const lastItem = items[items.length - 1];
 
   return apiSuccess({

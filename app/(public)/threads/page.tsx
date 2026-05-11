@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
+import { normalizeThreadList } from '@/lib/thread-figures';
 
 export const metadata: Metadata = {
   title: 'Threads',
@@ -52,8 +53,9 @@ export default async function ThreadsPage() {
       like_count, reply_count, view_count,
       created_at,
       profiles!threads_author_id_fkey ( nickname, avatar_url ),
-      persons!threads_person_id_fkey ( slug, name_en ),
-      thread_images ( id, url, sort_order )
+      persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
+      thread_images ( id, url, sort_order ),
+      thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )
     `
     )
     .eq('is_deleted', false)
@@ -75,9 +77,9 @@ export default async function ThreadsPage() {
       </div>
 
       <div className="space-y-2">
-        {(threads ?? []).map((thread) => {
+        {normalizeThreadList(threads).map((thread) => {
           const profile = thread.profiles as unknown as { nickname: string; avatar_url: string | null } | null;
-          const person = thread.persons as unknown as { slug: string; name_en: string } | null;
+          const figures = thread.figures;
           const images = ((thread.thread_images as unknown as { id: string; url: string; sort_order: number }[]) ?? []).sort(
             (a, b) => a.sort_order - b.sort_order
           );
@@ -115,9 +117,21 @@ export default async function ThreadsPage() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  {person && (
-                    <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">
-                      {person.name_en}
+                  {figures.slice(0, 4).map((figure) => (
+                    <span
+                      key={figure.id}
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                        figure.is_primary
+                          ? 'bg-brand-50 text-brand-700'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {figure.name_en ?? figure.name_ko}
+                    </span>
+                  ))}
+                  {figures.length > 4 && (
+                    <span className="text-[10px] font-medium text-gray-400">
+                      +{figures.length - 4}
                     </span>
                   )}
                 </div>

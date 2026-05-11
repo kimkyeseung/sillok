@@ -5,7 +5,14 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 
-const TAGS = ['기획', '특집', '인물탐구', '현대', '공지', '안내'] as const;
+const TAGS = [
+  { value: '기획', label: 'Feature' },
+  { value: '특집', label: 'Special' },
+  { value: '인물탐구', label: 'Profile' },
+  { value: '현대', label: 'Modern' },
+  { value: '공지', label: 'Notice' },
+  { value: '안내', label: 'Guide' },
+] as const;
 
 interface ArticleData {
   slug: string;
@@ -66,11 +73,11 @@ export default function ArticleForm({
   const uploadFile = async (file: File) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      toast('JPG, PNG, WebP만 업로드 가능합니다', 'error');
+      toast('Only JPG, PNG, and WebP files are allowed', 'error');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast('5MB 이하만 업로드 가능합니다', 'error');
+      toast('File size must be 5MB or less', 'error');
       return;
     }
 
@@ -96,9 +103,9 @@ export default function ArticleForm({
 
       const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/articles/${path}`;
       setForm((prev) => ({ ...prev, thumbnail: publicUrl }));
-      toast('썸네일이 업로드되었습니다');
+      toast('Thumbnail uploaded');
     } catch {
-      toast('업로드에 실패했습니다', 'error');
+      toast('Upload failed', 'error');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -139,19 +146,19 @@ export default function ArticleForm({
           method: 'POST',
           body: JSON.stringify(body),
         });
-        toast('아티클이 작성되었습니다');
+        toast('Article created');
       } else {
         await apiFetch(`/api/articles/${slug}`, {
           method: 'PUT',
           body: JSON.stringify(body),
         });
-        toast('아티클이 수정되었습니다');
+        toast('Article updated');
       }
 
       router.push('/admin/articles');
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : '오류가 발생했습니다';
+        err instanceof Error ? err.message : 'An error occurred';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -161,7 +168,7 @@ export default function ArticleForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="card-flat p-6 space-y-5">
-        <h2 className="text-sm font-semibold text-gray-900">기본 정보</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Basic Information</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -181,7 +188,7 @@ export default function ArticleForm({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
-              태그 *
+              Tag *
             </label>
             <select
               name="tag"
@@ -189,9 +196,9 @@ export default function ArticleForm({
               onChange={handleChange}
               className="input"
             >
-              {TAGS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {TAGS.map((tag) => (
+                <option key={tag.value} value={tag.value}>
+                  {tag.label}
                 </option>
               ))}
             </select>
@@ -200,14 +207,14 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            제목 *
+            Title *
           </label>
           <input
             type="text"
             name="title"
             value={form.title}
             onChange={handleChange}
-            placeholder="아티클 제목"
+            placeholder="Article title"
             maxLength={300}
             required
             className="input"
@@ -216,14 +223,14 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            요약
+            Summary
           </label>
           <input
             type="text"
             name="summary"
             value={form.summary}
             onChange={handleChange}
-            placeholder="간단한 요약 (목록에 표시됩니다)"
+            placeholder="Short summary shown in lists"
             maxLength={500}
             className="input"
           />
@@ -231,13 +238,13 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            썸네일
+            Thumbnail
           </label>
           {form.thumbnail ? (
             <div className="relative inline-block">
               <img
                 src={form.thumbnail}
-                alt="썸네일 미리보기"
+                alt="Thumbnail preview"
                 className="h-40 rounded-lg object-cover"
               />
               <button
@@ -264,7 +271,7 @@ export default function ArticleForm({
               {uploading ? (
                 <div className="flex items-center gap-2 text-gray-400">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-                  <span className="text-sm">업로드 중...</span>
+                  <span className="text-sm">Uploading...</span>
                 </div>
               ) : (
                 <>
@@ -272,7 +279,7 @@ export default function ArticleForm({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
                   </svg>
                   <span className="mt-2 text-xs text-gray-400">
-                    클릭 또는 드래그하여 이미지 업로드 (JPG, PNG, WebP / 5MB)
+                    Click or drag to upload an image (JPG, PNG, WebP / 5MB)
                   </span>
                 </>
               )}
@@ -290,13 +297,13 @@ export default function ArticleForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-600">
-            본문 *
+            Body *
           </label>
           <textarea
             name="body"
             value={form.body}
             onChange={handleChange}
-            placeholder="아티클 본문을 작성하세요 (Markdown 지원)"
+            placeholder="Write the article body (Markdown supported)"
             rows={15}
             required
             className="input resize-none font-mono text-sm"
@@ -304,9 +311,9 @@ export default function ArticleForm({
         </div>
       </div>
 
-      {/* 옵션 */}
+      {/* Options */}
       <div className="card-flat p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-900">옵션</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Options</h2>
         <label className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -316,9 +323,9 @@ export default function ArticleForm({
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           />
           <div>
-            <span className="text-sm font-medium text-gray-900">공개</span>
+            <span className="text-sm font-medium text-gray-900">Published</span>
             <p className="text-xs text-gray-500">
-              체크하면 아티클 목록에 노출됩니다
+              Show this article in public article lists
             </p>
           </div>
         </label>
@@ -331,15 +338,15 @@ export default function ArticleForm({
             className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
           />
           <div>
-            <span className="text-sm font-medium text-gray-900">공지</span>
+            <span className="text-sm font-medium text-gray-900">Notice</span>
             <p className="text-xs text-gray-500">
-              체크하면 상단에 공지 배지가 표시됩니다
+              Display a notice badge at the top
             </p>
           </div>
         </label>
       </div>
 
-      {/* 제출 */}
+      {/* Submit */}
       <div className="flex items-center gap-3">
         <button
           type="submit"
@@ -352,17 +359,17 @@ export default function ArticleForm({
           className="btn-primary disabled:opacity-50"
         >
           {saving
-            ? '저장 중...'
+            ? 'Saving...'
             : mode === 'create'
-              ? '아티클 작성'
-              : '수정 저장'}
+              ? 'Create Article'
+              : 'Save Changes'}
         </button>
         <button
           type="button"
           onClick={() => router.push('/admin/articles')}
           className="btn-ghost"
         >
-          취소
+          Cancel
         </button>
       </div>
     </form>

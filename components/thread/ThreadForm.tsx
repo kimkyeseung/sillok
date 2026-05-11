@@ -31,10 +31,10 @@ function isValidVideoUrl(url: string): boolean {
 }
 
 export default function ThreadForm({ personId, personName }: ThreadFormProps) {
-  const [selectedPerson, setSelectedPerson] = useState<SelectedPerson | null>(
+  const [persons, setPersons] = useState<SelectedPerson[]>(
     personId && personName
-      ? { id: personId, slug: '', name_en: personName, thumbnail: null }
-      : null
+      ? [{ id: personId, slug: '', name_en: personName, thumbnail: null }]
+      : []
   );
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -44,12 +44,24 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const resolvedPersonId = selectedPerson?.id ?? personId;
+  const primaryPersonId = persons[0]?.id ?? personId;
+  const figureIds = persons.map((p) => p.id);
+
+  const handleAddPerson = (person: SelectedPerson | null) => {
+    if (!person) return;
+    if (persons.some((p) => p.id === person.id)) return;
+    if (persons.length >= 6) return; // 1 primary + 5 related
+    setPersons((prev) => [...prev, person]);
+  };
+
+  const handleRemovePerson = (id: string) => {
+    setPersons((prev) => prev.filter((p) => p.id !== id));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resolvedPersonId) {
-      toast('Please select a figure', 'error');
+    if (!primaryPersonId) {
+      toast('Please select at least one figure', 'error');
       return;
     }
     if (!title.trim() || !content.trim()) {
@@ -66,7 +78,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
       const res = await apiFetch<{ id: string }>('/api/threads', {
         method: 'POST',
         body: JSON.stringify({
-          person_id: resolvedPersonId,
+          figures: figureIds,
           title: title.trim(),
           content: content.trim(),
           ...(videoUrl ? { video_url: videoUrl } : {}),
@@ -82,19 +94,60 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
     }
   };
 
+  // Fixed person from props (e.g. writing from person page)
+  const isFixed = !!(personId && personName);
+
   return (
     <form onSubmit={handleSubmit} className="card-flat p-5 space-y-4">
-      {personId && personName ? (
-        <div className="flex items-center gap-1.5 text-sm text-brand-600">
-          <span className="flex h-5 w-5 items-center justify-center rounded bg-brand-100 text-[10px] font-bold text-brand-700">
-            {personName.charAt(0)}
-          </span>
-          <span className="font-medium">{personName}</span>
-          <span className="text-gray-400">— Thread</span>
-        </div>
-      ) : (
-        <PersonPicker value={selectedPerson} onChange={setSelectedPerson} />
-      )}
+      {/* Selected Persons */}
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-gray-500">
+          Figures <span className="text-red-400">*</span>
+          <span className="ml-1 font-normal text-gray-400">(up to 6)</span>
+        </label>
+
+        {persons.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {persons.map((p, i) => (
+              <span
+                key={p.id}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                  i === 0
+                    ? 'border border-brand-200 bg-brand-50 text-brand-700'
+                    : 'border border-gray-200 bg-gray-50 text-gray-600'
+                }`}
+              >
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${
+                    i === 0
+                      ? 'bg-brand-200 text-brand-700'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}
+                >
+                  {p.name_en.charAt(0)}
+                </span>
+                {p.name_en}
+                {!(isFixed && i === 0) && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePerson(p.id)}
+                    className="ml-0.5 text-gray-400 hover:text-red-500"
+                  >
+                    ✕
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {persons.length < 6 && (
+          <PersonPicker
+            value={null}
+            onChange={handleAddPerson}
+          />
+        )}
+      </div>
 
       <input
         type="text"
@@ -141,7 +194,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
         </p>
         <button
           type="submit"
-          disabled={submitting || !resolvedPersonId || !title.trim() || !content.trim()}
+          disabled={submitting || !primaryPersonId || !title.trim() || !content.trim()}
           className="btn-primary disabled:opacity-50"
         >
           {submitting ? 'Posting...' : 'Post Thread'}

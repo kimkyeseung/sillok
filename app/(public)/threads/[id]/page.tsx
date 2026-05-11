@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { ThreadActions, ReplyActions, ReplyFormWrapper } from '@/components/thread/ThreadInteractions';
 import ViewLogger from '@/components/thread/ViewLogger';
 import ImageLightbox from '@/components/common/ImageLightbox';
+import { normalizeThreadFigures, type ThreadFigure } from '@/lib/thread-figures';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -19,13 +20,14 @@ async function getThread(id: string) {
     .from('threads')
     .select(
       `*, profiles!threads_author_id_fkey ( nickname, avatar_url ),
-       persons!threads_person_id_fkey ( slug, name_en ),
-       thread_images ( id, url, sort_order )`
+       persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
+       thread_images ( id, url, sort_order ),
+       thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )`
     )
     .eq('id', id)
     .eq('is_deleted', false)
     .single();
-  return data;
+  return data ? normalizeThreadFigures(data) : data;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -129,9 +131,9 @@ export default async function ThreadDetailPage({ params }: Props) {
     .order('created_at', { ascending: true })
     .limit(50);
 
-  const person = thread.persons as Record<string, unknown> | null;
   const author = thread.profiles as Record<string, unknown>;
   const images = (thread.thread_images ?? []) as Array<Record<string, unknown>>;
+  const figures = thread.figures ?? [];
   const authorName = (author?.nickname as string) ?? 'Anonymous';
 
   return (
@@ -140,17 +142,32 @@ export default async function ThreadDetailPage({ params }: Props) {
       <ViewLogger threadId={params.id} />
       <article className="card-flat overflow-hidden">
         {/* Person Tag Bar */}
-        {person && (
+        {figures.length > 0 && (
           <div className="border-b border-gray-100 bg-gray-50/50 px-5 py-2.5">
-            <Link
-              href={`/persons/${person.slug}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-brand-100 text-[10px] font-bold text-brand-700">
-                {(person.name_en as string).charAt(0)}
-              </span>
-              {person.name_en as string}
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              {figures.map((figure: ThreadFigure) => (
+                <Link
+                  key={figure.id}
+                  href={`/persons/${figure.slug}`}
+                  className={`inline-flex items-center gap-1.5 font-medium hover:text-brand-700 ${
+                    figure.is_primary
+                      ? 'text-sm text-brand-600'
+                      : 'text-xs text-gray-500 hover:text-brand-600'
+                  }`}
+                >
+                  <span
+                    className={`flex items-center justify-center rounded font-bold ${
+                      figure.is_primary
+                        ? 'h-5 w-5 bg-brand-100 text-[10px] text-brand-700'
+                        : 'h-4 w-4 bg-gray-100 text-[9px] text-gray-500'
+                    }`}
+                  >
+                    {(figure.name_en ?? figure.name_ko ?? '?').charAt(0)}
+                  </span>
+                  {figure.name_en ?? figure.name_ko}
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 

@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
+    "db:migrate": "npx supabase migration up",
     "db:generate": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > lib/database.ts"
   },
   "dependencies": {

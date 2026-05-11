@@ -17,7 +17,14 @@ const LOCALHOST_ADMIN: AdminUser = {
   role: 'ADMIN',
 };
 
-function isLocalhost(request: Request): boolean {
+function isLocalhostAdminEnabled(request: Request): boolean {
+  if (
+    process.env.NODE_ENV !== 'development' ||
+    process.env.ENABLE_LOCALHOST_ADMIN !== 'true'
+  ) {
+    return false;
+  }
+
   const host = request.headers.get('host') ?? '';
   return host.startsWith('localhost') || host.startsWith('127.0.0.1');
 }
@@ -29,7 +36,7 @@ function isLocalhost(request: Request): boolean {
 export async function requireUser(
   request: Request
 ): Promise<AuthUser | null> {
-  if (isLocalhost(request)) return LOCALHOST_ADMIN;
+  if (isLocalhostAdminEnabled(request)) return LOCALHOST_ADMIN;
 
   const authHeader = request.headers.get('authorization');
 
@@ -90,7 +97,7 @@ export async function requireUser(
 export async function requireAdmin(
   request: Request
 ): Promise<AdminUser | null> {
-  if (isLocalhost(request)) return LOCALHOST_ADMIN;
+  if (isLocalhostAdminEnabled(request)) return LOCALHOST_ADMIN;
 
   const user = await requireUser(request);
   if (!user) return null;
