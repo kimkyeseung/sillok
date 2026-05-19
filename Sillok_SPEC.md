@@ -1,8 +1,18 @@
-# Sillok — 한국 인물 아카이브 플랫폼 SPEC
+# Sillok — 한국 인물·문화 아카이브 플랫폼 SPEC
 
-> **버전:** 2.2 (현행 코드·운영 서비스 반영, 구조 동기화)
+> **버전:** 2.3 (문화·음식·스포츠 TOPIC 노드 확장 반영)
 > **작성 목적:** Claude Code 기반 자동 개발을 위한 전체 명세서
 > **기술 스택:** Next.js 14 (App Router) + Supabase + Vercel
+
+### v2.2 → v2.3 변경 사항
+
+- **서비스 범위 확장**: 한국 인물 아카이브 → 한국 인물·문화 지식 그래프. 인물 중심성은 유지하되 음식·문화·스포츠 주제도 노드로 수록
+- **TOPIC 노드 타입 추가**: 김치, 불고기, 한복, 판소리, 한국축구, 한국야구 등 비인물 주제 지원
+- **TOPIC 분류 정책 추가**: `metadata.category`로 `food`, `culture`, `sport`, `music`, `literature`, `custom` 구분
+- **노드 간 연결 테이블 추가 예정**: `node_links`로 TOPIC ↔ EVENT/GROUP/MEDIA/ARTIFACT/TOPIC 연결 지원
+- **컬렉션 확장**: 컬렉션 아이템이 인물뿐 아니라 노드도 담을 수 있도록 스키마 확장
+- **Explore 허브 재정의**: Artifacts, Events, Media, Groups에 Topics 섹션 추가
+- **M1.5/M2 로드맵 보강**: 문화·음식·스포츠 TOPIC 데이터 모델, 어드민 입력, 초기 시드 데이터 작업 추가
 
 ### v2.1 → v2.2 변경 사항
 
@@ -63,14 +73,15 @@
 ## 1. 프로젝트 개요
 
 ### 서비스 컨셉
-BoardGameGeek(BGG)의 구조를 벤치마크하여, **한국의 이름있는 인물**을 하나의 노드로 삼고 유물·K-콘텐츠·사건·그룹이 연결되는 그래프형 인물 아카이브 플랫폼.
+BoardGameGeek(BGG)의 구조를 벤치마크하여, **한국의 이름있는 인물**을 핵심 노드로 삼고 유물·K-콘텐츠·사건·그룹·음식·문화·스포츠 주제가 연결되는 그래프형 한국 지식 아카이브 플랫폼.
 
 - 단군 시대부터 현재 대한민국의 살아있는 인물까지 수록
+- 김치, 불고기, 한복, 판소리, 한국축구, 한국야구처럼 인물만으로 설명되지 않는 한국 문화 주제도 수록
 - 논란 있는 인물(친일파, 독재자 등)도 포함하되 **기본 정보만 제공**
 - 운영진이 기본 뼈대를 관리하고, 유저가 커뮤니티 콘텐츠를 쌓는 구조
 - **운영 도메인**: sillok.kr
 
-### 노드 타입 (5종)
+### 노드 타입 (6종)
 
 | 타입 | 설명 | 인터랙션 |
 |------|------|----------|
@@ -79,6 +90,17 @@ BoardGameGeek(BGG)의 구조를 벤치마크하여, **한국의 이름있는 인
 | `MEDIA` | K-영화/드라마/도서/회화 | 댓글만 (독립) |
 | `EVENT` | 역사적 사건/업적 | 댓글만 (독립) |
 | `GROUP` | K-pop 그룹/현대 문화 엔티티 | 댓글만 (독립) |
+| `TOPIC` | 음식·문화·스포츠·개념 주제 (김치, 불고기, 한국축구 등) | 댓글만 (독립) |
+
+#### TOPIC 설계 원칙
+
+- `TOPIC`은 인물 중심 아카이브를 보완하는 지식 노드이며, 인물보다 상위 개념이 아님
+- `FOOD`, `SPORT`, `CULTURE`를 별도 `node_type`으로 늘리지 않고 `metadata.category`로 분류
+- 대표 예시:
+  - food: `kimchi`, `bulgogi`, `bibimbap`
+  - culture: `hanbok`, `pansori`, `hangul`, `korean-wave`
+  - sport: `korean-football`, `korean-baseball`, `taekwondo`
+- TOPIC 상세 페이지는 관련 인물, 관련 사건, 관련 그룹/미디어, 관련 토론을 함께 보여줌
 
 ---
 
@@ -252,7 +274,7 @@ sillok/
 │   ├── types.ts                  # 공유 타입 (NodeType, RelationType 등)
 │   └── upload.ts                 # 파일 업로드 유틸
 ├── db/
-│   └── schema.sql                # 전체 DB 스키마 (29개 테이블)
+│   └── schema.sql                # 전체 DB 스키마 (현행 29개 + v2.3 node_links 예정)
 ├── public/
 │   └── logo.png
 └── package.json
@@ -387,7 +409,7 @@ export function apiSuccess<T>(data: T) {
 
 ## 4. 데이터베이스 스키마
 
-> Supabase(PostgreSQL) 기준. 29개 테이블. 모든 테이블에 `created_at`, `updated_at` 포함.
+> Supabase(PostgreSQL) 기준. 현행 29개 테이블 + v2.3 `node_links` 추가 예정. 모든 테이블에 `created_at`, `updated_at` 포함.
 
 ### 4-1. 인물 (persons)
 
@@ -449,7 +471,7 @@ CREATE TABLE person_tags (
 CREATE TABLE nodes (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug         TEXT UNIQUE NOT NULL,
-  node_type    TEXT NOT NULL CHECK (node_type IN ('ARTIFACT', 'MEDIA', 'EVENT', 'GROUP')),
+  node_type    TEXT NOT NULL CHECK (node_type IN ('ARTIFACT', 'MEDIA', 'EVENT', 'GROUP', 'TOPIC')),
   title        TEXT NOT NULL,
   description  TEXT,
   thumbnail    TEXT,
@@ -458,6 +480,8 @@ CREATE TABLE nodes (
   -- MEDIA:    { "year": 2023, "genre": "드라마", "platform": "Netflix" }
   -- EVENT:    { "start_year": 1919, "end_year": 1919, "location": "전국" }
   -- GROUP:    { "members": [...], "debut_year": 2016, "genre": "K-pop" }
+  -- TOPIC:    { "category": "food|culture|sport|music|literature|custom",
+  --             "origin_period": "Joseon", "aliases": ["Kimchi", "Gimchi"] }
   is_published BOOLEAN DEFAULT FALSE,
   is_deleted   BOOLEAN DEFAULT FALSE,
   view_count   INTEGER DEFAULT 0,
@@ -478,6 +502,53 @@ CREATE TABLE person_node_links (
   UNIQUE (person_id, node_id)
 );
 ```
+
+`link_type` 권장값:
+
+| 값 | 의미 | 예시 |
+|----|------|------|
+| `ASSOCIATED_WITH` | 느슨한 관련 | 손흥민 ↔ 한국축구 |
+| `REPRESENTS` | 대표 인물/상징 | 박지성 ↔ 한국축구 |
+| `POPULARIZED` | 대중화 기여 | 현대 셰프/연구자 ↔ 김치 |
+| `CREATED_BY` | 창작/창설 | 창작자 ↔ 미디어/그룹 |
+| `PARTICIPATED_IN` | 사건 참여 | 선수/감독 ↔ 2002 FIFA World Cup |
+| `FEATURED_IN` | 작품/미디어 등장 | 인물 ↔ 영화/드라마 |
+
+### 4-4-1. 노드 간 연결 (node_links)
+
+> v2.3 추가 예정. TOPIC 확장 이후 노드끼리의 관계를 표현하기 위한 테이블.
+
+```sql
+CREATE TABLE node_links (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+  to_node_id   UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+  link_type    TEXT NOT NULL CHECK (link_type IN (
+    'RELATED_TO',      -- 느슨한 관련 (양방향)
+    'PART_OF',         -- 포함 관계 (단방향)
+    'ORIGINATED_IN',   -- 기원/발생 배경 (단방향)
+    'INFLUENCED_BY',   -- 영향 관계 (단방향)
+    'REPRESENTED_BY',  -- 대표 사건/미디어/그룹 (단방향)
+    'ASSOCIATED_WITH'  -- 운영진 판단의 일반 연관 (양방향)
+  )),
+  description TEXT,
+  source_url  TEXT,
+  is_approved BOOLEAN DEFAULT TRUE,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (from_node_id, to_node_id, link_type)
+);
+```
+
+노드 간 연결 예시:
+
+| from | link_type | to |
+|------|-----------|----|
+| `kimchi` | `PART_OF` | `korean-cuisine` |
+| `bulgogi` | `PART_OF` | `korean-cuisine` |
+| `korean-football` | `REPRESENTED_BY` | `2002-fifa-world-cup` |
+| `korean-baseball` | `REPRESENTED_BY` | `kbo-league` |
+| `hanbok` | `ASSOCIATED_WITH` | `joseon` |
 
 ### 4-5. 인물 간 관계 (person_relations)
 
@@ -684,10 +755,19 @@ CREATE TABLE collection_items (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   collection_id UUID REFERENCES collections(id) ON DELETE CASCADE,
   person_id     UUID REFERENCES persons(id) ON DELETE CASCADE,
+  node_id       UUID REFERENCES nodes(id) ON DELETE CASCADE,
   added_at      TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (collection_id, person_id)
+  CHECK (
+    (person_id IS NOT NULL AND node_id IS NULL)
+    OR (person_id IS NULL AND node_id IS NOT NULL)
+  ),
+  UNIQUE (collection_id, person_id),
+  UNIQUE (collection_id, node_id)
 );
 ```
+
+컬렉션은 인물 중심 큐레이션을 기본으로 하되, TOPIC 확장 이후에는 노드도 함께 담을 수 있다.
+예: `Korean Cuisine Essentials` 컬렉션에 김치·불고기·비빔밥 TOPIC과 관련 인물/사건을 함께 수록.
 
 ### 4-15. 알림 (notifications)
 
@@ -946,13 +1026,15 @@ POST   /admin/persons/bulk        CSV 벌크 등록 [ADMIN]
 
 ```
 GET    /nodes                     노드 목록
-  Query: limit, cursor, type(ARTIFACT|MEDIA|EVENT|GROUP), q
+  Query: limit, cursor, type(ARTIFACT|MEDIA|EVENT|GROUP|TOPIC), category, q
 
 GET    /nodes/:slug               노드 상세
+GET    /nodes/:slug/links         연결된 노드 목록
 GET    /nodes/:slug/comments      댓글 목록 (cursor 페이지네이션)
 POST   /nodes/:slug/comments      댓글 작성 [USER]
 
 POST   /admin/nodes               노드 등록/수정 [ADMIN]
+POST   /admin/nodes/:id/links     노드 간 연결 등록/수정 [ADMIN]
 ```
 
 ### 5-3. 관계 (Relations)
@@ -1023,7 +1105,7 @@ GET    /follows/me/feed           팔로우 피드 [USER]
 
 ```
 GET    /search
-  Query: q, type(ALL|PERSON|ARTIFACT|MEDIA|EVENT|GROUP), era, field, sort, limit, cursor
+  Query: q, type(ALL|PERSON|ARTIFACT|MEDIA|EVENT|GROUP|TOPIC), category, era, field, sort, limit, cursor
 
 GET    /search/suggest
   Query: q
@@ -1057,8 +1139,9 @@ GET    /collections/:id           컬렉션 상세
 POST   /collections               생성 [USER]
 PUT    /collections/:id           수정 [OWNER]
 DELETE /collections/:id           삭제 [OWNER]
-POST   /collections/:id/items     인물 추가 [OWNER]
-DELETE /collections/:id/items     인물 제거 [OWNER]
+POST   /collections/:id/items     인물/노드 추가 [OWNER]
+  body: { person_id?: UUID, node_id?: UUID } // exactly one
+DELETE /collections/:id/items     인물/노드 제거 [OWNER]
 ```
 
 ### 5-12. 알림
@@ -1155,7 +1238,7 @@ NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] 
 | `/persons/[slug]` | 인물 상세 | SSG + ISR(24h) |
 | `/age-flow` | 시대 흐름 인터랙티브 타임라인 | CSR |
 | `/nodes` | Explore 허브 (전체 노드 타입별 그리드) | SSR |
-| `/nodes/[slug]` | 노드 상세 (유물/미디어/사건/그룹) | SSR |
+| `/nodes/[slug]` | 노드 상세 (유물/미디어/사건/그룹/토픽) | SSR |
 | `/artifacts` | 유물 전용 목록 | SSR |
 | `/threads` | 스레드 목록 | SSR |
 | `/threads/new` | 스레드 작성 | CSR |
@@ -1268,7 +1351,7 @@ NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] 
 │  1397 출생 ── 사망    │                                   │
 │                      │                                   │
 │  🔗 관련 노드 갤러리   │                                   │
-│  (유물·미디어·사건)   │                                   │
+│  (유물·미디어·사건·토픽) │                                 │
 └──────────────────────┴──────────────────────────────────┘
 ```
 
@@ -1292,9 +1375,13 @@ NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] 
 ┌──────────────────────────────────────────────┐
 │  Explore  (157 items)                        │
 │  [🔍 All] [🏺 Artifacts] [⚔ Events]         │
-│  [🎬 Media] [👥 Groups]                     │
+│  [🎬 Media] [👥 Groups] [🧭 Topics]         │
 ├──────────────────────────────────────────────┤
 │  ⭐ Featured (6개 하이라이트)                 │
+├──────────────────────────────────────────────┤
+│  🧭 Topics (음식·문화·스포츠) → View All      │
+│  Kimchi, Bulgogi, Hanbok, Korean Football    │
+│  Korean Baseball, Taekwondo                  │
 ├──────────────────────────────────────────────┤
 │  🏺 Artifacts (47) → View All               │
 │  유물 카드 그리드                             │
@@ -1309,6 +1396,36 @@ NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] 
 │  그룹 카드 (BLACKPINK, NewJeans, BTS)        │
 └──────────────────────────────────────────────┘
 ```
+
+### 7-5-1. TOPIC 상세 페이지
+
+TOPIC은 음식·문화·스포츠처럼 인물 하나에 종속되지 않는 주제를 다룬다. 단, Sillok의 기본 탐색 축은 여전히 인물이므로 TOPIC 상세는 항상 관련 인물과 사건을 함께 노출한다.
+
+```
+┌──────────────────────────────────────────────┐
+│  Kimchi                                      │
+│  TOPIC · Food                                │
+│  "A fermented Korean food..."                │
+│  [Follow] [Add to Collection]                │
+├──────────────────────────────────────────────┤
+│  Overview                                    │
+│  기원, 변천, 지역성, 현대적 의미              │
+├──────────────────────┬───────────────────────┤
+│  Related Figures     │  Related Nodes         │
+│  인물 카드 리스트      │  Korean Cuisine        │
+│                      │  Joseon Food Culture   │
+├──────────────────────┴───────────────────────┤
+│  Discussions                                  │
+│  노드 댓글 + 관련 스레드                       │
+└──────────────────────────────────────────────┘
+```
+
+TOPIC 상세 데이터:
+- `nodes.metadata.category`: food | culture | sport | music | literature | custom
+- `person_node_links`: 관련 인물
+- `node_links`: 관련 주제/사건/그룹/미디어
+- `node_comments`: TOPIC 자체 댓글
+- `view_logs`, `follows`, `collections`: 기존 노드 공통 인터랙션 재사용
 
 ### 7-6. 스레드 댓글 렌더링 규칙
 
@@ -1498,9 +1615,10 @@ LIMIT $limit + 1;
 ### 필터 파라미터
 
 ```
-era:   tags.type = 'ERA' (고대, 삼국, 고려, 조선, 근현대)
-field: tags.type = 'FIELD' (왕, 장군, 예술가, 독립운동가, 학자, 종교인, 기업인, 정치인, 스포츠, 문화/예능)
-type:  ALL | PERSON | ARTIFACT | MEDIA | EVENT | GROUP
+era:      tags.type = 'ERA' (고대, 삼국, 고려, 조선, 근현대)
+field:    tags.type = 'FIELD' (왕, 장군, 예술가, 독립운동가, 학자, 종교인, 기업인, 정치인, 스포츠, 문화/예능)
+type:     ALL | PERSON | ARTIFACT | MEDIA | EVENT | GROUP | TOPIC
+category: TOPIC 전용 (food | culture | sport | music | literature | custom)
 sort:  relevance | name_asc | popular | recent
 ```
 
@@ -1546,6 +1664,7 @@ export const revalidate = 86400; // 24시간 ISR
 - 유물: `VisualArtwork`
 - 미디어: `Movie | TVSeries`
 - 사건: `Event`
+- 토픽: `Thing` 기본, category에 따라 `DefinedTerm`, `SportsOrganization`, `SportsEvent`, `CreativeWork` 보조 검토
 - 사이트: `WebSite` (홈페이지)
 
 ### Sitemap (`app/sitemap.ts`)
@@ -1601,6 +1720,14 @@ images: {
 - [x] 인물 175명+ 등록
 
 #### 남은 작업 (M1.5)
+- [ ] TOPIC 노드 타입 DB 마이그레이션 (`nodes.node_type`, `metadata.category`)
+- [ ] `node_links` 테이블 추가 및 어드민 연결 관리 UI
+- [ ] 컬렉션 아이템 노드 지원 (`collection_items.node_id`)
+- [ ] Explore 허브 Topics 섹션 추가
+- [ ] 초기 TOPIC 시드 30개 등록
+  - food: 김치, 불고기, 비빔밥, 떡볶이, 막걸리
+  - culture: 한복, 한글, 판소리, 사물놀이, Korean Wave
+  - sport: 한국축구, 한국야구, 태권도, KBO League, K League
 - [ ] Google Search Console 등록 + Sitemap 제출
 - [ ] Vercel Analytics 활성화
 - [ ] 소셜 채널 개설
@@ -1614,10 +1741,13 @@ images: {
 #### 핵심 개발
 - [ ] **관계도 시각화** (D3.js 미니 + vis-network 전체 탐색, lazy expand)
 - [ ] **생애 타임라인 시각화** 고도화
+- [ ] **문화 TOPIC 상세 페이지 고도화** — 관련 인물/사건/노드 그래프, 카테고리별 탐색
+- [ ] **음식·스포츠 SEO 랜딩 확장** — Korean Cuisine, Korean Sports, Korean Culture 클러스터
 - [ ] 오늘의 인물 생일/기일 자동 선정 cron
 - [ ] **Twitter/X 자동 포스팅** — 오늘의 인물 매일 자동 트윗
 - [ ] 인물 랭킹 고도화 (주간/월간 시각화)
 - [ ] 인물 데이터 500명+ 확장
+- [ ] TOPIC 데이터 100개+ 확장
 
 #### 비즈니스 모델
 - [ ] Google AdSense 심사 신청
