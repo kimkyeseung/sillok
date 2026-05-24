@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/persons', label: 'Figures' },
   { href: '/age-flow', label: 'Age Flow' },
+  { href: '/space', label: 'Space' },
   { href: '/nodes', label: 'Explore' },
   { href: '/threads', label: 'Threads' },
   { href: '/articles', label: 'Articles' },
