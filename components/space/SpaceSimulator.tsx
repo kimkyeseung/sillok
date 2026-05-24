@@ -300,6 +300,9 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     let selectedPlanet = null;
     let focusCamera = null;
     let focusTarget = null;
+    let cameraFlightActive = false;
+    let pointerDownPosition = null;
+    let pointerWasDragged = false;
 
     const textureBase = 'https://www.solarsystemscope.com/textures/download/2k_';
     const planets = [
@@ -463,6 +466,18 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     const cameraFill = new THREE.PointLight(0x9bdcff, 2.2, 760, 1.7);
     camera.add(cameraFill);
     scene.add(camera);
+
+    function startCameraFlight(cameraPosition, targetPosition) {
+      focusCamera = cameraPosition.clone();
+      focusTarget = targetPosition.clone();
+      cameraFlightActive = true;
+    }
+
+    function stopCameraFlight() {
+      cameraFlightActive = false;
+      focusCamera = null;
+      focusTarget = null;
+    }
 
     // Texture and sprite helpers
     function makeRadialTexture(inner, outer, size) {
@@ -824,8 +839,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
 
     function clearSelection() {
       selectedPlanet = null;
-      focusCamera = defaultCamera.clone();
-      focusTarget = defaultTarget.clone();
+      startCameraFlight(defaultCamera, defaultTarget);
       infoPanel.classList.remove('open');
       hoverLabel.style.display = 'none';
     }
@@ -838,10 +852,10 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       const planetPosition = targetObject.group.position.clone();
       const direction = planetPosition.clone().normalize();
       if (direction.lengthSq() < 0.01) direction.set(1, 0.35, 1).normalize();
-      focusTarget = planetPosition;
-      focusCamera = planetPosition.clone()
+      const nextCamera = planetPosition.clone()
         .add(direction.multiplyScalar(targetObject.radius * 6 + 18))
         .add(new THREE.Vector3(0, targetObject.radius * 2.1 + 7, 0));
+      startCameraFlight(nextCamera, planetPosition);
       showInfo(planet);
     }
 
@@ -863,8 +877,27 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       }
     }
 
-    renderer.domElement.addEventListener('pointermove', updateHover);
+    renderer.domElement.addEventListener('pointerdown', function(event) {
+      pointerDownPosition = { x: event.clientX, y: event.clientY };
+      pointerWasDragged = false;
+    });
+    renderer.domElement.addEventListener('pointermove', function(event) {
+      if (pointerDownPosition) {
+        const dragDistance = Math.hypot(event.clientX - pointerDownPosition.x, event.clientY - pointerDownPosition.y);
+        if (dragDistance > 6) pointerWasDragged = true;
+      }
+      updateHover(event);
+    });
+    renderer.domElement.addEventListener('pointerup', function() {
+      pointerDownPosition = null;
+    });
     renderer.domElement.addEventListener('click', function(event) {
+      if (pointerWasDragged) {
+        pointerWasDragged = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       const planet = findPlanetFromEvent(event);
       if (planet) {
         focusPlanet(planet);
@@ -876,6 +909,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       const planet = findPlanetFromEvent(event);
       if (planet) focusPlanet(planet);
     });
+    controls.addEventListener('start', stopCameraFlight);
 
     speedInput.addEventListener('input', function(event) {
       speedMultiplier = Number(event.target.value);
@@ -915,7 +949,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         }
       });
 
-      if (selectedPlanet && focusTarget) {
+      if (cameraFlightActive && selectedPlanet && focusTarget) {
         focusTarget.copy(selectedPlanet.group.position);
         const direction = selectedPlanet.group.position.clone().normalize();
         if (direction.lengthSq() < 0.01) direction.set(1, 0.35, 1).normalize();
@@ -924,9 +958,12 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
           .add(new THREE.Vector3(0, selectedPlanet.radius * 2.1 + 7, 0));
       }
 
-      if (focusCamera && focusTarget) {
+      if (cameraFlightActive && focusCamera && focusTarget) {
         camera.position.lerp(focusCamera, 0.045);
         controls.target.lerp(focusTarget, 0.06);
+        if (camera.position.distanceTo(focusCamera) < 0.18 && controls.target.distanceTo(focusTarget) < 0.18) {
+          stopCameraFlight();
+        }
       }
 
       controls.update();
