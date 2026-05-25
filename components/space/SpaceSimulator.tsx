@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-
 const spaceSimulatorHtml = String.raw`<!doctype html>
 <html lang="en">
 <head>
@@ -282,7 +280,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     const hoverLabel = document.getElementById('hoverLabel');
     const infoPanel = document.getElementById('infoPanel');
 
-    const defaultCamera = new THREE.Vector3(0, 105, 230);
+    const defaultCamera = new THREE.Vector3(0, 190, 620);
     const defaultTarget = new THREE.Vector3(0, 0, 0);
     const clock = new THREE.Clock();
     const raycaster = new THREE.Raycaster();
@@ -296,6 +294,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
 
     let speedMultiplier = 1;
     let simulationTime = 0;
+    const baseSimulationDate = new Date();
     let orbitRingsVisible = true;
     let selectedPlanet = null;
     let focusCamera = null;
@@ -314,6 +313,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         orbitalPeriod: 88,
         color: 0xb7a58d,
         texturePath: textureBase + 'mercury.jpg',
+        elements: {
+          a: [0.38709927, 0.00000037],
+          e: [0.20563593, 0.00001906],
+          i: [7.00497902, -0.00594749],
+          L: [252.25032350, 149472.67411175],
+          peri: [77.45779628, 0.16047689],
+          node: [48.33076593, -0.12534081]
+        },
         tilt: 0.03,
         moons: 0,
         diameter: '4,879 km',
@@ -329,6 +336,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         orbitalPeriod: 225,
         color: 0xd9a15f,
         texturePath: textureBase + 'venus_surface.jpg',
+        elements: {
+          a: [0.72333566, 0.00000390],
+          e: [0.00677672, -0.00004107],
+          i: [3.39467605, -0.00078890],
+          L: [181.97909950, 58517.81538729],
+          peri: [131.60246718, 0.00268329],
+          node: [76.67984255, -0.27769418]
+        },
         tilt: 177.4,
         moons: 0,
         diameter: '12,104 km',
@@ -344,6 +359,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         orbitalPeriod: 365.25,
         color: 0x2f7ee6,
         texturePath: textureBase + 'earth_daymap.jpg',
+        elements: {
+          a: [1.00000261, 0.00000562],
+          e: [0.01671123, -0.00004392],
+          i: [-0.00001531, -0.01294668],
+          L: [100.46457166, 35999.37244981],
+          peri: [102.93768193, 0.32327364],
+          node: [0.0, 0.0]
+        },
         tilt: 23.44,
         moons: 1,
         diameter: '12,742 km',
@@ -359,6 +382,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         orbitalPeriod: 687,
         color: 0xc45f3d,
         texturePath: textureBase + 'mars.jpg',
+        elements: {
+          a: [1.52371034, 0.00001847],
+          e: [0.09339410, 0.00007882],
+          i: [1.84969142, -0.00813131],
+          L: [-4.55343205, 19140.30268499],
+          peri: [-23.94362959, 0.44441088],
+          node: [49.55953891, -0.29257343]
+        },
         tilt: 25.19,
         moons: 2,
         diameter: '6,779 km',
@@ -374,6 +405,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         orbitalPeriod: 4333,
         color: 0xd9b27c,
         texturePath: textureBase + 'jupiter.jpg',
+        elements: {
+          a: [5.20288700, -0.00011607],
+          e: [0.04838624, -0.00013253],
+          i: [1.30439695, -0.00183714],
+          L: [34.39644051, 3034.74612775],
+          peri: [14.72847983, 0.21252668],
+          node: [100.47390909, 0.20469106]
+        },
         tilt: 3.13,
         moons: 95,
         diameter: '139,820 km',
@@ -390,6 +429,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         color: 0xe2c47b,
         texturePath: textureBase + 'saturn.jpg',
         ringTexturePath: textureBase + 'saturn_ring_alpha.png',
+        elements: {
+          a: [9.53667594, -0.00125060],
+          e: [0.05386179, -0.00050991],
+          i: [2.48599187, 0.00193609],
+          L: [49.95424423, 1222.49362201],
+          peri: [92.59887831, -0.41897216],
+          node: [113.66242448, -0.28867794]
+        },
         tilt: 26.73,
         moons: 146,
         diameter: '116,460 km',
@@ -405,6 +452,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         orbitalPeriod: 30687,
         color: 0x87d8e8,
         texturePath: textureBase + 'uranus.jpg',
+        elements: {
+          a: [19.18916464, -0.00196176],
+          e: [0.04725744, -0.00004397],
+          i: [0.77263783, -0.00242939],
+          L: [313.23810451, 428.48202785],
+          peri: [170.95427630, 0.40805281],
+          node: [74.01692503, 0.04240589]
+        },
         tilt: 97.77,
         moons: 28,
         diameter: '50,724 km',
@@ -420,6 +475,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         orbitalPeriod: 60190,
         color: 0x315fd9,
         texturePath: textureBase + 'neptune.jpg',
+        elements: {
+          a: [30.06992276, 0.00026291],
+          e: [0.00859048, 0.00005105],
+          i: [1.77004347, 0.00035372],
+          L: [-55.12002969, 218.45945325],
+          peri: [44.96476227, -0.32241464],
+          node: [131.78422574, -0.00508664]
+        },
         tilt: 28.32,
         moons: 16,
         diameter: '49,244 km',
@@ -433,7 +496,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x040814, 0.00145);
 
-    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 2200);
+    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 3200);
     camera.position.copy(defaultCamera);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
@@ -449,8 +512,8 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     controls.enableDamping = true;
     controls.dampingFactor = 0.065;
     controls.target.copy(defaultTarget);
-    controls.minDistance = 18;
-    controls.maxDistance = 620;
+    controls.minDistance = 12;
+    controls.maxDistance = 1250;
     controls.maxPolarAngle = Math.PI * 0.78;
 
     const ambient = new THREE.AmbientLight(0xb8c7e6, 0.58);
@@ -651,11 +714,11 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
       const material = new THREE.PointsMaterial({
-        size: 1.35,
+        size: 0.92,
         sizeAttenuation: true,
         vertexColors: true,
         transparent: true,
-        opacity: 0.96,
+        opacity: 0.88,
         depthWrite: false
       });
       const stars = new THREE.Points(geometry, material);
@@ -679,11 +742,89 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
 
     // Planet factory
     function scaledRadius(realRadius) {
-      return 1.8 + Math.log(realRadius + 1) * 5.2;
+      return 0.95 + Math.log(realRadius + 1) * 2.75;
     }
 
-    function scaledDistance(realDistance) {
-      return 22 + Math.pow(realDistance, 0.62) * 33;
+    function scaledDistance(au) {
+      return 16 + Math.pow(au, 0.72) * 43;
+    }
+
+    function toRadians(degrees) {
+      return THREE.MathUtils.degToRad(degrees);
+    }
+
+    function normalizeDegrees(degrees) {
+      return ((degrees % 360) + 360) % 360;
+    }
+
+    function julianDate(date) {
+      return date.getTime() / 86400000 + 2440587.5;
+    }
+
+    function centuriesSinceJ2000(date) {
+      return (julianDate(date) - 2451545.0) / 36525;
+    }
+
+    function valueAtCentury(pair, centuries) {
+      return pair[0] + pair[1] * centuries;
+    }
+
+    function solveKepler(meanAnomalyRadians, eccentricity) {
+      let eccentricAnomaly = meanAnomalyRadians;
+      for (let i = 0; i < 8; i += 1) {
+        eccentricAnomaly -= (eccentricAnomaly - eccentricity * Math.sin(eccentricAnomaly) - meanAnomalyRadians) /
+          (1 - eccentricity * Math.cos(eccentricAnomaly));
+      }
+      return eccentricAnomaly;
+    }
+
+    function calculatePlanetPosition(data, date) {
+      const T = centuriesSinceJ2000(date);
+      const a = valueAtCentury(data.elements.a, T);
+      const e = valueAtCentury(data.elements.e, T);
+      const I = toRadians(valueAtCentury(data.elements.i, T));
+      const L = valueAtCentury(data.elements.L, T);
+      const peri = valueAtCentury(data.elements.peri, T);
+      const node = valueAtCentury(data.elements.node, T);
+      const omega = toRadians(peri - node);
+      const Omega = toRadians(node);
+      const M = toRadians(normalizeDegrees(L - peri));
+      const E = solveKepler(M, e);
+      const xPrime = a * (Math.cos(E) - e);
+      const yPrime = a * Math.sqrt(1 - e * e) * Math.sin(E);
+      const cosOmega = Math.cos(Omega);
+      const sinOmega = Math.sin(Omega);
+      const cosI = Math.cos(I);
+      const sinI = Math.sin(I);
+      const cosOmegaArg = Math.cos(omega);
+      const sinOmegaArg = Math.sin(omega);
+      const xEcl = (cosOmegaArg * cosOmega - sinOmegaArg * sinOmega * cosI) * xPrime +
+        (-sinOmegaArg * cosOmega - cosOmegaArg * sinOmega * cosI) * yPrime;
+      const yEcl = (cosOmegaArg * sinOmega + sinOmegaArg * cosOmega * cosI) * xPrime +
+        (-sinOmegaArg * sinOmega + cosOmegaArg * cosOmega * cosI) * yPrime;
+      const zEcl = sinOmegaArg * sinI * xPrime + cosOmegaArg * sinI * yPrime;
+      const auVector = new THREE.Vector3(xEcl, zEcl, yEcl);
+      const scaled = scaledDistance(auVector.length());
+      return auVector.normalize().multiplyScalar(scaled);
+    }
+
+    function calculateMoonPosition(date, earthRadius) {
+      const days = julianDate(date) - 2451545.0;
+      const meanLongitude = toRadians(normalizeDegrees(218.316 + 13.176396 * days));
+      const meanAnomaly = toRadians(normalizeDegrees(134.963 + 13.064993 * days));
+      const argumentOfLatitude = toRadians(normalizeDegrees(93.272 + 13.229350 * days));
+      const longitude = meanLongitude + toRadians(6.289) * Math.sin(meanAnomaly);
+      const distanceKm = 385001 - 20905 * Math.cos(meanAnomaly);
+      const moonDistance = earthRadius + 3.2 + (distanceKm - 356500) / (406700 - 356500) * 2.2;
+      return new THREE.Vector3(
+        Math.cos(longitude) * moonDistance,
+        Math.sin(argumentOfLatitude) * 0.9,
+        Math.sin(longitude) * moonDistance
+      );
+    }
+
+    function getSimulationDate() {
+      return new Date(baseSimulationDate.getTime() + simulationTime * 86400000 * 12);
     }
 
     function createOrbitRing(distance) {
@@ -764,13 +905,13 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       if (data.name === 'Earth') {
         const moonPivot = new THREE.Group();
         const moon = new THREE.Mesh(
-          new THREE.SphereGeometry(0.95, 24, 12),
+          new THREE.SphereGeometry(0.42, 24, 12),
           new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.85, emissive: 0x94a3b8, emissiveIntensity: 0.16 })
         );
-        moon.position.set(radius + 5.6, 0, 0);
         moonPivot.add(moon);
         group.add(moonPivot);
         group.userData.moonPivot = moonPivot;
+        group.userData.moon = moon;
       }
 
       scene.add(group);
@@ -782,9 +923,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         mesh,
         radius,
         distance,
-        orbitRing,
-        angle: Math.random() * Math.PI * 2,
-        angularSpeed: 0.95 / Math.sqrt(Math.pow(data.distance, 3))
+        orbitRing
       };
       planetObjects.push(planetObject);
       return group;
@@ -933,19 +1072,15 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     function animate() {
       const delta = clock.getDelta();
       simulationTime += delta * speedMultiplier;
+      const simulationDate = getSimulationDate();
 
       sunMesh.rotation.y += delta * 0.08;
 
       planetObjects.forEach(function(item) {
-        const angle = item.angle + simulationTime * item.angularSpeed;
-        item.group.position.set(
-          Math.cos(angle) * item.distance,
-          0,
-          Math.sin(angle) * item.distance
-        );
+        item.group.position.copy(calculatePlanetPosition(item.data, simulationDate));
         item.mesh.rotation.y += delta * speedMultiplier * 0.18;
-        if (item.group.userData.moonPivot) {
-          item.group.userData.moonPivot.rotation.y = simulationTime * 2.1;
+        if (item.group.userData.moon) {
+          item.group.userData.moon.position.copy(calculateMoonPosition(simulationDate, item.radius));
         }
       });
 
@@ -977,34 +1112,6 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
 </html>`;
 
 export default function SpaceSimulator() {
-  useEffect(() => {
-    const chrome = Array.from(document.querySelectorAll<HTMLElement>('header, footer'));
-    const previous = chrome.map((element) => ({
-      element,
-      ariaHidden: element.getAttribute('aria-hidden'),
-      inert: element.inert,
-    }));
-    const previousOverflow = document.body.style.overflow;
-
-    chrome.forEach((element) => {
-      element.setAttribute('aria-hidden', 'true');
-      element.inert = true;
-    });
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      previous.forEach(({ element, ariaHidden, inert }) => {
-        if (ariaHidden === null) {
-          element.removeAttribute('aria-hidden');
-        } else {
-          element.setAttribute('aria-hidden', ariaHidden);
-        }
-        element.inert = inert;
-      });
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
-
   return (
     <div
       aria-label="Solar System simulator"
