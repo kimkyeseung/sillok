@@ -1,4 +1,4 @@
-import Link from 'next/link';
+const COPYRIGHT_YEAR = 2026;
 
 export default function Footer() {
   return (
@@ -17,15 +17,15 @@ export default function Footer() {
           <div className="flex gap-8 text-xs text-gray-500">
             <div className="space-y-2">
               <p className="font-medium text-gray-700">Explore</p>
-              <Link href="/persons" className="block hover:text-gray-900">Figures</Link>
-              <Link href="/age-flow" className="block hover:text-gray-900">Age Flow</Link>
-              <Link href="/articles" className="block hover:text-gray-900">Articles</Link>
+              <a href="/persons" className="block hover:text-gray-900">Figures</a>
+              <a href="/age-flow" className="block hover:text-gray-900">Age Flow</a>
+              <a href="/articles" className="block hover:text-gray-900">Articles</a>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-gray-700">Company</p>
-              <Link href="/about" className="block hover:text-gray-900">About</Link>
-              <Link href="/terms" className="block hover:text-gray-900">Terms of Service</Link>
-              <Link href="/privacy" className="block hover:text-gray-900">Privacy Policy</Link>
+              <a href="/about" className="block hover:text-gray-900">About</a>
+              <a href="/terms" className="block hover:text-gray-900">Terms of Service</a>
+              <a href="/privacy" className="block hover:text-gray-900">Privacy Policy</a>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-gray-700">Contact</p>
@@ -35,7 +35,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-6 border-t border-gray-100 pt-4 text-xs text-gray-400">
-          &copy; {new Date().getFullYear()} Sillok. All rights reserved.
+          &copy; {COPYRIGHT_YEAR} Sillok. All rights reserved.
         </div>
       </div>
     </footer>

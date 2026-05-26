@@ -50,9 +50,9 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-lg">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
         {/* Logo */}
-        <Link href="/" className="shrink-0" onClick={() => setMenuOpen(false)}>
+        <a href="/" className="shrink-0" onClick={() => setMenuOpen(false)}>
           <Image src="/logo.png" alt="Sillok" width={80} height={30} priority />
-        </Link>
+        </a>
 
         {/* Desktop Nav */}
         <nav className="hidden items-center gap-1 sm:flex">
@@ -61,10 +61,26 @@ export default function Header() {
               item.href === '/'
                 ? pathname === '/'
                 : pathname.startsWith(item.href);
+            if (item.href === '/') {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                >
+                  {item.label}
+                </a>
+              );
+            }
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-gray-100 text-gray-900'
@@ -117,6 +133,7 @@ export default function Header() {
             <>
               <Link
                 href="/notifications"
+                prefetch={false}
                 className="relative flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -133,6 +150,7 @@ export default function Header() {
               </button>
               <Link
                 href="/profile"
+                prefetch={false}
                 className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-100 text-xs font-bold text-brand-700"
               >
                 {profile?.avatar_url ? (
@@ -149,7 +167,7 @@ export default function Header() {
               </Link>
             </>
           ) : (
-            <Link href="/login" className="btn-primary">
+            <Link href="/login" prefetch={false} className="btn-primary">
               Log In
             </Link>
           )}
@@ -217,10 +235,27 @@ export default function Header() {
                 item.href === '/'
                   ? pathname === '/'
                   : pathname.startsWith(item.href);
+              if (item.href === '/') {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                );
+              }
               return (
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   onClick={() => setMenuOpen(false)}
                   className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
@@ -240,6 +275,7 @@ export default function Header() {
               <div className="space-y-1">
                 <Link
                   href="/notifications"
+                  prefetch={false}
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                 >
@@ -252,6 +288,7 @@ export default function Header() {
                 </Link>
                 <Link
                   href="/profile"
+                  prefetch={false}
                   onClick={() => setMenuOpen(false)}
                   className="block rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                 >
@@ -267,6 +304,7 @@ export default function Header() {
             ) : (
               <Link
                 href="/login"
+                prefetch={false}
                 onClick={() => setMenuOpen(false)}
                 className="block rounded-lg bg-brand-600 px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-brand-700"
               >
