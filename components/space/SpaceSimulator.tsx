@@ -139,6 +139,65 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       letter-spacing: 0;
       white-space: nowrap;
     }
+    .body-nav {
+      position: fixed;
+      left: 16px;
+      top: 112px;
+      z-index: 12;
+      width: 184px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.56);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      padding: 12px;
+      backdrop-filter: blur(18px);
+    }
+    .body-nav-title {
+      margin: 0 0 10px;
+      color: #67e8f9;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .body-nav-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .body-nav-button {
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: #cbd5e1;
+      padding: 7px 8px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+    }
+    .body-nav-button:hover,
+    .body-nav-button.active {
+      border-color: rgba(103, 232, 249, 0.36);
+      background: rgba(8, 47, 73, 0.5);
+      color: #f8fafc;
+      transform: none;
+    }
+    .body-nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--body-color);
+      box-shadow: 0 0 16px var(--body-color);
+    }
     .panel {
       position: fixed;
       right: 16px;
@@ -237,6 +296,35 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       .hint {
         display: none;
       }
+      .body-nav {
+        left: 16px;
+        right: 16px;
+        top: 356px;
+        bottom: auto;
+        width: auto;
+        padding: 8px;
+        overflow-x: auto;
+      }
+      .body-nav-list {
+        display: flex;
+        gap: 6px;
+        min-width: max-content;
+      }
+      .body-nav-title {
+        display: none;
+      }
+      .body-nav-button {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        width: 68px;
+        gap: 5px;
+        padding: 8px 4px;
+        font-size: 10px;
+      }
+      .body-nav-dot {
+        width: 8px;
+        height: 8px;
+      }
     }
   </style>
 </head>
@@ -256,6 +344,10 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     </div>
   </div>
   <div id="hoverLabel" class="label"></div>
+  <aside class="body-nav" aria-label="Solar system bodies">
+    <p class="body-nav-title">Bodies</p>
+    <ol id="bodyNavList" class="body-nav-list"></ol>
+  </aside>
   <aside id="infoPanel" class="panel" aria-live="polite">
     <div class="empty-state">Click a planet to inspect its orbit, scale, and physical profile.</div>
   </aside>
@@ -279,6 +371,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     const toggleRingsButton = document.getElementById('toggleRings');
     const hoverLabel = document.getElementById('hoverLabel');
     const infoPanel = document.getElementById('infoPanel');
+    const bodyNavList = document.getElementById('bodyNavList');
 
     const defaultCamera = new THREE.Vector3(0, 190, 620);
     const defaultTarget = new THREE.Vector3(0, 0, 0);
@@ -492,6 +585,12 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       }
     ];
 
+    const navigationBodies = [
+      { name: 'Sun', color: '#ffd166' }
+    ].concat(planets.map(function(planet) {
+      return { name: planet.name, color: '#' + new THREE.Color(planet.color).getHexString() };
+    }));
+
     // Scene setup
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x040814, 0.00145);
@@ -540,6 +639,12 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       cameraFlightActive = false;
       focusCamera = null;
       focusTarget = null;
+    }
+
+    function setActiveBody(name) {
+      bodyNavList.querySelectorAll('.body-nav-button').forEach(function(button) {
+        button.classList.toggle('active', button.dataset.body === name);
+      });
     }
 
     // Texture and sprite helpers
@@ -778,20 +883,17 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       return eccentricAnomaly;
     }
 
-    function calculatePlanetPosition(data, date) {
+    function calculateOrbitVector(data, eccentricAnomaly, date) {
       const T = centuriesSinceJ2000(date);
       const a = valueAtCentury(data.elements.a, T);
       const e = valueAtCentury(data.elements.e, T);
       const I = toRadians(valueAtCentury(data.elements.i, T));
-      const L = valueAtCentury(data.elements.L, T);
       const peri = valueAtCentury(data.elements.peri, T);
       const node = valueAtCentury(data.elements.node, T);
       const omega = toRadians(peri - node);
       const Omega = toRadians(node);
-      const M = toRadians(normalizeDegrees(L - peri));
-      const E = solveKepler(M, e);
-      const xPrime = a * (Math.cos(E) - e);
-      const yPrime = a * Math.sqrt(1 - e * e) * Math.sin(E);
+      const xPrime = a * (Math.cos(eccentricAnomaly) - e);
+      const yPrime = a * Math.sqrt(1 - e * e) * Math.sin(eccentricAnomaly);
       const cosOmega = Math.cos(Omega);
       const sinOmega = Math.sin(Omega);
       const cosI = Math.cos(I);
@@ -806,6 +908,15 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       const auVector = new THREE.Vector3(xEcl, zEcl, yEcl);
       const scaled = scaledDistance(auVector.length());
       return auVector.normalize().multiplyScalar(scaled);
+    }
+
+    function calculatePlanetPosition(data, date) {
+      const T = centuriesSinceJ2000(date);
+      const e = valueAtCentury(data.elements.e, T);
+      const L = valueAtCentury(data.elements.L, T);
+      const peri = valueAtCentury(data.elements.peri, T);
+      const M = toRadians(normalizeDegrees(L - peri));
+      return calculateOrbitVector(data, solveKepler(M, e), date);
     }
 
     function calculateMoonPosition(date, earthRadius) {
@@ -827,18 +938,18 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       return new Date(baseSimulationDate.getTime() + simulationTime * 86400000 * 12);
     }
 
-    function createOrbitRing(distance) {
+    function createOrbitRing(data) {
       const points = [];
       const segments = 240;
       for (let i = 0; i <= segments; i += 1) {
-        const angle = (i / segments) * Math.PI * 2;
-        points.push(new THREE.Vector3(Math.cos(angle) * distance, 0, Math.sin(angle) * distance));
+        const eccentricAnomaly = (i / segments) * Math.PI * 2;
+        points.push(calculateOrbitVector(data, eccentricAnomaly, baseSimulationDate));
       }
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
       const material = new THREE.LineBasicMaterial({
-        color: 0x7dd3fc,
+        color: data.color,
         transparent: true,
-        opacity: 0.18,
+        opacity: 0.24,
         blending: THREE.AdditiveBlending
       });
       const ring = new THREE.Line(geometry, material);
@@ -851,7 +962,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       const group = new THREE.Group();
       const radius = scaledRadius(data.radius);
       const distance = scaledDistance(data.distance);
-      const orbitRing = createOrbitRing(distance);
+      const orbitRing = createOrbitRing(data);
 
       const material = new THREE.MeshStandardMaterial({
         color: data.color,
@@ -976,11 +1087,35 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         '</div>';
     }
 
+    function showSunInfo() {
+      infoPanel.classList.add('open');
+      infoPanel.innerHTML =
+        '<p class="eyebrow">Selected star</p>' +
+        '<h2>Sun</h2>' +
+        '<p class="type">G-type main-sequence star</p>' +
+        '<p class="description">The Sun anchors the solar system and supplies nearly all of its light and heat. Its gravity keeps the planets moving along their orbits.</p>' +
+        '<div class="stats">' +
+          '<div class="stat"><div class="key">Diameter</div><div class="value">1.39 million km</div></div>' +
+          '<div class="stat"><div class="key">Distance</div><div class="value">Center</div></div>' +
+          '<div class="stat"><div class="key">Type</div><div class="value">G2V star</div></div>' +
+          '<div class="stat"><div class="key">Planets</div><div class="value">8</div></div>' +
+        '</div>';
+    }
+
     function clearSelection() {
       selectedPlanet = null;
+      setActiveBody(null);
       startCameraFlight(defaultCamera, defaultTarget);
       infoPanel.classList.remove('open');
       hoverLabel.style.display = 'none';
+    }
+
+    function focusSun() {
+      selectedPlanet = null;
+      hoverLabel.style.display = 'none';
+      setActiveBody('Sun');
+      startCameraFlight(new THREE.Vector3(0, 42, 82), new THREE.Vector3(0, 0, 0));
+      showSunInfo();
     }
 
     function focusPlanet(planet) {
@@ -988,6 +1123,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       if (!targetObject) return;
       selectedPlanet = targetObject;
       hoverLabel.style.display = 'none';
+      setActiveBody(planet.name);
       const planetPosition = targetObject.group.position.clone();
       const direction = planetPosition.clone().normalize();
       if (direction.lengthSq() < 0.01) direction.set(1, 0.35, 1).normalize();
@@ -996,6 +1132,29 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         .add(new THREE.Vector3(0, targetObject.radius * 2.1 + 7, 0));
       startCameraFlight(nextCamera, planetPosition);
       showInfo(planet);
+    }
+
+    function focusBody(name) {
+      if (name === 'Sun') {
+        focusSun();
+        return;
+      }
+      const planet = planets.find(function(item) { return item.name === name; });
+      if (planet) focusPlanet(planet);
+    }
+
+    function createBodyNavigator() {
+      bodyNavList.innerHTML = navigationBodies.map(function(body) {
+        return '<li><button class="body-nav-button" type="button" data-body="' + body.name + '" style="--body-color: ' + body.color + '">' +
+          '<span class="body-nav-dot" aria-hidden="true"></span>' +
+          '<span>' + body.name + '</span>' +
+        '</button></li>';
+      }).join('');
+      bodyNavList.querySelectorAll('.body-nav-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+          focusBody(button.dataset.body);
+        });
+      });
     }
 
     function updateHover(event) {
@@ -1060,6 +1219,8 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       orbitRings.forEach(function(ring) { ring.visible = orbitRingsVisible; });
       toggleRingsButton.textContent = orbitRingsVisible ? 'Hide rings' : 'Show rings';
     });
+
+    createBodyNavigator();
 
     // Resize handling
     window.addEventListener('resize', function() {
