@@ -273,6 +273,34 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       font-size: 14px;
       line-height: 1.6;
     }
+    .fallback {
+      display: grid;
+      min-height: 100%;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .fallback-card {
+      max-width: 420px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 18px;
+      background: rgba(2, 6, 23, 0.68);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
+      padding: 24px;
+      backdrop-filter: blur(22px);
+    }
+    .fallback-card h2 {
+      margin: 0;
+      color: white;
+      font-size: 24px;
+      line-height: 1.15;
+    }
+    .fallback-card p {
+      margin: 12px 0 0;
+      color: #cbd5e1;
+      font-size: 14px;
+      line-height: 1.6;
+    }
     @media (max-width: 720px) {
       .topbar {
         align-items: stretch;
@@ -299,7 +327,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       .body-nav {
         left: 16px;
         right: 16px;
-        top: 356px;
+        top: 204px;
         bottom: auto;
         width: auto;
         padding: 8px;
@@ -380,6 +408,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     const pointer = new THREE.Vector2();
     const planetObjects = [];
     const interactiveMeshes = [];
+    const planetMeshes = [];
     const orbitRings = [];
     const textureCache = new Map();
     const loader = new THREE.TextureLoader();
@@ -390,11 +419,13 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     const baseSimulationDate = new Date();
     let orbitRingsVisible = true;
     let selectedPlanet = null;
+    let trackedPlanet = null;
     let focusCamera = null;
     let focusTarget = null;
     let cameraFlightActive = false;
     let pointerDownPosition = null;
     let pointerWasDragged = false;
+    let suppressCanvasClick = false;
 
     const textureBase = 'https://www.solarsystemscope.com/textures/download/2k_';
     const planets = [
@@ -591,6 +622,25 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       return { name: planet.name, color: '#' + new THREE.Color(planet.color).getHexString() };
     }));
 
+    function showWebGLFallback() {
+      container.innerHTML =
+        '<div class="fallback">' +
+          '<div class="fallback-card">' +
+            '<p class="eyebrow">Rendering unavailable</p>' +
+            '<h2>WebGL is not available</h2>' +
+            '<p>This simulator needs browser WebGL support. Enable hardware acceleration or try a browser that supports 3D rendering.</p>' +
+          '</div>' +
+        '</div>';
+      infoPanel.classList.remove('open');
+      infoPanel.innerHTML = '<div class="empty-state">WebGL is not available in this browser session.</div>';
+      const bodyNav = document.querySelector('.body-nav');
+      if (bodyNav) bodyNav.style.display = 'none';
+      speedInput.disabled = true;
+      toggleRingsButton.disabled = true;
+      toggleRingsButton.textContent = 'Unavailable';
+    }
+
+    simulator: {
     // Scene setup
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x040814, 0.00145);
@@ -598,7 +648,13 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 3200);
     camera.position.copy(defaultCamera);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    } catch (error) {
+      showWebGLFallback();
+      break simulator;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -615,17 +671,17 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     controls.maxDistance = 1250;
     controls.maxPolarAngle = Math.PI * 0.78;
 
-    const ambient = new THREE.AmbientLight(0xb8c7e6, 0.58);
+    const ambient = new THREE.AmbientLight(0x8fa7c9, 0.08);
     scene.add(ambient);
 
-    const sunlight = new THREE.PointLight(0xffd28a, 9.2, 980, 1.15);
+    const sunlight = new THREE.PointLight(0xffd28a, 24, 1200, 0.72);
     sunlight.position.set(0, 0, 0);
     scene.add(sunlight);
 
-    const fillLight = new THREE.HemisphereLight(0x67e8f9, 0x172554, 0.62);
+    const fillLight = new THREE.HemisphereLight(0x67e8f9, 0x020617, 0.14);
     scene.add(fillLight);
 
-    const cameraFill = new THREE.PointLight(0x9bdcff, 2.2, 760, 1.7);
+    const cameraFill = new THREE.PointLight(0x9bdcff, 0.18, 520, 1.7);
     camera.add(cameraFill);
     scene.add(camera);
 
@@ -639,6 +695,19 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       cameraFlightActive = false;
       focusCamera = null;
       focusTarget = null;
+    }
+
+    function setTrackedSelection(targetObject) {
+      selectedPlanet = targetObject;
+      trackedPlanet = targetObject;
+    }
+
+    function clearTrackedSelection() {
+      setTrackedSelection(null);
+    }
+
+    function releaseCameraTracking() {
+      trackedPlanet = null;
     }
 
     function setActiveBody(name) {
@@ -836,13 +905,14 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     // Sun with layered additive glow for a bloom-like center
     const sunGroup = new THREE.Group();
     const sunMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(9.5, 64, 32),
-      new THREE.MeshBasicMaterial({ color: 0xffb13d })
+      new THREE.SphereGeometry(10.5, 64, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffc55c })
     );
     sunGroup.add(sunMesh);
-    sunGroup.add(makeGlowSprite('rgba(255,214,120,0.98)', 40, 0.86));
-    sunGroup.add(makeGlowSprite('rgba(255,158,64,0.54)', 86, 0.62));
-    sunGroup.add(makeGlowSprite('rgba(34,211,238,0.22)', 150, 0.34));
+    sunGroup.add(makeGlowSprite('rgba(255,246,196,1)', 28, 0.72));
+    sunGroup.add(makeGlowSprite('rgba(255,214,120,0.98)', 66, 0.92));
+    sunGroup.add(makeGlowSprite('rgba(255,158,64,0.58)', 138, 0.58));
+    sunGroup.add(makeGlowSprite('rgba(34,211,238,0.2)', 250, 0.22));
     scene.add(sunGroup);
 
     // Planet factory
@@ -967,10 +1037,10 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       const material = new THREE.MeshStandardMaterial({
         color: data.color,
         map: makePlanetTexture(data),
-        roughness: 0.68,
+        roughness: 0.76,
         metalness: 0.01,
-        emissive: data.color,
-        emissiveIntensity: data.radius > 3 ? 0.18 : 0.12
+        emissive: 0x000000,
+        emissiveIntensity: 0
       });
 
       applyExternalTexture(data.texturePath, material, { repeat: true });
@@ -980,6 +1050,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       mesh.userData.planet = data;
       mesh.userData.parentGroup = group;
       group.add(mesh);
+      planetMeshes.push(mesh);
 
       const hitMesh = new THREE.Mesh(
         new THREE.SphereGeometry(Math.max(radius * 1.9, radius + 4), 24, 12),
@@ -993,7 +1064,13 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       hitMesh.userData.parentGroup = group;
       group.add(hitMesh);
 
-      const atmosphere = makeGlowSprite('rgba(103,232,249,0.56)', radius * 4.4, 0.32);
+      const atmosphereColor = new THREE.Color(data.color).lerp(new THREE.Color(0x67e8f9), 0.35);
+      const atmosphereOpacity = data.radius > 3 ? 0.08 : 0.13;
+      const atmosphere = makeGlowSprite(
+        'rgba(' + Math.round(atmosphereColor.r * 255) + ',' + Math.round(atmosphereColor.g * 255) + ',' + Math.round(atmosphereColor.b * 255) + ',0.42)',
+        radius * 2.35,
+        atmosphereOpacity
+      );
       group.add(atmosphere);
 
       if (data.name === 'Saturn') {
@@ -1017,7 +1094,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         const moonPivot = new THREE.Group();
         const moon = new THREE.Mesh(
           new THREE.SphereGeometry(0.42, 24, 12),
-          new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.85, emissive: 0x94a3b8, emissiveIntensity: 0.16 })
+          new THREE.MeshStandardMaterial({ color: 0xdbeafe, roughness: 0.9, emissive: 0x000000, emissiveIntensity: 0 })
         );
         moonPivot.add(moon);
         group.add(moonPivot);
@@ -1049,11 +1126,13 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     }
 
-    function findPlanetFromEvent(event) {
+    function findPlanetFromEvent(event, options) {
+      const precise = options && options.precise;
       setPointer(event);
       raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects(interactiveMeshes, false);
+      const hits = raycaster.intersectObjects(precise ? planetMeshes : interactiveMeshes, false);
       if (hits.length) return hits[0].object.userData.planet;
+      if (precise) return null;
 
       const rect = renderer.domElement.getBoundingClientRect();
       let nearest = null;
@@ -1063,7 +1142,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         const x = (projected.x * 0.5 + 0.5) * rect.width + rect.left;
         const y = (-projected.y * 0.5 + 0.5) * rect.height + rect.top;
         const distance = Math.hypot(event.clientX - x, event.clientY - y);
-        const threshold = Math.max(26, item.radius * 3.4);
+        const threshold = precise ? Math.max(12, item.radius * 1.2) : Math.max(26, item.radius * 3.4);
         if (distance < threshold && distance < nearestDistance) {
           nearest = item.data;
           nearestDistance = distance;
@@ -1103,15 +1182,17 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     }
 
     function clearSelection() {
-      selectedPlanet = null;
+      clearTrackedSelection();
       setActiveBody(null);
+      stopCameraFlight();
       startCameraFlight(defaultCamera, defaultTarget);
       infoPanel.classList.remove('open');
+      infoPanel.innerHTML = '<div class="empty-state">Click a planet to inspect its orbit, scale, and physical profile.</div>';
       hoverLabel.style.display = 'none';
     }
 
     function focusSun() {
-      selectedPlanet = null;
+      clearTrackedSelection();
       hoverLabel.style.display = 'none';
       setActiveBody('Sun');
       startCameraFlight(new THREE.Vector3(0, 42, 82), new THREE.Vector3(0, 0, 0));
@@ -1121,7 +1202,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     function focusPlanet(planet) {
       const targetObject = planetObjects.find(function(item) { return item.data.name === planet.name; });
       if (!targetObject) return;
-      selectedPlanet = targetObject;
+      setTrackedSelection(targetObject);
       hoverLabel.style.display = 'none';
       setActiveBody(planet.name);
       const planetPosition = targetObject.group.position.clone();
@@ -1162,7 +1243,7 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         hoverLabel.style.display = 'none';
         return;
       }
-      const planet = findPlanetFromEvent(event);
+      const planet = findPlanetFromEvent(event, { precise: Boolean(selectedPlanet) });
       if (planet) {
         hoverLabel.textContent = planet.name;
         hoverLabel.style.left = event.clientX + 'px';
@@ -1178,20 +1259,36 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
     renderer.domElement.addEventListener('pointerdown', function(event) {
       pointerDownPosition = { x: event.clientX, y: event.clientY };
       pointerWasDragged = false;
+      suppressCanvasClick = false;
     });
     renderer.domElement.addEventListener('pointermove', function(event) {
       if (pointerDownPosition) {
         const dragDistance = Math.hypot(event.clientX - pointerDownPosition.x, event.clientY - pointerDownPosition.y);
-        if (dragDistance > 6) pointerWasDragged = true;
+        if (dragDistance > 3) {
+          if (selectedPlanet) {
+            stopCameraFlight();
+            releaseCameraTracking();
+          }
+          pointerWasDragged = true;
+          suppressCanvasClick = true;
+        }
       }
       updateHover(event);
     });
-    renderer.domElement.addEventListener('pointerup', function() {
+    renderer.domElement.addEventListener('pointerup', function(event) {
+      if (pointerDownPosition) {
+        const dragDistance = Math.hypot(event.clientX - pointerDownPosition.x, event.clientY - pointerDownPosition.y);
+        if (dragDistance > 3) {
+          pointerWasDragged = true;
+          suppressCanvasClick = true;
+        }
+      }
       pointerDownPosition = null;
     });
     renderer.domElement.addEventListener('click', function(event) {
-      if (pointerWasDragged) {
+      if (pointerWasDragged || suppressCanvasClick) {
         pointerWasDragged = false;
+        suppressCanvasClick = false;
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -1207,7 +1304,12 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
       const planet = findPlanetFromEvent(event);
       if (planet) focusPlanet(planet);
     });
-    controls.addEventListener('start', stopCameraFlight);
+    controls.addEventListener('start', function() {
+      if (selectedPlanet && !pointerDownPosition) {
+        stopCameraFlight();
+        releaseCameraTracking();
+      }
+    });
 
     speedInput.addEventListener('input', function(event) {
       speedMultiplier = Number(event.target.value);
@@ -1262,12 +1364,19 @@ const spaceSimulatorHtml = String.raw`<!doctype html>
         }
       }
 
+      if (!cameraFlightActive && trackedPlanet) {
+        const targetDelta = trackedPlanet.group.position.clone().sub(controls.target);
+        camera.position.add(targetDelta);
+        controls.target.copy(trackedPlanet.group.position);
+      }
+
       controls.update();
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
 
     animate();
+    }
   </script>
 </body>
 </html>`;
