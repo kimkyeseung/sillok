@@ -13,6 +13,7 @@ import { getPrimaryFieldTag } from '@/lib/person-utils';
 import FamilyTree, { type FamilyTreePerson } from '@/components/person/FamilyTree';
 import { buildFamilyTree, type FamilyRelation } from '@/lib/family-tree';
 import { tagLabel } from '@/lib/tags';
+import { DEFAULT_OG_IMAGE, nameWithKorean, truncateDescription } from '@/lib/seo';
 
 // Supabase calls go through fetch — without this, Next 14 caches them indefinitely
 // (stale relations, view counts, threads)
@@ -144,24 +145,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson(params.slug);
   if (!person) return {};
 
-  const description = person.summary?.slice(0, 160) ?? `About ${person.name_en}`;
+  // "Sejong the Great (세종대왕, 世宗大王) — …" so Korean-name searches can match
+  const fullName = nameWithKorean(person.name_en, person.name_ko, person.name_hanja);
+  const description = truncateDescription(
+    person.summary ? `${fullName} — ${person.summary}` : `About ${fullName}`
+  );
+  const ogImage = person.thumbnail ?? DEFAULT_OG_IMAGE;
 
   return {
-    title: `${person.name_en}`,
+    title: person.name_en,
     description,
     alternates: { canonical: `/persons/${params.slug}` },
     openGraph: {
       title: `${person.name_en} - Sillok`,
       description,
       type: 'profile',
-      images: person.thumbnail ? [person.thumbnail] : [],
+      images: [ogImage],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: person.thumbnail ? 'summary_large_image' : 'summary',
       title: `${person.name_en} - Sillok`,
       description,
-      ...(person.thumbnail && { images: [person.thumbnail] }),
+      images: [ogImage],
     },
+    keywords: [person.name_en, person.name_ko, person.name_hanja].filter(Boolean),
   };
 }
 

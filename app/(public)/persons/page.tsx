@@ -7,16 +7,19 @@ import PersonAvatar from '@/components/common/PersonAvatar';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
 import { sanitizeSearchTerm } from '@/lib/search';
 import { tagLabel } from '@/lib/tags';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Figures',
   description: 'Explore Korean historical figures from Dangun to the present — kings, scholars, generals, artists, and modern icons.',
   alternates: { canonical: '/persons' },
   openGraph: {
+    images: [DEFAULT_OG_IMAGE],
     title: 'Figures | Sillok',
     description: 'Explore Korean historical figures from Dangun to the present.',
   },
   twitter: {
+    images: [DEFAULT_OG_IMAGE],
     card: 'summary',
     title: 'Figures | Sillok',
     description: 'Explore Korean historical figures from Dangun to the present.',

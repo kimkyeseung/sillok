@@ -7,6 +7,7 @@ import { ThreadActions, ReplyActions, ReplyFormWrapper } from '@/components/thre
 import ViewLogger from '@/components/thread/ViewLogger';
 import ImageLightbox from '@/components/common/ImageLightbox';
 import { normalizeThreadFigures, type ThreadFigure } from '@/lib/thread-figures';
+import { DEFAULT_OG_IMAGE, stripMarkdown, truncateDescription, truncateTitle } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -34,27 +35,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const thread = await getThread(params.id);
   if (!thread) return {};
 
-  const description = thread.content?.slice(0, 160) ?? thread.title;
+  const description = truncateDescription(
+    thread.content ? stripMarkdown(thread.content) : thread.title
+  );
+  const title = truncateTitle(thread.title);
 
   const images = ((thread.thread_images as unknown as { url: string; sort_order: number }[]) ?? [])
     .sort((a, b) => a.sort_order - b.sort_order);
   const ogImage = images[0]?.url;
 
   return {
-    title: `${thread.title}`,
+    title,
     description,
     alternates: { canonical: `/threads/${params.id}` },
     openGraph: {
-      title: `${thread.title} - Sillok`,
+      title: `${title} - Sillok`,
       description,
       type: 'article',
-      ...(ogImage && { images: [ogImage] }),
+      images: [ogImage ?? DEFAULT_OG_IMAGE],
     },
     twitter: {
       card: ogImage ? 'summary_large_image' : 'summary',
-      title: thread.title,
+      title,
       description,
-      ...(ogImage && { images: [ogImage] }),
+      images: [ogImage ?? DEFAULT_OG_IMAGE],
     },
   };
 }

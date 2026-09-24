@@ -1,6 +1,9 @@
 import type { MetadataRoute } from 'next';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
+// Regenerate hourly — otherwise the sitemap is frozen at build time
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://sillok.kr';
 
@@ -74,12 +77,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/about`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/search`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
       priority: 0.5,
     },
     {

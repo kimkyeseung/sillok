@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Metadata } from 'next';
 import ExploreNodesClient from '@/components/nodes/ExploreNodesClient';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Explore — Artifacts, Events, Media & Groups',
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
     'Discover Korean historical artifacts, events, media, and groups. Explore national treasures, pivotal moments, and cultural heritage.',
   alternates: { canonical: '/nodes' },
   openGraph: {
+    images: [DEFAULT_OG_IMAGE],
     title: 'Explore Nodes | Sillok',
     description:
       'Discover Korean historical artifacts, events, media, and groups.',

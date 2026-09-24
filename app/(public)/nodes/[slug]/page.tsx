@@ -5,6 +5,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { NodeActions, CommentActions, CommentFormWrapper } from '@/components/thread/NodeInteractions';
 import { eventJsonLd } from '@/lib/jsonld';
+import { DEFAULT_OG_IMAGE, nameWithKorean, truncateDescription, truncateTitle } from '@/lib/seo';
 
 export const revalidate = 0;
 
@@ -19,6 +20,13 @@ interface LinkedPerson {
   name_en: string | null;
   thumbnail: string | null;
 }
+
+const NODE_TYPE_SEO_LABELS: Record<string, string> = {
+  ARTIFACT: 'artifact',
+  EVENT: 'historical event',
+  MEDIA: 'media',
+  GROUP: 'group',
+};
 
 async function getNode(slug: string) {
   const { data } = await supabaseAdmin
@@ -37,24 +45,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const titleKo = node.metadata?.title_ko as string | undefined;
   const startYear = node.metadata?.start_year as number | undefined;
   const yearPrefix = startYear ? `[${startYear}] ` : '';
-  const description = node.description?.slice(0, 160)
-    ?? `${yearPrefix}${node.title} — historical event on Sillok`;
+  const typeLabel = NODE_TYPE_SEO_LABELS[node.node_type as string] ?? 'topic';
+  // Korean title goes into the description (search snippet) — not shown in the UI
+  const description = truncateDescription(
+    `${nameWithKorean(node.title, titleKo)} — ${
+      node.description ?? `${yearPrefix}Korean ${typeLabel} on Sillok`
+    }`
+  );
+  const ogImage = node.thumbnail ?? DEFAULT_OG_IMAGE;
 
   return {
-    title: `${yearPrefix}${node.title}`,
+    title: truncateTitle(`${yearPrefix}${node.title}`),
     description,
     alternates: { canonical: `/nodes/${params.slug}` },
     openGraph: {
       title: `${yearPrefix}${node.title} - Sillok`,
       description,
-      ...(node.thumbnail && { images: [node.thumbnail] }),
+      images: [ogImage],
     },
-    // title_ko in keywords only — helps Korean search without showing in UI
+    twitter: {
+      card: node.thumbnail ? 'summary_large_image' : 'summary',
+      title: `${yearPrefix}${node.title}`,
+      description,
+      images: [ogImage],
+    },
     keywords: [
       node.title,
       ...(titleKo ? [titleKo] : []),
       ...(startYear ? [String(startYear)] : []),
-      'Korean history', 'Joseon',
+      'Korean history',
+      typeLabel,
     ],
   };
 }

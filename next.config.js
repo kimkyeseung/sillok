@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -15,7 +14,22 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
     ],
+  },
+  async redirects() {
+    return [
+      // Canonical host is the apex domain
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.sillok.kr' }],
+        destination: 'https://sillok.kr/:path*',
+        permanent: true,
+      },
+    ];
   },
 };
 

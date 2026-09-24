@@ -124,5 +124,10 @@ export default async function AgeFlowPage() {
   const initialData = await fetchAgeFlowData();
   // If SSR returned no persons, pass undefined so client fetches its own data
   const hasPersons = initialData && initialData.persons.length > 0;
-  return <AgeFlowClient initialData={hasPersons ? initialData : undefined} />;
+  return (
+    <>
+      <h1 className="sr-only">Age Flow — Interactive Timeline of Korean Historical Figures</h1>
+      <AgeFlowClient initialData={hasPersons ? initialData : undefined} />
+    </>
+  );
 }

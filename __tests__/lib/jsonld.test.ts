@@ -114,6 +114,17 @@ describe('personJsonLd', () => {
     expect(result.url).toContain('/persons/sejong-daewang');
   });
 
+  it('should include Korean and Hanja names as alternateName', () => {
+    const result = personJsonLd({
+      name_en: 'Sejong the Great',
+      name_ko: '세종대왕',
+      name_hanja: '世宗大王',
+      slug: 'sejong-daewang',
+    });
+
+    expect(result.alternateName).toEqual(['세종대왕', '世宗大王']);
+  });
+
   it('should omit optional fields when null', () => {
     const result = personJsonLd({
       name_en: 'Test',

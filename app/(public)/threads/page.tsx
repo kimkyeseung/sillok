@@ -3,16 +3,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { normalizeThreadList } from '@/lib/thread-figures';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Threads',
   description: 'Community discussions about Korean historical figures — share insights, debate, and discover surprising stories.',
   alternates: { canonical: '/threads' },
   openGraph: {
+    images: [DEFAULT_OG_IMAGE],
     title: 'Threads | Sillok',
     description: 'Community discussions about Korean historical figures.',
   },
   twitter: {
+    images: [DEFAULT_OG_IMAGE],
     card: 'summary',
     title: 'Threads | Sillok',
     description: 'Community discussions about Korean historical figures.',

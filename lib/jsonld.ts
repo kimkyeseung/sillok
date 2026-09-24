@@ -21,6 +21,7 @@ export function websiteJsonLd() {
 
 export function personJsonLd(person: {
   name_en: string;
+  name_ko?: string | null;
   name_hanja?: string | null;
   summary?: string | null;
   thumbnail?: string | null;
@@ -28,11 +29,15 @@ export function personJsonLd(person: {
   death_year?: number | null;
   slug: string;
 }) {
+  // Korean + Hanja names help Korean-language search (not shown in the English UI)
+  const alternateNames = [person.name_ko, person.name_hanja].filter(
+    (v): v is string => !!v
+  );
   return {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: person.name_en,
-    ...(person.name_hanja && { alternateName: person.name_hanja }),
+    ...(alternateNames.length > 0 && { alternateName: alternateNames }),
     ...(person.summary && { description: person.summary.slice(0, 300) }),
     ...(person.thumbnail && { image: person.thumbnail }),
     ...(person.birth_year && { birthDate: String(person.birth_year) }),

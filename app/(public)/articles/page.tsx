@@ -1,16 +1,19 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Articles',
   description: 'Stories, deep-dives, and announcements from the Sillok team about Korean history and the archive.',
   alternates: { canonical: '/articles' },
   openGraph: {
+    images: [DEFAULT_OG_IMAGE],
     title: 'Articles | Sillok',
     description: 'Stories and announcements from the Sillok team.',
   },
   twitter: {
+    images: [DEFAULT_OG_IMAGE],
     card: 'summary',
     title: 'Articles | Sillok',
     description: 'Stories and announcements from the Sillok team.',
