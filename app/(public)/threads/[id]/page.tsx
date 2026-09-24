@@ -9,6 +9,7 @@ import ImageLightbox from '@/components/common/ImageLightbox';
 import { normalizeThreadFigures, type ThreadFigure } from '@/lib/thread-figures';
 import { DEFAULT_OG_IMAGE, stripMarkdown, truncateDescription, truncateTitle } from '@/lib/seo';
 import { buildReplyTree } from '@/lib/feed';
+import { breadcrumbJsonLd, discussionJsonLd } from '@/lib/jsonld';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -53,6 +54,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${title} - Sillok`,
       description,
       type: 'article',
+      url: `/threads/${params.id}`,
+      publishedTime: thread.created_at,
       images: [ogImage ?? DEFAULT_OG_IMAGE],
     },
     twitter: {
@@ -141,9 +144,44 @@ export default async function ThreadDetailPage({ params }: Props) {
   const images = (thread.thread_images ?? []) as Array<Record<string, unknown>>;
   const figures = thread.figures ?? [];
   const authorName = (author?.nickname as string) ?? 'Anonymous';
+  const firstImage = [...images].sort((a, b) => (a.sort_order as number) - (b.sort_order as number))[0];
+
+  const jsonLd = [
+    discussionJsonLd(
+      {
+        id: thread.id,
+        title: thread.title,
+        content: thread.content,
+        created_at: thread.created_at,
+        updated_at: thread.updated_at,
+        author: (author?.nickname as string) ?? null,
+        like_count: thread.like_count ?? 0,
+        reply_count: thread.reply_count ?? 0,
+        image: (firstImage?.url as string) ?? null,
+        figures: figures.map((f: ThreadFigure) => ({ name: f.name_en ?? f.name_ko, slug: f.slug })),
+      },
+      replyTree.map(({ reply }) => ({
+        id: reply.id,
+        parent_id: reply.parent_id,
+        content: reply.content as string,
+        created_at: reply.created_at,
+        like_count: (reply.like_count as number) ?? 0,
+        author: ((reply.profiles as Record<string, unknown> | null)?.nickname as string) ?? null,
+      }))
+    ),
+    breadcrumbJsonLd([
+      { name: 'Home', path: '' },
+      { name: 'Threads', path: '/threads' },
+      { name: thread.title, path: `/threads/${thread.id}` },
+    ]),
+  ];
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
       {/* Thread Content Card */}
       <ViewLogger threadId={params.id} />
       <article className="card-flat overflow-hidden">
@@ -242,6 +280,7 @@ export default async function ThreadDetailPage({ params }: Props) {
             return (
               <div
                 key={reply.id}
+                id={`reply-${reply.id}`}
                 className={`py-3.5 pr-5 ${depth > 0 ? 'border-l-2 border-gray-100' : ''}`}
                 style={{ paddingLeft: depth > 0 ? '14px' : '20px', marginLeft: depth > 0 ? `${depth * 20}px` : undefined }}
               >

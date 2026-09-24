@@ -418,7 +418,7 @@ export const getSiteStats = cache(async () => {
 
 export const getBoardInfo = cache(async (board: string) => {
   const ids = await getBoardPersonIds(board);
-  if (!ids.length) return { figureCount: 0, threadCount: 0, figures: [] as FeedFigure[] };
+  if (!ids.length) return { figureCount: 0, threadCount: 0, latest: null, figures: [] as FeedFigure[] };
   const [{ data: figures }, { data: threads }] = await Promise.all([
     supabaseAdmin
       .from('persons')
@@ -429,11 +429,40 @@ export const getBoardInfo = cache(async (board: string) => {
       .not('thumbnail', 'is', null)
       .order('view_count', { ascending: false })
       .limit(8),
-    supabaseAdmin.from('threads').select('id').in('person_id', ids).eq('is_deleted', false).limit(2000),
+    supabaseAdmin
+      .from('threads')
+      .select('created_at')
+      .in('person_id', ids)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(2000),
   ]);
   return {
     figureCount: ids.length,
     threadCount: threads?.length ?? 0,
+    /** newest thread — sitemap lastmod */
+    latest: (threads?.[0]?.created_at as string | undefined) ?? null,
     figures: (figures ?? []).map((f) => ({ slug: f.slug, name_en: f.name_en, thumbnail: f.thumbnail })),
   };
+});
+
+/** Thread count and newest post for a topic (category) page */
+export const getTopicInfo = cache(async (topic: string) => {
+  const category = findTopic(topic)?.category;
+  if (!category) return { threadCount: 0, latest: null as string | null };
+  const [{ count }, { data: newest }] = await Promise.all([
+    supabaseAdmin
+      .from('threads')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_deleted', false)
+      .eq('category', category),
+    supabaseAdmin
+      .from('threads')
+      .select('created_at')
+      .eq('is_deleted', false)
+      .eq('category', category)
+      .order('created_at', { ascending: false })
+      .limit(1),
+  ]);
+  return { threadCount: count ?? 0, latest: (newest?.[0]?.created_at as string | undefined) ?? null };
 });

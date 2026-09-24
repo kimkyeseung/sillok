@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { TAB_MIN_ITEMS } from '@/lib/person-sections';
 import { BOARDS, TOPICS } from '@/lib/feed';
+import { getBoardInfo, getTopicInfo } from '@/lib/feed-data';
 
 // Regenerate hourly — otherwise the sitemap is frozen at build time
 export const revalidate = 3600;
@@ -142,19 +143,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
+  // Only boards/topics that have posts (empty ones are noindex); lastmod = newest post
+  const [boardInfo, topicInfo] = await Promise.all([
+    Promise.all(BOARDS.map((b) => getBoardInfo(b.slug))),
+    Promise.all(TOPICS.map((t) => getTopicInfo(t.slug))),
+  ]);
   const communityPages: MetadataRoute.Sitemap = [
-    ...BOARDS.map((b) => ({
-      url: `${baseUrl}/b/${b.slug}`,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 0.7,
-    })),
-    ...TOPICS.map((t) => ({
-      url: `${baseUrl}/t/${t.slug}`,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: 0.6,
-    })),
+    ...BOARDS.flatMap((b, i) =>
+      boardInfo[i].threadCount && boardInfo[i].latest
+        ? [{ url: `${baseUrl}/b/${b.slug}`, lastModified: new Date(boardInfo[i].latest!), changeFrequency: 'daily' as const, priority: 0.7 }]
+        : []
+    ),
+    ...TOPICS.flatMap((t, i) =>
+      topicInfo[i].threadCount && topicInfo[i].latest
+        ? [{ url: `${baseUrl}/t/${t.slug}`, lastModified: new Date(topicInfo[i].latest!), changeFrequency: 'daily' as const, priority: 0.6 }]
+        : []
+    ),
   ];
 
   return [

@@ -7,11 +7,11 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://sillok.kr'),
   title: {
-    default: 'Sillok - Korean Historical Figures Archive',
+    default: 'Sillok - Korean History Community & Figures Archive',
     template: '%s | Sillok',
   },
   description:
-    'A graph-based archive platform connecting notable Korean figures from Dangun to the present as interconnected nodes',
+    'Join discussions about Korean history — threads, polls and trivia on historical figures from Dangun to today, with family trees, timelines and an archive.',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '16x16 32x32' },
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
   openGraph: {
-    title: 'Sillok - Korean Historical Figures Archive',
+    title: 'Sillok - Korean History Community & Figures Archive',
     description:
-      'A graph-based archive platform connecting notable Korean figures from Dangun to the present as interconnected nodes',
+      'Join discussions about Korean history — threads, polls and trivia on historical figures from Dangun to today, with family trees, timelines and an archive.',
     url: 'https://sillok.kr',
     siteName: 'Sillok',
     locale: 'en_US',

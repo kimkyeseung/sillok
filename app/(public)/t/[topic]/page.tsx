@@ -5,9 +5,10 @@ import FeedShell from '@/components/feed/FeedShell';
 import FeedSidebar from '@/components/feed/FeedSidebar';
 import FeedComposer from '@/components/feed/FeedComposer';
 import SortTabs from '@/components/feed/SortTabs';
-import { getDefaultFeedSort, getFeedPage } from '@/lib/feed-data';
+import { getDefaultFeedSort, getFeedPage, getTopicInfo } from '@/lib/feed-data';
 import { FEED_SORTS, TOP_WINDOWS, findTopic, type FeedSort, type TopWindow } from '@/lib/feed';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { breadcrumbJsonLd, communityPageJsonLd } from '@/lib/jsonld';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -28,13 +29,16 @@ const DESCRIPTIONS: Record<string, string> = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const topic = findTopic(params.topic);
   if (!topic) return {};
-  const title = `${topic.label} — Discussions`;
+  const info = await getTopicInfo(topic.slug);
+  const title = `${topic.label} Threads — Korean History`;
   const description = DESCRIPTIONS[topic.slug];
   return {
     title,
     description,
     alternates: { canonical: `/t/${topic.slug}` },
-    openGraph: { title: `${title} | Sillok`, description, images: [DEFAULT_OG_IMAGE] },
+    // An empty topic is a thin page — keep it out of the index until it has posts
+    ...(info.threadCount === 0 && { robots: { index: false, follow: true } }),
+    openGraph: { title: `${title} | Sillok`, description, url: `/t/${topic.slug}`, images: [DEFAULT_OG_IMAGE] },
   };
 }
 
@@ -51,6 +55,23 @@ export default async function TopicPage({ params, searchParams }: Props) {
 
   return (
     <FeedShell active={{ kind: 'topic', slug: topic.slug }} sidebar={<FeedSidebar />}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            communityPageJsonLd({
+              name: `${topic.label} Threads — Korean History`,
+              description: DESCRIPTIONS[topic.slug],
+              path: `/t/${topic.slug}`,
+              threads: page.items.map((i) => ({ id: i.id, title: i.title })),
+            }),
+            breadcrumbJsonLd([
+              { name: 'Home', path: '' },
+              { name: topic.label, path: `/t/${topic.slug}` },
+            ]),
+          ]).replace(/</g, '\\u003c'),
+        }}
+      />
       <header className="card-flat flex items-center gap-3 p-4">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 text-2xl">{topic.icon}</span>
         <div>

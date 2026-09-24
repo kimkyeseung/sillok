@@ -11,6 +11,7 @@ import PersonAvatar from '@/components/common/PersonAvatar';
 import { getBoardInfo, getDefaultFeedSort, getFeedPage } from '@/lib/feed-data';
 import { FEED_SORTS, TOP_WINDOWS, findBoard, type FeedSort, type TopWindow } from '@/lib/feed';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { breadcrumbJsonLd, communityPageJsonLd } from '@/lib/jsonld';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -20,16 +21,22 @@ interface Props {
   searchParams: { sort?: string; t?: string };
 }
 
+const boardDescription = (label: string) =>
+  `Discussions, stories and debates about the people of ${label} on Sillok.`;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const board = findBoard(params.board);
   if (!board) return {};
+  const info = await getBoardInfo(board.slug);
   const title = `${board.label} — Discussions`;
-  const description = `Discussions, stories and debates about the people of ${board.label} on Sillok.`;
+  const description = boardDescription(board.label);
   return {
     title,
     description,
     alternates: { canonical: `/b/${board.slug}` },
-    openGraph: { title: `${title} | Sillok`, description, images: [DEFAULT_OG_IMAGE] },
+    // An empty board is a thin page — keep it out of the index until it has posts
+    ...(info.threadCount === 0 && { robots: { index: false, follow: true } }),
+    openGraph: { title: `${title} | Sillok`, description, url: `/b/${board.slug}`, images: [DEFAULT_OG_IMAGE] },
   };
 }
 
@@ -47,6 +54,23 @@ export default async function BoardPage({ params, searchParams }: Props) {
 
   return (
     <FeedShell active={{ kind: 'board', slug: board.slug }} sidebar={<FeedSidebar />}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            communityPageJsonLd({
+              name: `${board.label} — Discussions`,
+              description: boardDescription(board.label),
+              path: `/b/${board.slug}`,
+              threads: page.items.map((i) => ({ id: i.id, title: i.title })),
+            }),
+            breadcrumbJsonLd([
+              { name: 'Home', path: '' },
+              { name: board.label, path: `/b/${board.slug}` },
+            ]),
+          ]).replace(/</g, '\\u003c'),
+        }}
+      />
       <header className="card-flat overflow-hidden">
         <div className="h-16 bg-gradient-to-r from-brand-500 to-brand-700" />
         <div className="px-4 pb-4">
