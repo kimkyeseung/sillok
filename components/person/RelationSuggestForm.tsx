@@ -17,6 +17,15 @@ const RELATION_TYPES = [
   { value: 'AFFILIATED', label: 'Affiliated' },
 ] as const;
 
+// Relative to the current person: "<personName> is the ___ of <selected person>"
+const FAMILY_ROLES = [
+  { value: 'PARENT', label: 'Parent of' },
+  { value: 'CHILD', label: 'Child of' },
+  { value: 'SPOUSE', label: 'Spouse of' },
+  { value: 'SIBLING', label: 'Sibling of' },
+  { value: '', label: 'Other' },
+] as const;
+
 interface RelationSuggestFormProps {
   personId: string;
   personName: string;
@@ -36,6 +45,7 @@ export default function RelationSuggestForm({
     name_en: string;
   } | null>(null);
   const [relationType, setRelationType] = useState('FAMILY');
+  const [familyRole, setFamilyRole] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -69,9 +79,11 @@ export default function RelationSuggestForm({
       await apiFetch('/api/relations/suggest', {
         method: 'POST',
         body: JSON.stringify({
-          person_a_id: personId,
-          person_b_id: selectedPerson.id,
+          from_person_id: personId,
+          to_person_id: selectedPerson.id,
           relation_type: relationType,
+          family_role:
+            relationType === 'FAMILY' && familyRole ? familyRole : undefined,
           description: description.trim() || undefined,
         }),
       });
@@ -92,6 +104,7 @@ export default function RelationSuggestForm({
     setSearchResults([]);
     setSelectedPerson(null);
     setRelationType('FAMILY');
+    setFamilyRole('');
     setDescription('');
   };
 
@@ -222,6 +235,31 @@ export default function RelationSuggestForm({
               ))}
             </div>
           </div>
+
+          {/* Family tie (used for the family tree) */}
+          {relationType === 'FAMILY' && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                {personName} is the…
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {FAMILY_ROLES.map((r) => (
+                  <button
+                    key={r.value || 'other'}
+                    onClick={() => setFamilyRole(r.value)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      familyRole === r.value
+                        ? 'bg-brand-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {r.label}
+                    {r.value && selectedPerson ? ` ${selectedPerson.name_en}` : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div>

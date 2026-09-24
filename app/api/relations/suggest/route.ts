@@ -21,6 +21,8 @@ const SuggestRelationSchema = z.object({
     'AFFILIATED',
   ]),
   description: z.string().max(500).optional(),
+  // FAMILY only — relative to from_person: CHILD is stored as PARENT with ends swapped
+  family_role: z.enum(['PARENT', 'CHILD', 'SPOUSE', 'SIBLING']).optional(),
 });
 
 export async function POST(request: Request) {
@@ -42,10 +44,19 @@ export async function POST(request: Request) {
   if (!result.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { from_person_id, to_person_id, relation_type, description } = result.data;
+  const { relation_type, description, family_role } = result.data;
+  let { from_person_id, to_person_id } = result.data;
 
   if (from_person_id === to_person_id)
     return apiError('VALIDATION_ERROR', 'Cannot specify the same person.', 422);
+
+  if (family_role && relation_type !== 'FAMILY')
+    return apiError('VALIDATION_ERROR', 'family_role is only allowed for FAMILY.', 422);
+
+  // Normalize "child of" into a PARENT row (from = parent)
+  if (family_role === 'CHILD')
+    [from_person_id, to_person_id] = [to_person_id, from_person_id];
+  const storedFamilyRole = family_role === 'CHILD' ? 'PARENT' : family_role ?? null;
 
   // Check duplicate relation
   const { data: existing } = await supabaseAdmin
@@ -66,6 +77,7 @@ export async function POST(request: Request) {
       from_person_id,
       to_person_id,
       relation_type,
+      family_role: storedFamilyRole,
       description,
       is_approved: false,
       suggested_by: user.id,

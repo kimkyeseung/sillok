@@ -89,6 +89,16 @@ describe('eventJsonLd', () => {
 });
 
 describe('personJsonLd', () => {
+  it('should use summary as description (truncated to 300 chars)', () => {
+    const result = personJsonLd({
+      name_en: 'Sejong the Great',
+      slug: 'sejong-daewang',
+      summary: 'B'.repeat(500),
+    });
+
+    expect(result.description).toHaveLength(300);
+  });
+
   it('should generate valid Person schema', () => {
     const result = personJsonLd({
       name_en: 'Sejong the Great',

@@ -22,7 +22,7 @@ export function websiteJsonLd() {
 export function personJsonLd(person: {
   name_en: string;
   name_hanja?: string | null;
-  description?: string | null;
+  summary?: string | null;
   thumbnail?: string | null;
   birth_year?: number | null;
   death_year?: number | null;
@@ -33,7 +33,7 @@ export function personJsonLd(person: {
     '@type': 'Person',
     name: person.name_en,
     ...(person.name_hanja && { alternateName: person.name_hanja }),
-    ...(person.description && { description: person.description.slice(0, 300) }),
+    ...(person.summary && { description: person.summary.slice(0, 300) }),
     ...(person.thumbnail && { image: person.thumbnail }),
     ...(person.birth_year && { birthDate: String(person.birth_year) }),
     ...(person.death_year && { deathDate: String(person.death_year) }),

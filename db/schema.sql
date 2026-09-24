@@ -168,13 +168,17 @@ CREATE TABLE person_relations (
   from_person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
   to_person_id   UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
   relation_type  relation_type NOT NULL,
+  -- FAMILY only: PARENT (from = parent of to) / SPOUSE / SIBLING, NULL = other ties
+  family_role    TEXT CHECK (family_role IN ('PARENT', 'SPOUSE', 'SIBLING')),
   description    TEXT,
   source_url     TEXT,
   is_approved    BOOLEAN DEFAULT FALSE,
   suggested_by   UUID REFERENCES auth.users(id),
   approved_by    UUID REFERENCES auth.users(id),
   created_at     TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (from_person_id, to_person_id, relation_type)
+  UNIQUE (from_person_id, to_person_id, relation_type),
+  CONSTRAINT person_relations_family_role_type_check
+    CHECK (family_role IS NULL OR relation_type = 'FAMILY')
 );
 
 CREATE INDEX person_relations_from_idx ON person_relations (from_person_id);
@@ -197,12 +201,21 @@ RETURNS TABLE (
   WHERE from_person_id = p_id AND is_approved = TRUE
   UNION ALL
   SELECT
-    id, from_person_id, relation_type,
-    CASE WHEN relation_type IN ('FAMILY','ALLY','RIVAL','AFFILIATED') THEN 'both' ELSE 'incoming' END,
-    description
-  FROM person_relations
-  WHERE to_person_id = p_id AND is_approved = TRUE
-    AND relation_type NOT IN ('FAMILY','ALLY','RIVAL','AFFILIATED')
+    r.id, r.from_person_id, r.relation_type,
+    CASE WHEN r.relation_type IN ('FAMILY','ALLY','RIVAL','AFFILIATED') THEN 'both' ELSE 'incoming' END,
+    r.description
+  FROM person_relations r
+  WHERE r.to_person_id = p_id AND r.is_approved = TRUE
+    AND (
+      r.relation_type NOT IN ('FAMILY','ALLY','RIVAL','AFFILIATED')
+      OR NOT EXISTS (
+        SELECT 1 FROM person_relations rev
+        WHERE rev.from_person_id = p_id
+          AND rev.to_person_id = r.from_person_id
+          AND rev.relation_type = r.relation_type
+          AND rev.is_approved = TRUE
+      )
+    )
 $$ LANGUAGE sql;
 
 -- ============================================================

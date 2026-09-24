@@ -10,6 +10,13 @@ import PersonRequestButton from '@/components/person/PersonRequestButton';
 import { personJsonLd } from '@/lib/jsonld';
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
+import FamilyTree, { type FamilyTreePerson } from '@/components/person/FamilyTree';
+import { buildFamilyTree, type FamilyRelation } from '@/lib/family-tree';
+
+// Supabase calls go through fetch — without this, Next 14 caches them indefinitely
+// (stale relations, view counts, threads)
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 interface Props {
   params: { slug: string };
@@ -63,11 +70,80 @@ async function getPerson(slug: string) {
   return data;
 }
 
+const FAMILY_PERSON_FIELDS = 'id, slug, name_en, thumbnail, birth_year, death_year';
+
+/**
+ * Family tree around a person (grandparents → grandchildren).
+ * Returns null when there are no drawable family relations.
+ */
+async function getFamilyTree(personId: string) {
+  const base = () =>
+    supabaseAdmin
+      .from('person_relations')
+      .select('from_person_id, to_person_id, family_role')
+      .eq('relation_type', 'FAMILY')
+      .eq('is_approved', true)
+      .not('family_role', 'is', null);
+
+  // 1st hop: parents, spouses, siblings, children
+  const { data: direct, error } = await base().or(
+    `from_person_id.eq.${personId},to_person_id.eq.${personId}`
+  );
+  if (error || !direct?.length) return null;
+
+  const parentIds = direct
+    .filter((r) => r.family_role === 'PARENT' && r.to_person_id === personId)
+    .map((r) => r.from_person_id);
+  const childIds = direct
+    .filter((r) => r.family_role === 'PARENT' && r.from_person_id === personId)
+    .map((r) => r.to_person_id);
+
+  // 2nd hop: grandparents, siblings via parents, grandchildren
+  const hop2: string[] = [];
+  if (parentIds.length) hop2.push(`to_person_id.in.(${parentIds.join(',')})`);
+  if (parentIds.length || childIds.length)
+    hop2.push(`from_person_id.in.(${[...parentIds, ...childIds].join(',')})`);
+  const { data: second } = hop2.length
+    ? await base().eq('family_role', 'PARENT').or(hop2.join(','))
+    : { data: [] };
+
+  const relations = [...direct, ...(second ?? [])] as FamilyRelation[];
+  const ids = Array.from(
+    new Set(relations.flatMap((r) => [r.from_person_id, r.to_person_id]))
+  );
+  const { data: people } = await supabaseAdmin
+    .from('persons')
+    .select(FAMILY_PERSON_FIELDS)
+    .in('id', ids)
+    .eq('is_deleted', false)
+    .eq('is_published', true);
+
+  const persons: Record<string, FamilyTreePerson> = Object.fromEntries(
+    (people ?? []).map((p) => [p.id, p])
+  );
+  persons[personId] ??= (
+    await supabaseAdmin.from('persons').select(FAMILY_PERSON_FIELDS).eq('id', personId).single()
+  ).data as FamilyTreePerson;
+
+  // Drop relations to unpublished/deleted people before layout
+  const visible = relations.filter(
+    (r) => persons[r.from_person_id] && persons[r.to_person_id]
+  );
+  const tree = buildFamilyTree(personId, visible, {
+    birthYears: Object.fromEntries(
+      Object.values(persons).map((p) => [p.id, p.birth_year])
+    ),
+  });
+  if (tree.nodes.length < 2) return null;
+
+  return { tree, persons };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const person = await getPerson(params.slug);
   if (!person) return {};
 
-  const description = person.description?.slice(0, 160) ?? `About ${person.name_en}`;
+  const description = person.summary?.slice(0, 160) ?? `About ${person.name_en}`;
 
   return {
     title: `${person.name_en}`,
@@ -97,6 +173,7 @@ export default async function PersonDetailPage({ params }: Props) {
     { data: threads },
     { data: tags },
     { data: nodeLinks },
+    familyTree,
   ] = await Promise.all([
     supabaseAdmin
       .from('person_timeline')
@@ -126,6 +203,7 @@ export default async function PersonDetailPage({ params }: Props) {
       )
       .eq('person_id', person.id)
       .eq('nodes.is_deleted', false),
+    getFamilyTree(person.id),
   ]);
 
   // Relations — fetch via RPC
@@ -245,14 +323,26 @@ export default async function PersonDetailPage({ params }: Props) {
         </div>
 
         {/* Description */}
-        {person.description && (
+        {person.summary && (
           <div className="card-flat p-5">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
               About
             </h2>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
-              {person.description}
+              {person.summary}
             </p>
+          </div>
+        )}
+
+        {/* Family Tree */}
+        {familyTree && (
+          <div>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+              Family Tree
+            </h2>
+            <div className="card-flat">
+              <FamilyTree tree={familyTree.tree} persons={familyTree.persons} />
+            </div>
           </div>
         )}
 
