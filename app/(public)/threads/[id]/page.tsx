@@ -8,6 +8,7 @@ import ViewLogger from '@/components/thread/ViewLogger';
 import ImageLightbox from '@/components/common/ImageLightbox';
 import { normalizeThreadFigures, type ThreadFigure } from '@/lib/thread-figures';
 import { DEFAULT_OG_IMAGE, stripMarkdown, truncateDescription, truncateTitle } from '@/lib/seo';
+import { buildReplyTree } from '@/lib/feed';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -127,13 +128,14 @@ export default async function ThreadDetailPage({ params }: Props) {
   const { data: replies } = await supabaseAdmin
     .from('thread_replies')
     .select(
-      `id, content, depth, like_count, created_at,
+      `id, parent_id, content, depth, like_count, created_at,
        profiles!thread_replies_author_id_fkey ( nickname, avatar_url )`
     )
     .eq('thread_id', params.id)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true })
-    .limit(50);
+    .limit(200);
+  const replyTree = buildReplyTree((replies ?? []) as Array<Record<string, unknown> & { id: string; parent_id: string | null; created_at: string }>);
 
   const author = thread.profiles as Record<string, unknown>;
   const images = (thread.thread_images ?? []) as Array<Record<string, unknown>>;
@@ -226,7 +228,7 @@ export default async function ThreadDetailPage({ params }: Props) {
       </article>
 
       {/* Comments Section */}
-      <div className="card-flat">
+      <div id="comments" className="card-flat scroll-mt-20">
         <div className="border-b border-gray-100 px-5 py-3">
           <h2 className="text-sm font-semibold text-gray-900">
             Comments {thread.reply_count}
@@ -234,15 +236,14 @@ export default async function ThreadDetailPage({ params }: Props) {
         </div>
 
         <div className="divide-y divide-gray-50">
-          {(replies ?? []).map((reply: Record<string, unknown>) => {
+          {replyTree.map(({ reply, depth }) => {
             const replyAuthor = reply.profiles as Record<string, unknown> | null;
-            const depth = Math.min((reply.depth as number) ?? 0, 3);
             const replyName = (replyAuthor?.nickname as string) ?? 'Anonymous';
             return (
               <div
-                key={reply.id as string}
-                className="px-5 py-3.5"
-                style={{ paddingLeft: `${20 + depth * 24}px` }}
+                key={reply.id}
+                className={`py-3.5 pr-5 ${depth > 0 ? 'border-l-2 border-gray-100' : ''}`}
+                style={{ paddingLeft: depth > 0 ? '14px' : '20px', marginLeft: depth > 0 ? `${depth * 20}px` : undefined }}
               >
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xs font-bold text-gray-500">
@@ -262,11 +263,11 @@ export default async function ThreadDetailPage({ params }: Props) {
                 <p className="mt-1.5 pl-[38px] text-sm leading-relaxed text-gray-700">
                   {reply.content as string}
                 </p>
-                <ReplyActions replyId={reply.id as string} likeCount={reply.like_count as number} />
+                <ReplyActions threadId={params.id} replyId={reply.id} likeCount={reply.like_count as number} />
               </div>
             );
           })}
-          {(replies ?? []).length === 0 && (
+          {replyTree.length === 0 && (
             <div className="flex flex-col items-center py-12 text-gray-400">
               <svg className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

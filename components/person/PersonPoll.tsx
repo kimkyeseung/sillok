@@ -16,7 +16,16 @@ interface Poll {
 }
 
 /** Single-choice community poll — results are shown after voting */
-export default function PersonPoll({ slug }: { slug: string }) {
+export default function PersonPoll({
+  slug,
+  label = 'Community Poll',
+  moreLink,
+}: {
+  slug: string;
+  label?: string;
+  /** Optional link under the poll (e.g. to the figure page from the home feed) */
+  moreLink?: { href: string; text: string };
+}) {
   const key = `/api/persons/${slug}/poll`;
   const { data, mutate } = useSWR<{ poll: Poll | null }>(key, fetcher);
   const { user } = useAuth();
@@ -54,7 +63,7 @@ export default function PersonPoll({ slug }: { slug: string }) {
 
   return (
     <section className="card-flat p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Community Poll</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
       <h2 className="mt-1 text-sm font-semibold text-gray-900">{poll.question}</h2>
       <ul className="mt-3 space-y-2">
         {poll.options.map((o) => {
@@ -100,6 +109,14 @@ export default function PersonPoll({ slug }: { slug: string }) {
           </>
         )}
         {showResults && ' · You can change your vote'}
+        {moreLink && (
+          <>
+            {' · '}
+            <Link href={moreLink.href} className="text-brand-600 hover:underline">
+              {moreLink.text}
+            </Link>
+          </>
+        )}
       </p>
     </section>
   );

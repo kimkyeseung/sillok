@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { TAB_MIN_ITEMS } from '@/lib/person-sections';
+import { BOARDS, TOPICS } from '@/lib/feed';
 
 // Regenerate hourly — otherwise the sitemap is frozen at build time
 export const revalidate = 3600;
@@ -141,8 +142,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
+  const communityPages: MetadataRoute.Sitemap = [
+    ...BOARDS.map((b) => ({
+      url: `${baseUrl}/b/${b.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.7,
+    })),
+    ...TOPICS.map((t) => ({
+      url: `${baseUrl}/t/${t.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.6,
+    })),
+  ];
+
   return [
     ...staticPages,
+    ...communityPages,
     ...personPages,
     ...nodePages,
     ...articlePages,

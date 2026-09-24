@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -23,6 +23,19 @@ export default function Header() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // ⌘K / Ctrl+K focuses the search box
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const { data: profile } = useSWR<{ nickname: string | null; avatar_url: string | null }>(
     user ? '/api/profile' : null,
     fetcher
@@ -104,17 +117,25 @@ export default function Header() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
+              ref={searchRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search figures, artifacts, threads..."
-              className="w-full rounded-full border border-gray-200 bg-gray-50 py-1.5 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-300"
+              aria-keyshortcuts="Meta+K Control+K"
+              className="w-full rounded-full border border-gray-200 bg-gray-50 py-1.5 pl-9 pr-12 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-300"
             />
+            <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-gray-200 bg-white px-1.5 text-[10px] font-medium text-gray-400 lg:block">
+              ⌘K
+            </kbd>
           </div>
         </form>
 
         {/* Desktop Auth */}
         <div className="hidden items-center gap-2 sm:flex">
+          <Link href={user ? '/threads/new' : '/login'} prefetch={false} className="btn-ghost whitespace-nowrap font-semibold">
+            + Create
+          </Link>
           {loading ? (
             <div className="h-8 w-20 animate-pulse rounded-lg bg-gray-100" />
           ) : user ? (

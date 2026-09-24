@@ -4,6 +4,7 @@ import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { replyCreateLimiter } from '@/lib/rate-limit';
 import { createNotification, getUserNickname } from '@/lib/notifications';
+import { MAX_REPLY_DEPTH } from '@/lib/feed';
 
 // ─── GET /api/threads/:id/replies — List replies (public) ───
 
@@ -95,13 +96,29 @@ export async function POST(
   if (!result.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
+  // Parent must be a live reply in this thread; past the depth cap,
+  // attach to the parent's parent so the thread stays readable.
+  let parentId: string | null = null;
+  if (result.data.parent_id) {
+    const { data: parent } = await supabaseAdmin
+      .from('thread_replies')
+      .select('id, parent_id, depth')
+      .eq('id', result.data.parent_id)
+      .eq('thread_id', params.id)
+      .eq('is_deleted', false)
+      .maybeSingle();
+    if (!parent)
+      return apiError('REPLY_NOT_FOUND', 'The comment you replied to no longer exists.', 404);
+    parentId = parent.depth >= MAX_REPLY_DEPTH && parent.parent_id ? parent.parent_id : parent.id;
+  }
+
   // depth is auto-calculated by trigger (calc_reply_depth)
   const { data: reply, error } = await supabaseAdmin
     .from('thread_replies')
     .insert({
       thread_id: params.id,
       author_id: user.id,
-      parent_id: result.data.parent_id ?? null,
+      parent_id: parentId,
       content: result.data.content,
     })
     .select()
@@ -116,7 +133,7 @@ export async function POST(
     : '';
   const threadLink = personSlug
     ? `/persons/${personSlug}?thread=${params.id}`
-    : undefined;
+    : `/threads/${params.id}#comments`;
 
   getUserNickname(user.id).then((nickname) => {
     // 1. Notify thread author (THREAD_REPLY)

@@ -10,6 +10,13 @@ interface ReportButtonProps {
   targetId: string;
 }
 
+// API expects the DB enum values
+const TARGET_TYPES: Record<ReportButtonProps['targetType'], string> = {
+  thread: 'THREAD',
+  reply: 'THREAD_REPLY',
+  node_comment: 'NODE_COMMENT',
+};
+
 const REASONS = [
   { value: 'SPAM', label: 'Spam' },
   { value: 'ABUSE', label: 'Abuse / Harassment' },
@@ -36,7 +43,7 @@ export default function ReportButton({ targetType, targetId }: ReportButtonProps
       await apiFetch('/api/reports', {
         method: 'POST',
         body: JSON.stringify({
-          target_type: targetType,
+          target_type: TARGET_TYPES[targetType],
           target_id: targetId,
           reason,
           ...(detail ? { detail } : {}),
