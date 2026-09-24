@@ -78,7 +78,7 @@ export default async function PersonOverviewPage({ params }: Props) {
       {achievements.length > 0 && (
         <section>
           <SectionHeader title="Achievements" href={`${base}/legacy`} linkLabel="Legacy" />
-          <AchievementList items={achievements.slice(0, 3)} />
+          <AchievementList items={achievements.slice(0, 3)} slug={params.slug} />
         </section>
       )}
 
@@ -137,7 +137,7 @@ export default async function PersonOverviewPage({ params }: Props) {
       {trivia.length > 0 && (
         <section>
           <SectionHeader title="Did You Know?" />
-          <TriviaList items={trivia.slice(0, 2)} />
+          <TriviaList items={trivia.slice(0, 2)} slug={params.slug} />
         </section>
       )}
 
@@ -161,7 +161,7 @@ export default async function PersonOverviewPage({ params }: Props) {
             title={`Gallery (${gallery.length})`}
             href={isTabVisible('gallery', counts) ? `${base}/gallery` : undefined}
           />
-          <GalleryStrip images={gallery} size="sm" />
+          <GalleryStrip images={gallery} size="sm" slug={params.slug} />
         </section>
       )}
 
@@ -171,7 +171,7 @@ export default async function PersonOverviewPage({ params }: Props) {
             title="On Screen"
             href={portrayals.length > 4 ? `${base}/related` : undefined}
           />
-          <PortrayalList items={portrayals.slice(0, 4)} personName={person.name_en} />
+          <PortrayalList items={portrayals.slice(0, 4)} personName={person.name_en} slug={params.slug} />
         </section>
       )}
 

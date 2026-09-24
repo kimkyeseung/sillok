@@ -20,16 +20,19 @@ interface Response {
   has_next: boolean;
 }
 
+// Keys match reports.target_type values
 const typeLabel: Record<string, string> = {
-  thread: 'Thread',
-  reply: 'Reply',
-  node_comment: 'Node comment',
+  THREAD: 'Thread',
+  THREAD_REPLY: 'Reply',
+  NODE_COMMENT: 'Node comment',
+  PERSON_ITEM_COMMENT: 'Person page comment',
 };
 
 const typeColor: Record<string, string> = {
-  thread: 'bg-blue-50 text-blue-700',
-  reply: 'bg-gray-100 text-gray-600',
-  node_comment: 'bg-purple-50 text-purple-700',
+  THREAD: 'bg-blue-50 text-blue-700',
+  THREAD_REPLY: 'bg-gray-100 text-gray-600',
+  NODE_COMMENT: 'bg-purple-50 text-purple-700',
+  PERSON_ITEM_COMMENT: 'bg-amber-50 text-amber-700',
 };
 
 const reasonLabel: Record<string, string> = {

@@ -7,7 +7,7 @@ import { reportLimiter } from '@/lib/rate-limit';
 // ─── POST /api/reports — Submit report [USER] ───
 
 const ReportSchema = z.object({
-  target_type: z.enum(['THREAD', 'THREAD_REPLY', 'NODE_COMMENT']),
+  target_type: z.enum(['THREAD', 'THREAD_REPLY', 'NODE_COMMENT', 'PERSON_ITEM_COMMENT']),
   target_id: z.string().uuid(),
   reason: z.enum([
     'SPAM',

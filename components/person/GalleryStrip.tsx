@@ -5,9 +5,11 @@ import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { GalleryImage } from '@/lib/person-page';
+import ItemReactions from '@/components/person/ItemReactions';
 
 interface Props {
   images: GalleryImage[];
+  slug: string;
   /** 'lg' for the Gallery tab, 'sm' for the overview preview */
   size?: 'sm' | 'lg';
 }
@@ -18,7 +20,7 @@ const SIZES = {
 };
 
 /** Horizontally scrolling image row with a fullscreen viewer */
-export default function GalleryStrip({ images, size = 'lg' }: Props) {
+export default function GalleryStrip({ images, slug, size = 'lg' }: Props) {
   const s = SIZES[size];
   const scroller = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<number | null>(null);
@@ -90,14 +92,19 @@ export default function GalleryStrip({ images, size = 'lg' }: Props) {
               />
             </button>
             {s.caption && (
-              <figcaption className="mt-1.5 line-clamp-2 w-56 text-xs text-gray-600 sm:w-64">
-                {img.href ? (
-                  <Link href={img.href} className="hover:text-brand-700 hover:underline">
-                    {img.caption}
-                  </Link>
-                ) : (
-                  img.caption
-                )}
+              <figcaption className="mt-1.5 w-56 text-xs text-gray-600 sm:w-64">
+                <span className="line-clamp-2">
+                  {img.href ? (
+                    <Link href={img.href} className="hover:text-brand-700 hover:underline">
+                      {img.caption}
+                    </Link>
+                  ) : (
+                    img.caption
+                  )}
+                </span>
+                <div className="mt-1">
+                  <ItemReactions slug={slug} targetType="GALLERY" targetKey={img.id} />
+                </div>
               </figcaption>
             )}
           </figure>
@@ -166,6 +173,9 @@ export default function GalleryStrip({ images, size = 'lg' }: Props) {
               <button type="button" onClick={() => step(1)} disabled={active === images.length - 1} className="px-2 text-lg disabled:opacity-30" aria-label="Next image">
                 ›
               </button>
+            </div>
+            <div className="mt-2 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+              <ItemReactions key={current.id} slug={slug} targetType="GALLERY" targetKey={current.id} tone="light" />
             </div>
           </div>,
           document.body

@@ -47,6 +47,7 @@ export async function PUT(
       THREAD: 'threads',
       THREAD_REPLY: 'thread_replies',
       NODE_COMMENT: 'node_comments',
+      PERSON_ITEM_COMMENT: 'person_item_comments',
     };
     const table = tableMap[report.target_type];
     if (table) {

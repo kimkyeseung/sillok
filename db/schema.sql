@@ -387,7 +387,8 @@ CREATE TRIGGER person_requests_updated_at
 CREATE TABLE reports (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   reporter_id UUID REFERENCES auth.users(id),
-  target_type TEXT NOT NULL CHECK (target_type IN ('THREAD', 'THREAD_REPLY', 'NODE_COMMENT')),
+  target_type TEXT NOT NULL CONSTRAINT reports_target_type_check
+              CHECK (target_type IN ('THREAD', 'THREAD_REPLY', 'NODE_COMMENT', 'PERSON_ITEM_COMMENT')),
   target_id   UUID NOT NULL,
   reason      TEXT NOT NULL,
   status      TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'RESOLVED', 'DISMISSED')),
@@ -1028,3 +1029,40 @@ ALTER TABLE person_poll_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE person_poll_votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE person_user_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE person_suggestions ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- Hearts and comments on person page items
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS person_item_likes (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  person_id    UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  target_type  TEXT NOT NULL CHECK (target_type IN ('HIGHLIGHT', 'GALLERY', 'PORTRAYAL')),
+  target_key   TEXT NOT NULL,
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (person_id, target_type, target_key, user_id)
+);
+CREATE INDEX IF NOT EXISTS person_item_likes_person_idx ON person_item_likes (person_id);
+
+CREATE TABLE IF NOT EXISTS person_item_comments (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  person_id    UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  target_type  TEXT NOT NULL CHECK (target_type IN ('HIGHLIGHT', 'GALLERY', 'PORTRAYAL')),
+  target_key   TEXT NOT NULL,
+  user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content      TEXT NOT NULL CHECK (char_length(content) BETWEEN 1 AND 1000),
+  is_deleted   BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS person_item_comments_target_idx
+  ON person_item_comments (person_id, target_type, target_key, created_at)
+  WHERE is_deleted = FALSE;
+
+DROP TRIGGER IF EXISTS person_item_comments_updated_at ON person_item_comments;
+CREATE TRIGGER person_item_comments_updated_at BEFORE UPDATE ON person_item_comments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE person_item_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE person_item_comments ENABLE ROW LEVEL SECURITY;

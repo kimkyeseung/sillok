@@ -55,7 +55,7 @@ export default async function PersonRelatedPage({ params }: Props) {
         return (
           <section key={type} className="space-y-3">
             <SectionHeader title={`${GROUP_TITLES[type] ?? NODE_TYPE_LABELS[type] ?? type} (${items.length})`} />
-            {screen.length > 0 && <PortrayalList items={screen} personName={person.name_en} />}
+            {screen.length > 0 && <PortrayalList items={screen} personName={person.name_en} slug={params.slug} />}
             {rest.length > 0 && <LinkedNodeGrid nodes={rest} />}
           </section>
         );

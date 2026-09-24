@@ -33,7 +33,7 @@ export default async function PersonGalleryPage({ params }: Props) {
   return (
     <section>
       <SectionHeader title={`Gallery (${images.length})`} />
-      <GalleryStrip images={images} size="lg" />
+      <GalleryStrip images={images} size="lg" slug={params.slug} />
     </section>
   );
 }

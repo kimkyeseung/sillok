@@ -1,8 +1,9 @@
 import AiDraftBadge from '@/components/person/AiDraftBadge';
+import ItemReactions from '@/components/person/ItemReactions';
 import type { PersonHighlight } from '@/lib/person-page';
 
 /** Achievement cards (year + title + body) */
-export function AchievementList({ items }: { items: PersonHighlight[] }) {
+export function AchievementList({ items, slug }: { items: PersonHighlight[]; slug: string }) {
   return (
     <ol className="card-flat divide-y divide-gray-100">
       {items.map((h) => (
@@ -16,6 +17,9 @@ export function AchievementList({ items }: { items: PersonHighlight[] }) {
               {h.is_ai_generated && <AiDraftBadge />}
             </p>
             {h.body && <p className="mt-1 text-sm leading-relaxed text-gray-600">{h.body}</p>}
+            <div className="mt-2">
+              <ItemReactions slug={slug} targetType="HIGHLIGHT" targetKey={h.id} />
+            </div>
           </div>
         </li>
       ))}
@@ -24,7 +28,7 @@ export function AchievementList({ items }: { items: PersonHighlight[] }) {
 }
 
 /** "Did you know?" trivia cards */
-export function TriviaList({ items }: { items: PersonHighlight[] }) {
+export function TriviaList({ items, slug }: { items: PersonHighlight[]; slug: string }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {items.map((h) => (
@@ -34,6 +38,9 @@ export function TriviaList({ items }: { items: PersonHighlight[] }) {
             {h.is_ai_generated && <AiDraftBadge />}
           </p>
           {h.body && <p className="mt-1 text-sm leading-relaxed text-gray-600">{h.body}</p>}
+          <div className="mt-2">
+            <ItemReactions slug={slug} targetType="HIGHLIGHT" targetKey={h.id} />
+          </div>
         </div>
       ))}
     </div>
@@ -41,7 +48,7 @@ export function TriviaList({ items }: { items: PersonHighlight[] }) {
 }
 
 /** Quotations with attribution line */
-export function QuoteList({ items, speaker }: { items: PersonHighlight[]; speaker: string }) {
+export function QuoteList({ items, speaker, slug }: { items: PersonHighlight[]; speaker: string; slug: string }) {
   return (
     <div className="space-y-3">
       {items.map((h) => (
@@ -54,6 +61,9 @@ export function QuoteList({ items, speaker }: { items: PersonHighlight[]; speake
             {h.year ? ` (${h.year})` : ''}
             {h.is_ai_generated && <AiDraftBadge />}
           </figcaption>
+          <div className="mt-2">
+            <ItemReactions slug={slug} targetType="HIGHLIGHT" targetKey={h.id} />
+          </div>
         </figure>
       ))}
     </div>

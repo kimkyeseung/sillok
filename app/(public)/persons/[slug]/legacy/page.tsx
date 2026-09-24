@@ -44,19 +44,19 @@ export default async function PersonLegacyPage({ params }: Props) {
       {achievements.length > 0 && (
         <section>
           <SectionHeader title={`Achievements (${achievements.length})`} />
-          <AchievementList items={achievements} />
+          <AchievementList items={achievements} slug={params.slug} />
         </section>
       )}
       {quotes.length > 0 && (
         <section>
           <SectionHeader title="In Their Words" />
-          <QuoteList items={quotes} speaker={person.name_en} />
+          <QuoteList items={quotes} speaker={person.name_en} slug={params.slug} />
         </section>
       )}
       {trivia.length > 0 && (
         <section>
           <SectionHeader title="Did You Know?" />
-          <TriviaList items={trivia} />
+          <TriviaList items={trivia} slug={params.slug} />
         </section>
       )}
     </>
