@@ -8,6 +8,7 @@ import { useToast } from '@/components/common/Toast';
 import { uploadPersonImage } from '@/lib/upload';
 import ImageCropModal from '@/components/admin/ImageCropModal';
 import useSWR from 'swr';
+import { tagLabel } from '@/lib/tags';
 
 interface Tag {
   id: string;
@@ -384,7 +385,7 @@ export default function PersonForm({ mode, initialData, slug }: PersonFormProps)
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    {tag.name_en || tag.name_ko}
+                    {tag.name_en ? tagLabel(tag.name_en) : tag.name_ko}
                   </button>
                 ))}
               </div>

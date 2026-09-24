@@ -8,6 +8,7 @@ import {
   JOSEON_END,
 } from '@/components/age-flow/useAgeFlow';
 import AgeFlowClient from './AgeFlowClient';
+import { tagLabel } from '@/lib/tags';
 
 // Force dynamic rendering — SSR on every request
 // (ISR cache was serving stale empty data after initial SSR failure)
@@ -30,7 +31,7 @@ function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
     .filter((pt) => pt.tags !== null)
     .map((pt) => ({
       id: pt.tags!.id,
-      name_en: pt.tags!.name_en,
+      name_en: tagLabel(pt.tags!.name_en),
       type: pt.tags!.type as 'ERA' | 'FIELD',
     }));
 

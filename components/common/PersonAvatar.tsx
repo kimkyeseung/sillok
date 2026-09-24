@@ -1,5 +1,7 @@
 'use client';
 
+import { tagLabel } from '@/lib/tags';
+
 /**
  * PersonAvatar — FIELD 태그별 스타일이 적용되는 인물 placeholder avatar.
  * 썸네일이 없을 때 이니셜 + 태그별 배경/아이콘을 표시합니다.
@@ -92,7 +94,7 @@ export default function PersonAvatar({
   size = 'md',
   className = '',
 }: PersonAvatarProps) {
-  const style = (fieldTag && FIELD_STYLES[fieldTag]) || DEFAULT_STYLE;
+  const style = (fieldTag && FIELD_STYLES[tagLabel(fieldTag)]) || DEFAULT_STYLE;
   const sizes = SIZE_MAP[size];
   const initials = name.slice(0, 2);
 

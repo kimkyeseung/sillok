@@ -12,6 +12,7 @@ import PersonAvatar from '@/components/common/PersonAvatar';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
 import FamilyTree, { type FamilyTreePerson } from '@/components/person/FamilyTree';
 import { buildFamilyTree, type FamilyRelation } from '@/lib/family-tree';
+import { tagLabel } from '@/lib/tags';
 
 // Supabase calls go through fetch — without this, Next 14 caches them indefinitely
 // (stale relations, view counts, threads)
@@ -299,7 +300,7 @@ export default async function PersonDetailPage({ params }: Props) {
                 const tag = pt.tags as Record<string, unknown>;
                 return (
                   <span key={tag.id as string} className="badge-brand">
-                    {(tag.name_en || tag.name_ko) as string}
+                    {tag.name_en ? tagLabel(tag.name_en as string) : (tag.name_ko as string)}
                   </span>
                 );
               })}

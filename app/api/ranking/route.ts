@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { tagLabel } from '@/lib/tags';
 
 const RankingQuerySchema = z.object({
   tag: z.string().optional(),
@@ -134,7 +135,10 @@ export async function GET(request: Request) {
         person_tags: { tags: { name_en: string | null; name_ko: string; type: string } | null }[];
       };
       const tags = (person_tags ?? [])
-        .map((pt) => (pt.tags as unknown as { name_en: string | null; name_ko: string; type: string } | null)?.name_en || (pt.tags as unknown as { name_en: string | null; name_ko: string } | null)?.name_ko)
+        .map((pt) => {
+          const tag = pt.tags as unknown as { name_en: string | null; name_ko: string } | null;
+          return tag?.name_en ? tagLabel(tag.name_en) : tag?.name_ko;
+        })
         .filter(Boolean) as string[];
       return {
         rank: cursor + idx + 1,

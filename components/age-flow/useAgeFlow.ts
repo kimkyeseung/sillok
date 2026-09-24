@@ -16,6 +16,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { tagLabel } from '@/lib/tags';
 
 // ── Types ──
 
@@ -349,7 +350,7 @@ function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
     .filter((pt) => pt.tags !== null)
     .map((pt) => ({
       id: pt.tags!.id,
-      name_en: pt.tags!.name_en,
+      name_en: tagLabel(pt.tags!.name_en),
       type: pt.tags!.type as 'ERA' | 'FIELD',
     }));
 

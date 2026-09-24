@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AgeFlowPersonDetail } from './useAgeFlow';
 import { formatCount, getAge } from './useAgeFlow';
+import { tagLabel } from '@/lib/tags';
 
 interface PersonHoverPanelProps {
   personSlug: string | null;
@@ -42,7 +43,7 @@ export default function PersonHoverPanel({
               .filter((pt) => pt.tags)
               .map((pt) => ({
                 id: pt.tags!.id,
-                name_en: pt.tags!.name_en,
+                name_en: tagLabel(pt.tags!.name_en),
                 type: pt.tags!.type as 'ERA' | 'FIELD',
               }))
           : [];

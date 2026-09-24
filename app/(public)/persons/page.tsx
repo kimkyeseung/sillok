@@ -6,6 +6,7 @@ import RankingSection, { type RankedPerson } from '@/components/ranking/RankingS
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
 import { sanitizeSearchTerm } from '@/lib/search';
+import { tagLabel } from '@/lib/tags';
 
 export const metadata: Metadata = {
   title: 'Figures',
@@ -112,7 +113,10 @@ export default async function PersonsPage({
           person_tags: { tags: { name_en: string | null; name_ko: string; type: string } | null }[];
         };
         const tags = (person_tags ?? [])
-          .map((pt) => (pt.tags as unknown as { name_en: string | null; name_ko: string } | null)?.name_en || (pt.tags as unknown as { name_en: string | null; name_ko: string } | null)?.name_ko)
+          .map((pt) => {
+            const tag = pt.tags as unknown as { name_en: string | null; name_ko: string } | null;
+            return tag?.name_en ? tagLabel(tag.name_en) : tag?.name_ko;
+          })
           .filter(Boolean) as string[];
         return {
           rank: idx + 1,
