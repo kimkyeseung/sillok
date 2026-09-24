@@ -293,7 +293,7 @@ sillok/
 ├── db/
 │   └── schema.sql                # 전체 DB 스키마 (현행 29개 + v2.3 node_links 예정)
 ├── public/
-│   └── logo.png
+│   └── logo.svg
 └── package.json
 ```
 

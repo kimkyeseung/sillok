@@ -52,7 +52,7 @@ export default function Header() {
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
         {/* Logo */}
         <a href="/" className="shrink-0" onClick={() => setMenuOpen(false)}>
-          <Image src="/logo.png" alt="Sillok" width={80} height={30} priority />
+          <Image src="/logo.svg" alt="Sillok" width={82} height={39} priority unoptimized className="h-8 w-auto" />
         </a>
 
         {/* Desktop Nav */}
