@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { z } from 'zod';
+import type { AuthError } from '@supabase/supabase-js';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address.'),
@@ -18,6 +19,41 @@ const signupSchema = loginSchema.extend({
     .min(2, 'Nickname must be at least 2 characters.')
     .max(20, 'Nickname must be 20 characters or less.'),
 });
+
+const URL_ERROR_MESSAGES: Record<string, string> = {
+  link_browser_mismatch:
+    'This link could not finish signing you in on this browser. If you were verifying your email, it is likely confirmed — please log in below.',
+  link_expired: 'This link has expired. Please sign up again or log in.',
+};
+
+function getLoginErrorMessage(err: AuthError): string {
+  switch (err.code) {
+    case 'email_not_confirmed':
+      return 'Please verify your email first. Check your inbox for the confirmation link.';
+    case 'over_request_rate_limit':
+    case 'over_email_send_rate_limit':
+      return 'Too many attempts. Please wait a moment and try again.';
+    case 'user_banned':
+      return 'This account is suspended.';
+    default:
+      return 'Invalid email or password.';
+  }
+}
+
+function getSignupErrorMessage(err: AuthError): string {
+  switch (err.code) {
+    case 'user_already_exists':
+    case 'email_exists':
+      return 'An account with this email already exists. Please log in.';
+    case 'weak_password':
+      return 'Please choose a stronger password.';
+    case 'over_email_send_rate_limit':
+    case 'over_request_rate_limit':
+      return 'Too many attempts. Please wait a moment and try again.';
+    default:
+      return err.message;
+  }
+}
 
 function LoginContent() {
   const { signInWithGoogle, signInWithDiscord, signInWithEmail, signUpWithEmail } =
@@ -32,6 +68,15 @@ function LoginContent() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const handleOAuth = async (
+    signIn: () => Promise<{ error: AuthError | null }>,
+  ) => {
+    setError('');
+    setMessage('');
+    const { error: authError } = await signIn();
+    if (authError) setError('Could not start social login. Please try again.');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +102,7 @@ function LoginContent() {
         nickname,
       );
       if (authError) {
-        setError(authError.message);
+        setError(getSignupErrorMessage(authError));
       } else {
         setMessage(
           'Sign up complete. Please verify your email to continue.',
@@ -69,7 +114,7 @@ function LoginContent() {
     } else {
       const { error: authError } = await signInWithEmail(email, password);
       if (authError) {
-        setError('Invalid email or password.');
+        setError(getLoginErrorMessage(authError));
       } else {
         window.location.href = '/';
       }
@@ -107,7 +152,9 @@ function LoginContent() {
 
           {(urlError || error) && (
             <div className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600">
-              {error || 'Login failed. Please try again.'}
+              {error ||
+                (urlError && URL_ERROR_MESSAGES[urlError]) ||
+                'Login failed. Please try again.'}
             </div>
           )}
 
@@ -120,7 +167,7 @@ function LoginContent() {
           {/* Social Login */}
           <div className="mt-6 space-y-3">
             <button
-              onClick={signInWithGoogle}
+              onClick={() => handleOAuth(signInWithGoogle)}
               className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
@@ -145,7 +192,7 @@ function LoginContent() {
             </button>
 
             <button
-              onClick={signInWithDiscord}
+              onClick={() => handleOAuth(signInWithDiscord)}
               className="flex w-full items-center justify-center gap-2.5 rounded-lg bg-[#5865F2] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#4752C4]"
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
