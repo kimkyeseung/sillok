@@ -1,8 +1,25 @@
 # Sillok — 한국 인물·문화 아카이브 플랫폼 SPEC
 
-> **버전:** 2.3 (문화·음식·스포츠 TOPIC 노드 확장 반영)
+> **버전:** 2.4 (커뮤니티 피드 홈 · 인물 페이지 탭/커뮤니티 기능 반영)
 > **작성 목적:** Claude Code 기반 자동 개발을 위한 전체 명세서
 > **기술 스택:** Next.js 14 (App Router) + Supabase + Vercel
+
+### v2.3 → v2.4 변경 사항
+
+- **홈 = Reddit식 커뮤니티 피드**: 히어로 배너·Recent Threads 구조 → Hot/New/Top 정렬 피드 + 게시물 사이 편집 모듈 + 3단 레이아웃 (섹션 7-1)
+- **기본 정렬 자동 전환**: 최근 7일 새 스레드 5개 미만이면 Top(전체), 이상이면 Hot
+- **짧은 경로 추가**: `/b/{board}` 시대별 게시판, `/t/{topic}` 스레드 카테고리별 토픽
+- **threads 컬럼 추가**: `category`, `hot_score`(트리거 + pg_cron 15분), `top_score`(생성 컬럼). `updated_at` 트리거는 내용 컬럼 수정 시에만 동작
+- **대댓글 UI**: 댓글별 Reply, 트리 렌더링, 최대 4단계 (서버에서 부모 검증 + 깊이 제한)
+- **헤더**: `+ Create` 버튼, ⌘K/Ctrl+K 검색 단축키
+- **인물 상세 탭별 URL**: `/persons/{slug}/timeline|relations|legacy|related|gallery|threads|sources|stats`. 항목 수가 기준 미만인 탭은 숨김(404), Overview·Stats는 항상 표시 (섹션 7-3)
+- **인물 편집 콘텐츠**: `person_facts`, `person_highlights`, `person_sources`. AI 초안은 `is_ai_generated` 라벨로 즉시 공개 후 어드민 검수
+- **인물 커뮤니티 기능**: 인물별 투표, 개인 상태(Studied/Visited/Want to learn), 사실 제안, 항목별 하트·댓글
+- **가족관계도**: `person_relations.family_role` (PARENT/SPOUSE/SIBLING)
+- **영화·드라마 출연**: `person_node_links.portrayed_by` (배우명)
+- **SEO**: 스레드 `DiscussionForumPosting`(대댓글 포함), 게시판·토픽 `CollectionPage`, Breadcrumb. 빈 게시판·토픽은 noindex + sitemap 제외
+- **렌더링**: 인물 상세는 SSG+ISR → SSR(`force-dynamic`) (Supabase fetch 캐시로 인한 stale 데이터 방지)
+- **신고 버그 수정**: 클라이언트가 `THREAD` / `THREAD_REPLY` enum 값을 보내도록 수정
 
 ### v2.2 → v2.3 변경 사항
 
@@ -499,6 +516,7 @@ CREATE TABLE person_node_links (
   person_id UUID REFERENCES persons(id) ON DELETE CASCADE,
   node_id   UUID REFERENCES nodes(id) ON DELETE CASCADE,
   link_type TEXT,
+  portrayed_by TEXT,            -- MEDIA 연결: 해당 인물을 연기한 배우 (Portrayals 섹션)
   UNIQUE (person_id, node_id)
 );
 ```
@@ -570,6 +588,8 @@ CREATE TABLE person_relations (
   from_person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
   to_person_id   UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
   relation_type  relation_type NOT NULL,
+  -- FAMILY 전용: PARENT(from이 to의 부모) / SPOUSE / SIBLING, NULL = 기타 친족 (가족관계도에 사용)
+  family_role    TEXT CHECK (family_role IN ('PARENT', 'SPOUSE', 'SIBLING')),
   description    TEXT,
   source_url     TEXT,
   is_approved    BOOLEAN DEFAULT FALSE,
@@ -617,15 +637,24 @@ CREATE TABLE threads (
   title       TEXT NOT NULL,
   content     TEXT NOT NULL,
   video_url   TEXT,                    -- YouTube/Vimeo URL (선택)
+  category    TEXT NOT NULL DEFAULT 'DISCUSSION'
+              CHECK (category IN ('DISCUSSION', 'TRIVIA', 'QNA', 'SOURCES', 'MEDIA')),
   is_pinned   BOOLEAN DEFAULT FALSE,
   is_deleted  BOOLEAN DEFAULT FALSE,
   view_count  INTEGER DEFAULT 0,
   reply_count INTEGER DEFAULT 0,       -- 트리거로 동기화
   like_count  INTEGER DEFAULT 0,       -- 트리거로 동기화
+  hot_score   DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 트리거 + pg_cron 15분 갱신
+  top_score   INTEGER GENERATED ALWAYS AS (COALESCE(like_count, 0) + COALESCE(reply_count, 0)) STORED,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW()
+  updated_at  TIMESTAMPTZ DEFAULT NOW()  -- 내용 컬럼 수정 시에만 갱신
 );
 ```
+
+- **category ↔ 토픽 URL**: DISCUSSION=`/t/discussion`, TRIVIA=`/t/trivia`, QNA=`/t/qna`, SOURCES=`/t/sources`, MEDIA=`/t/film-tv`
+- **hot_score** = `(1 + replies × 0.5 + likes) / (age_days + 2)^1.5`, 소수점 12자리 반올림. PostgREST가 float를 15자리로 직렬화하므로 반올림하지 않으면 피드 커서 경계 행이 다음 페이지에 중복됨
+- **피드 인덱스**: `(hot_score DESC, id DESC)`, `(top_score DESC, id DESC)`, `(created_at DESC, id DESC)` — 모두 `WHERE is_deleted = FALSE`
+- **thread_persons**: 스레드 ↔ 여러 인물 연결 (주 인물 `is_primary`)
 
 ### 4-7. 스레드 댓글 (thread_replies)
 
@@ -643,6 +672,9 @@ CREATE TABLE thread_replies (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
+
+- **대댓글 규칙** (API): `parent_id`는 같은 스레드의 미삭제 댓글이어야 함 (아니면 404). 부모 depth가 4 이상이면 부모의 부모에 붙여 최대 4단계 유지
+- **표시**: `buildReplyTree` (`lib/feed.ts`) — 부모 아래 오래된 순, 부모가 삭제된 댓글은 최상위로
 
 ### 4-8. 스레드 이미지 (thread_images)
 
@@ -966,11 +998,53 @@ CREATE TABLE curator_roles (
 );
 ```
 
+### 4-26. 인물 편집 콘텐츠 (person_facts / person_highlights / person_sources)
+
+```sql
+CREATE TABLE person_facts (          -- 인포박스 행 (Reign, Tomb, Predecessor …)
+  id UUID PRIMARY KEY, person_id UUID NOT NULL REFERENCES persons(id),
+  label TEXT NOT NULL, value TEXT NOT NULL,
+  linked_person_id UUID REFERENCES persons(id),   -- 값이 인물이면 링크
+  sort_order INTEGER, is_ai_generated BOOLEAN, is_deleted BOOLEAN, created_at, updated_at
+);
+CREATE TABLE person_highlights (     -- 업적·어록·트리비아
+  ..., kind TEXT CHECK (kind IN ('ACHIEVEMENT', 'QUOTE', 'TRIVIA')),
+  title TEXT NOT NULL, body TEXT, year INTEGER, ...
+);
+CREATE TABLE person_sources (        -- 사료·백과·도서
+  ..., kind TEXT CHECK (kind IN ('PRIMARY', 'ENCYCLOPEDIA', 'BOOK', 'ARTICLE', 'WEB')),
+  title TEXT NOT NULL, url TEXT, citation TEXT, ...
+);
+```
+
+- `is_ai_generated = TRUE` → "AI draft" 라벨로 즉시 공개, 어드민 검수 시 해제
+- 전체 컬럼: `db/schema.sql` / 마이그레이션 `20260925_person_content.sql`
+
+### 4-27. 인물 커뮤니티 (투표 / 개인 상태 / 사실 제안)
+
+| 테이블 | 용도 | 제약 |
+|--------|------|------|
+| `person_polls` | 인물별 질문 | `is_active`, soft delete |
+| `person_poll_options` | 선택지 | `sort_order` |
+| `person_poll_votes` | 투표 | `UNIQUE (poll_id, user_id)` — 1인 1표 |
+| `person_user_status` | 개인 상태 | `STUDIED` / `VISITED` / `WANT_TO_LEARN`, `UNIQUE (person_id, user_id, status)` |
+| `person_suggestions` | "Suggest a fact" 제안 | `kind`: FACT/ACHIEVEMENT/TRIVIA/SOURCE/CORRECTION, `status`: PENDING/APPROVED/REJECTED |
+
+### 4-28. 인물 페이지 항목 반응 (person_item_likes / person_item_comments)
+
+- 대상: `target_type` ∈ `HIGHLIGHT` / `GALLERY` / `PORTRAYAL`, `target_key` = 항목 식별자
+- 하트: `UNIQUE (person_id, target_type, target_key, user_id)`
+- 댓글: 1~1000자, soft delete, 신고 대상 `PERSON_ITEM_COMMENT`
+- 이미지 첨부 없음 (댓글 이미지 금지 원칙 유지)
+
+> 4-26 ~ 4-28의 모든 테이블: RLS 켜고 정책 없음 — service role(서버)로만 접근
+
 ### DB 트리거 목록
 
 | 트리거 | 대상 | 동작 |
 |--------|------|------|
-| `update_updated_at()` | 모든 주요 테이블 | BEFORE UPDATE → `updated_at = NOW()` |
+| `update_updated_at()` | 모든 주요 테이블 | BEFORE UPDATE → `updated_at = NOW()` (threads는 `title, content, video_url, category, person_id, is_pinned, is_deleted` 수정 시에만) |
+| `set_thread_hot_score()` | threads | BEFORE INSERT / UPDATE OF like_count, reply_count → `hot_score` 재계산 |
 | `calc_reply_depth()` | thread_replies | BEFORE INSERT → `depth = parent.depth + 1` |
 | `update_thread_reply_count()` | thread_replies | AFTER INSERT/UPDATE → threads.reply_count 동기화 |
 | `update_like_count()` | likes | AFTER INSERT/DELETE → 대상 테이블 like_count 동기화 |
@@ -989,6 +1063,9 @@ CREATE TABLE curator_roles (
 
 -- 3. 오래된 view_logs 정리 (매일 자정)
 -- DELETE FROM view_logs WHERE viewed_at < NOW() - INTERVAL '7 days'
+
+-- 4. 피드 hot_score 시간 감쇠 (15분마다) — pg_cron 확장 활성화 필요
+-- SELECT cron.schedule('refresh-thread-hot-scores', '*/15 * * * *', 'SELECT refresh_thread_hot_scores()');
 ```
 
 ---
@@ -1015,6 +1092,17 @@ DELETE /persons/:slug/hard        인물 hard delete [ADMIN]
 
 POST   /persons/:slug/vote-today  오늘의 인물 추천 투표 [USER]
 GET    /persons/today-ranking     오늘 투표 현황
+
+GET    /persons/:slug/poll        인물 투표 + 결과
+POST   /persons/:slug/poll        투표 [USER]
+GET    /persons/:slug/status      개인 상태 집계 (+ 내 상태)
+POST   /persons/:slug/status      개인 상태 토글 [USER]
+POST   /persons/:slug/suggestions 사실 제안 [USER]
+GET    /persons/:slug/reactions   항목별 하트 수 (+ 내가 누른 항목)
+POST   /persons/:slug/reactions   항목 하트 토글 [USER]
+GET    /persons/:slug/comments    항목 댓글 목록 (target_type, target_key)
+POST   /persons/:slug/comments    항목 댓글 작성 [USER]
+DELETE /person-item-comments/:id  항목 댓글 soft delete [OWNER|ADMIN]
 
 POST   /admin/persons             인물 등록 [ADMIN]
 GET    /admin/persons             인물 목록 (어드민) [ADMIN]
@@ -1051,6 +1139,11 @@ GET    /admin/relations           관계 목록 (어드민) [ADMIN]
 ### 5-4. 스레드 (Threads)
 
 ```
+GET    /feed                      홈·게시판·토픽 피드
+  Query: sort(hot|new|top), t(day|week|month|all — top 전용), board, topic, cursor, limit
+  커서: base64url JSON {v: 정렬값, id} — (정렬값, id) keyset, 서버에서 엄격 검증
+  hot/top 컬럼이 없으면(마이그레이션 전) new로 폴백
+
 GET    /threads                   스레드 목록 (전체 피드)
 GET    /threads/:id               스레드 상세
 POST   /threads                   스레드 작성 [USER]
@@ -1199,6 +1292,14 @@ PUT    /admin/timelines/:id       타임라인 수정 [ADMIN]
 DELETE /admin/timelines/:id       타임라인 삭제 [ADMIN]
 
 GET    /admin/api-docs            API 문서 [ADMIN]
+
+GET    /admin/persons/:slug/content        인물 편집 콘텐츠 조회 [ADMIN]
+POST   /admin/persons/:slug/content        인물 편집 콘텐츠 추가 [ADMIN]
+PATCH  /admin/person-content/:kind/:id     콘텐츠 수정·검수(AI 라벨 해제) [ADMIN]
+DELETE /admin/person-content/:kind/:id     콘텐츠 삭제 [ADMIN]
+GET    /admin/person-content/pending       검수 대기 AI 초안 [ADMIN]
+GET    /admin/suggestions                  사실 제안 큐 [ADMIN]
+PATCH  /admin/suggestions/:id              제안 승인·반려 [ADMIN]
 ```
 
 ### 5-17. AI
@@ -1233,9 +1334,12 @@ NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] 
 
 | 경로 | 설명 | 렌더링 |
 |------|------|--------|
-| `/` | Main home (Latest Articles, Recent Threads, New Persons) | SSR (`force-dynamic`) |
+| `/` | 커뮤니티 피드 홈 (`?sort=hot|new|top&t=…`, 정렬 변형은 `/`로 canonical) | SSR (`force-dynamic`) |
+| `/b/[board]` | 시대별 게시판 — ancient, three-kingdoms, unified-silla, goryeo, joseon, modern | SSR |
+| `/t/[topic]` | 토픽 (스레드 category) — discussion, trivia, qna, sources, film-tv | SSR |
 | `/persons` | 인물 목록 (Figures) — Trending + 전체 그리드 + 검색 | SSR |
-| `/persons/[slug]` | 인물 상세 | SSG + ISR(24h) |
+| `/persons/[slug]` | 인물 상세 (Overview 탭) | SSR (`force-dynamic`) |
+| `/persons/[slug]/{tab}` | timeline, relations, legacy, related, gallery, threads, sources, stats — 기준 미만 탭은 404 | SSR |
 | `/age-flow` | 시대 흐름 인터랙티브 타임라인 | CSR |
 | `/nodes` | Explore 허브 (전체 노드 타입별 그리드) | SSR |
 | `/nodes/[slug]` | 노드 상세 (유물/미디어/사건/그룹/토픽) | SSR |
@@ -1282,40 +1386,44 @@ NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] 
 
 ## 7. 핵심 기능 상세 명세
 
-### 7-1. 홈페이지 레이아웃
+### 7-1. 홈페이지 레이아웃 (커뮤니티 피드)
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  NAV: SILLOK | Home | Figures | Age Flow | Explore | Threads    │
-│       | Articles | [🔍 검색] | [유저 메뉴/로그인]                   │
-├──────────────────────────────────────────────────────────────────┤
-│  히어로 배너                                                       │
-│  "Connecting notable Korean figures from Dangun to the present  │
-│   as interconnected nodes."                                      │
-│  [👤 175 Figures]  [💬 54 Threads]                               │
-├────────────────────────────────────┬─────────────────────────────┤
-│  좌측 메인 (~75%)                   │  우측 사이드바 (320px)        │
-│                                    │                             │
-│  📰 Latest Articles               │  ✨ Recently Added Figures  │
-│  ┌ Featured article (큰 카드)      │  인물 카드 리스트 (8명)       │
-│  └ 2개 서브 카드 그리드             │                             │
-│                                    │  ℹ️ About                  │
-│  💬 Recent Threads                │  "A community archive..."   │
-│  ┌ 스레드 카드 (썸네일 + 인물배지)  │  [Explore] [Search]          │
-│  │ 작성자, 좋아요, 댓글, 시간       │                             │
-│  └ 최대 10개                       │                             │
-│                                    │                             │
-└────────────────────────────────────┴─────────────────────────────┘
-│  Footer: Explore | Company | Contact                            │
-│  Terms of Service | Privacy Policy | contact@sillok.kr          │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ NAV: Logo | Home Figures Age Flow Explore Threads Articles           │
+│      | [🔍 Search ⌘K] | + Create | 🔔 | Log In/Out | Avatar          │
+├──────────┬───────────────────────────────────────┬───────────────────┤
+│ 좌측 레일 │ 메인 피드                               │ 우측 사이드바 300px │
+│ (xl~)    │                                       │ (lg~)             │
+│ Home     │ [✎ Start a discussion…]  [+ Create]   │ Today in Korean   │
+│ Popular  │ [🔥Hot] [🆕New] [🏆Top ▾기간]          │  History (compact)│
+│ Newest   │ ┌ FeedCard ────────────────────────┐ │ Trending figures  │
+│ Boards   │ │ ♥N │ 인물칩 · flair · 작성자 · 2h │ │  (활동 적으면     │
+│  b/joseon│ │    │ 제목 / 미리보기      [썸네일] │ │   Discover)       │
+│  …       │ │    │ 💬 N comments                 │ │ Editor's pick     │
+│ Topics   │ └──────────────────────────────────┘ │ About · 통계      │
+│  t/trivia│ … 2번째 뒤: Today (모바일)            │  · 규칙 · Create  │
+│  …       │ … 4번째 뒤: 🗳 Poll of the Day          │                   │
+│ Explore  │ … 7번째 뒤: 💡 Trivia                   │                   │
+│          │ … 10번째 뒤: 최근 활동                  │                   │
+│          │ 무한 스크롤 (IntersectionObserver + Load more) │           │
+└──────────┴───────────────────────────────────────┴───────────────────┘
 ```
 
-**홈 데이터 로드 (SSR, force-dynamic):**
-- `newPersons`: 최근 등록 인물 8명 (태그 포함)
-- `latestArticles`: 최신 아티클 3건
-- `recentThreads`: 최신 스레드 10건 (작성자, 인물, 이미지 포함)
-- `stats`: 인물 수, 스레드 수
+**정렬:**
+- Hot: `hot_score` (시간 감쇠), New: `created_at`, Top: `top_score` + 기간(day/week/month/all)
+- 기본값: 최근 7일 스레드 5개 미만 → Top·All time, 이상 → Hot (`pickDefaultSort`)
+- 커서 기반 페이지네이션 (`/api/feed`), 20개 단위
+
+**편집 모듈 (피드 사이 삽입, KST 날짜 기준 매일 교체):**
+- Today in Korean History: 오늘의 인물(하이라이트 보유 인물 순환) + 오늘/이번 달의 탄생·사망·사건
+- Poll of the Day: 투표가 있는 인물 순환
+- Trivia: 인물 하이라이트(TRIVIA) 순환
+- Recent activity: 인물 페이지 항목 댓글 (없으면 숨김)
+
+**게시판·토픽 페이지 (`/b/*`, `/t/*`):** 같은 피드 + 헤더(게시판은 대표 인물 칩·인물 수·스레드 수). 글이 0개면 noindex.
+
+**구현 위치:** `lib/feed.ts`(순수 로직), `lib/feed-data.ts`(로더), `components/feed/*`
 
 ### 7-2. 인물 목록 페이지 (Figures)
 
@@ -1331,29 +1439,29 @@ NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] 
 └──────────────────────────────────────────────────┘
 ```
 
-### 7-3. 인물 상세 페이지 레이아웃
+### 7-3. 인물 상세 페이지 레이아웃 (탭별 URL)
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  [썸네일]  이름 (한자)                                      │
-│           생몰년도 · 출생지                                 │
-│           태그: #왕 #조선                                  │
-│           [⭐ 컬렉션에 추가] [❤ 팔로우]                     │
-│  ⚠️ 논란 인물 배너 (is_controversial=true 시)              │
-├──────────────────────┬──────────────────────────────────┤
-│  좌측 (메인)          │  우측 사이드바                      │
-│                      │                                   │
-│  💬 스레드           │  🕸 관계도 (미니, 1촌)              │
-│  [새 스레드 작성]     │  [관계 유형 토글]                   │
-│  스레드 목록          │                                   │
-│                      │  ⭐ 포함된 컬렉션                   │
-│  📅 생애 타임라인     │                                   │
-│  1397 출생 ── 사망    │                                   │
-│                      │                                   │
-│  🔗 관련 노드 갤러리   │                                   │
-│  (유물·미디어·사건·토픽) │                                 │
-└──────────────────────┴──────────────────────────────────┘
+│ [초상] 이름 (한자) · 생몰년 · 태그 · [팔로우] [컬렉션]       │
+│ 개인 상태: Studied / Visited / Want to learn               │
+│ 탭: Overview | Timeline | Relations | Legacy | Related |   │
+│     Gallery | Threads | Sources | Stats                    │
+├─────────────────────────────────┬────────────────────────┤
+│ Overview                         │ 인포박스 (person_facts) │
+│  요약 · 하이라이트(업적/어록/트리비아) │ Community Poll         │
+│  ♥ 하트 · 💬 항목 댓글            │ Suggest a fact         │
+│  갤러리 가로 스트립 + 뷰어          │                        │
+│  On screen (portrayed_by)        │                        │
+│  가족관계도 (왕 중심, family_role) │                        │
+└─────────────────────────────────┴────────────────────────┘
 ```
+
+- 각 탭은 별도 URL·메타데이터·canonical. 항목 수가 `TAB_MIN_ITEMS` 미만이면 탭 숨김 + 404 (Overview·Stats는 항상 표시)
+- 헤더(layout): 인포박스 Facts, 개인 상태 버튼, Suggest a fact / Overview(page): 하이라이트, 투표, 갤러리, On screen, 가족관계도
+- 로더: `lib/person-page.ts` (React `cache()`로 layout/page/generateMetadata 공유)
+- AI 초안 항목은 "AI draft" 라벨 표시
+- 구조화 데이터: `Person`(+ 확장 필드), `BreadcrumbList`
 
 ### 7-4. 스레드 목록 페이지
 
@@ -1651,13 +1759,10 @@ sort:  relevance | name_asc | popular | recent
 
 ## 12. SEO 전략
 
-### 정적 생성 (SSG + ISR)
+### 렌더링
 
-```typescript
-// app/(public)/persons/[slug]/page.tsx
-export async function generateStaticParams() { /* 전체 published persons */ }
-export const revalidate = 86400; // 24시간 ISR
-```
+- 인물·스레드·피드 페이지는 SSR `force-dynamic` + `fetchCache = 'force-no-store'` (Next 14의 Supabase fetch 무기한 캐시 방지)
+- 사이트맵은 `revalidate = 3600`
 
 ### Schema.org 구조화 데이터 (`lib/jsonld.ts`)
 - 인물: `Person` type
@@ -1666,9 +1771,14 @@ export const revalidate = 86400; // 24시간 ISR
 - 사건: `Event`
 - 토픽: `Thing` 기본, category에 따라 `DefinedTerm`, `SportsOrganization`, `SportsEvent`, `CreativeWork` 보조 검토
 - 사이트: `WebSite` (홈페이지)
+- 스레드: `DiscussionForumPosting` — 작성자, 날짜, 좋아요·댓글 수, `about`(관련 인물), 대댓글은 `comment` 중첩 + `BreadcrumbList`
+- 게시판·토픽: `CollectionPage`(표시된 스레드 `ItemList`) + `BreadcrumbList`
+- 사용자 입력이 들어가는 JSON-LD는 `<` → `\u003c` 이스케이프
 
 ### Sitemap (`app/sitemap.ts`)
-- 전체 persons/nodes slug 기반 동적 사이트맵
+- persons(+ 기준 이상 탭), nodes, threads, articles, 게시판·토픽
+- PostgREST 1000행 제한 → `fetchAll`로 페이징
+- `lastmod`: 실제 수정 시각 (게시판·토픽은 최신 글 시각), 글 0개 게시판·토픽은 제외
 
 ### robots.ts
 - `app/robots.ts` — 크롤링 규칙

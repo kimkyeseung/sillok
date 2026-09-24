@@ -42,6 +42,18 @@
 5. **시덥잖은 TMI**: "Wait till you find out how many kids Jeong Yak-yong had..."
 6. **재평가 글**: "Ngl Yeonsangun gets way too much hate"
 
+### 카테고리 (category) — 반드시 지정
+
+스레드 내용에 맞는 카테고리를 하나 고릅니다. 카테고리별로 토픽 페이지(`/t/…`)가 만들어지고, 글이 0개인 토픽은 검색 색인에서 빠지므로 한쪽으로 몰리지 않게 골고루 사용합니다.
+
+| category | 토픽 URL | 어울리는 스레드 |
+|----------|---------|----------------|
+| `DISCUSSION` | `/t/discussion` | VS 떡밥, 재평가, 의견·논쟁 |
+| `TRIVIA` | `/t/trivia` | 시덥잖은 TMI, 의외의 사실, 짧은 일화 |
+| `QNA` | `/t/qna` | "Why did…?", "How did…?" 처럼 질문으로 끝나는 글 |
+| `SOURCES` | `/t/sources` | 실록·일기·편지 등 사료 인용이 중심인 글 |
+| `MEDIA` | `/t/film-tv` | 영화·드라마·웹툰 속 인물 묘사, 고증 비교 |
+
 ### 절대 하면 안 되는 것
 - 백과사전처럼 딱딱하게 쓰기
 - 격식체 학술 영어 사용
@@ -50,7 +62,7 @@
 
 ## 출력 및 DB INSERT
 
-스레드 작성 후 사용자에게 **제목, 본문, 이미지 URL**을 보여주고 확인 받으면 **직접 DB에 INSERT** 합니다.
+스레드 작성 후 사용자에게 **제목, 본문, 카테고리, 이미지 URL**을 보여주고 확인 받으면 **직접 DB에 INSERT** 합니다.
 
 ### 1단계: 스레드 INSERT
 
@@ -69,7 +81,8 @@ sb.from('threads').insert({
   person_id: '{person_id}',
   author_id: 'e9517e9f-511d-4b0d-a8e9-ff22a3346758',
   title: '{title}',
-  content: '{content}'
+  content: '{content}',
+  category: '{category}'  // DISCUSSION | TRIVIA | QNA | SOURCES | MEDIA
 }).select().single().then(({ data, error }) => {
   if (error) console.error('INSERT ERROR:', error);
   else console.log('SUCCESS:', JSON.stringify(data, null, 2));
@@ -109,8 +122,8 @@ sb.from('thread_images').insert([
 1. `https://sillok.kr/api/search?q={인물이름}&type=person&limit=1` API 호출로 인물 정보 조회
 2. 웹 검색으로 재미있는 소재 탐색
 3. 스레드 내용과 어울리는 이미지 1~3장 검색 (구글 등)
-4. 스레드 유형 하나를 골라 영어로 작성
-5. 사용자에게 제목, 본문, 이미지 URL을 보여주고 확인 요청
+4. 스레드 유형 하나를 골라 영어로 작성하고 카테고리 지정
+5. 사용자에게 제목, 본문, 카테고리, 이미지 URL을 보여주고 확인 요청
 6. 확인 시:
    - 1단계: threads 테이블에 INSERT → thread_id 확보
    - 2단계: thread_images 테이블에 이미지 URL INSERT

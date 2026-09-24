@@ -11,7 +11,7 @@ npm run dev          # Next.js dev (port 3000)
 npm run build        # 프로덕션 빌드
 npm run type-check   # tsc --noEmit
 npm run lint         # ESLint
-npm run db:migrate   # Supabase migration 적용
+npm run db:migrate   # 로컬 DB 전용 — 원격은 db/migrations/*.sql을 Supabase SQL Editor에서 직접 실행
 npm run db:generate  # 타입 자동 생성
 ```
 
@@ -21,21 +21,32 @@ npm run db:generate  # 타입 자동 생성
 
 ```
 app/
-├── (public)/        SSG/ISR 페이지 + CSR (age-flow)
+├── (public)/        페이지 (대부분 SSR force-dynamic)
+│   ├── page.tsx         홈 = Reddit식 커뮤니티 피드
+│   ├── b/[board]/       시대별 게시판 (ancient, three-kingdoms, unified-silla, goryeo, joseon, modern)
+│   ├── t/[topic]/       토픽 = 스레드 category (discussion, trivia, qna, sources, film-tv)
+│   ├── persons/[slug]/  인물 상세 — 탭별 URL (timeline, relations, legacy, related, gallery, threads, sources, stats)
+│   └── threads/[id]/    스레드 상세 + 대댓글 트리
 ├── (auth)/          로그인/회원가입
 ├── admin/           어드민 (로그인 필수)
-└── api/             API Routes (persons, threads, nodes, collections 등)
+└── api/             API Routes (feed, persons, threads, replies, nodes, person-item-comments 등)
 components/
+├── feed/            홈 피드 (Feed, FeedCard, FeedShell, SortTabs, 중간 삽입 모듈)
 ├── age-flow/        시대 흐름 시각화 (8 컴포넌트 + useAgeFlow 훅)
 ├── common/          Header, Modal, Toast, PersonAvatar
 ├── person/ thread/ collection/ ranking/ search/ admin/
 lib/
 ├── supabase-admin.ts   서버 전용 (SERVICE_ROLE_KEY)
 ├── supabase-server.ts  SSR 서버 컴포넌트 전용
-├── auth.ts             requireUser / requireAdmin
+├── auth.ts             requireUser / requireActiveUser(정지 유저 차단) / requireAdmin
 ├── api-helpers.ts      apiError / apiSuccess
+├── feed.ts             피드 순수 로직 (정렬, 커서, 게시판·토픽, 댓글 트리) — 테스트 대상
+├── feed-data.ts        피드·홈 모듈 로더 (서버)
+├── person-page.ts      인물 페이지 로더 (React cache로 layout/page/metadata 공유)
+├── jsonld.ts           구조화 데이터 (Person, DiscussionForumPosting, Breadcrumb 등)
 ├── types.ts            NodeType, RelationType 등
-db/schema.sql           전체 DB 스키마 (27 테이블)
+db/schema.sql           전체 DB 스키마 (40 테이블)
+db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동기화)
 ```
 
 **Supabase 클라이언트 사용 규칙:**
@@ -49,7 +60,7 @@ db/schema.sql           전체 DB 스키마 (27 테이블)
 
 ### 반드시 지킬 것
 
-- API Route: `requireUser()` 또는 `requireAdmin()`으로 인증
+- API Route: `requireUser()` / `requireActiveUser()`(작성·댓글) / `requireAdmin()`으로 인증
 - 입력값: `zod` 스키마 검증
 - 응답: `apiError()` / `apiSuccess()` 헬퍼 사용
 - 목록 API: Cursor 기반 페이지네이션 (`limit+1` → `has_next`)
@@ -69,12 +80,15 @@ db/schema.sql           전체 DB 스키마 (27 테이블)
 
 ## DB 핵심 규칙
 
-- 전체 스키마: `db/schema.sql` (27 테이블)
+- 전체 스키마: `db/schema.sql` (40 테이블)
 - soft delete: `is_deleted = TRUE` (hard delete는 어드민만)
 - 카운터: 트리거 동기화 (`like_count`, `reply_count` 등)
 - `view_count`: 직접 UPDATE 금지 → `view_logs` + 배치 집계
 - 관계: FAMILY·ALLY·RIVAL은 단방향 저장 후 OR 쿼리
 - 파일 업로드: Supabase Storage presigned URL 방식 (image/jpeg, png, webp, 5MB)
+- `threads.hot_score`: 트리거(좋아요·댓글 변경) + pg_cron 15분 갱신. 소수점 12자리 반올림 필수 (PostgREST가 float를 15자리로 잘라 커서가 어긋남)
+- `threads.updated_at`: 내용 컬럼 수정 시에만 갱신 (점수·카운터 변경은 제외 → sitemap lastmod 보호)
+- 새 테이블: RLS 켜고 정책 없음 (service role로만 접근)
 
 ---
 
@@ -90,6 +104,12 @@ db/schema.sql           전체 DB 스키마 (27 테이블)
 | 관계 양방향 1건 저장 | OR 쿼리로 양방향 조회 |
 | age-flow 전체 메모리 로드 | ~1,000명 OK. 2,000명 이상 시 구간 로드 전환 (SCALABILITY NOTE 참조) |
 | PersonAvatar 태그별 스타일 | FIELD 태그별 배경색·아이콘 분기 (`components/common/PersonAvatar.tsx`) |
+| 홈 기본 정렬 자동 전환 | 최근 7일 새 스레드 5개 미만이면 Top(전체), 이상이면 Hot. 조용할 때 오래된 글 목록처럼 보이지 않게 |
+| 피드 사이 편집 모듈 | 오늘의 역사·투표·트리비아·최근 활동을 게시물 사이에 삽입 (커뮤니티 활동 부족 보완) |
+| 대댓글 최대 4단계 | 초과 시 부모의 부모에 붙임. 부모 댓글은 같은 스레드·미삭제인지 서버 검증 |
+| 인물 페이지 탭별 URL | 탭마다 색인 가능한 페이지. 항목 수가 `TAB_MIN_ITEMS` 미만인 탭은 숨기고 404 |
+| AI 초안 즉시 공개 + 라벨 | `is_ai_generated` 표시로 투명성 확보, 어드민이 사후 검수 |
+| 빈 게시판·토픽 noindex | 글 0개면 noindex + sitemap 제외 (thin content 방지) |
 
 ---
 
