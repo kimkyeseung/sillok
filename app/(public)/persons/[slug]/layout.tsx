@@ -5,11 +5,12 @@ import FollowButton from '@/components/person/FollowButton';
 import VoteTodayButton from '@/components/person/VoteTodayButton';
 import PersonRequestButton from '@/components/person/PersonRequestButton';
 import PersonTabs from '@/components/person/PersonTabs';
-import ViewTracker from '@/components/person/ViewTracker';
+import ViewTracker from '@/components/common/ViewTracker';
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { personJsonLd } from '@/lib/jsonld';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
-import { getPersonBySlug, getTabCounts } from '@/lib/person-page';
+import { getPersonBySlug, getPersonFacts, getTabCounts } from '@/lib/person-page';
+import AiDraftBadge from '@/components/person/AiDraftBadge';
 import { personTabs } from '@/lib/person-sections';
 import { tagLabel } from '@/lib/tags';
 
@@ -27,7 +28,7 @@ export default async function PersonLayout({
   const person = await getPersonBySlug(params.slug);
   if (!person) notFound();
 
-  const counts = await getTabCounts(person);
+  const [counts, facts] = await Promise.all([getTabCounts(person), getPersonFacts(person.id)]);
   const tabs = personTabs(params.slug, counts);
   const lifespan =
     person.birth_year && person.death_year ? person.death_year - person.birth_year : null;
@@ -107,10 +108,27 @@ export default async function PersonLayout({
         <div className="min-w-0 space-y-6">{children}</div>
 
         <aside className="space-y-6">
-          {/* Quick facts */}
+          {/* At a glance: editorial facts + computed life facts */}
           <div className="card-flat p-4">
-            <h2 className="mb-3 text-sm font-semibold text-gray-900">Quick Facts</h2>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-gray-900">At a Glance</h2>
+              {facts.some((f) => f.is_ai_generated) && <AiDraftBadge />}
+            </div>
             <dl className="space-y-2 text-sm">
+              {facts.map((f) => (
+                <div key={f.id} className="flex justify-between gap-3">
+                  <dt className="shrink-0 text-gray-500">{f.label}</dt>
+                  <dd className="text-right text-gray-900">
+                    {f.linked ? (
+                      <Link href={`/persons/${f.linked.slug}`} className="text-brand-700 hover:underline">
+                        {f.linked.name_en}
+                      </Link>
+                    ) : (
+                      f.value
+                    )}
+                  </dd>
+                </div>
+              ))}
               {person.birth_year != null && (
                 <div className="flex justify-between gap-3">
                   <dt className="text-gray-500">Born</dt>

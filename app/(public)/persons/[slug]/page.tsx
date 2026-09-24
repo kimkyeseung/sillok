@@ -7,6 +7,7 @@ import PersonMiniCard from '@/components/person/PersonMiniCard';
 import SectionHeader from '@/components/person/SectionHeader';
 import LinkedNodeGrid from '@/components/person/LinkedNodeGrid';
 import PersonThreadList, { WriteThreadLink } from '@/components/person/PersonThreadList';
+import { AchievementList, TriviaList } from '@/components/person/HighlightList';
 import {
   getContemporaries,
   getFamilyTree,
@@ -14,6 +15,7 @@ import {
   getLifeEvents,
   getLinkedNodes,
   getPersonBySlug,
+  getPersonHighlights,
   getPersonRelations,
   getPersonThreads,
   getTabCounts,
@@ -38,7 +40,7 @@ export default async function PersonOverviewPage({ params }: Props) {
   const person = await getPersonBySlug(params.slug);
   if (!person) notFound();
 
-  const [counts, familyTree, relations, lifeEvents, contemporaries, gallery, nodes, threads] =
+  const [counts, familyTree, relations, lifeEvents, contemporaries, gallery, nodes, threads, highlights] =
     await Promise.all([
       getTabCounts(person),
       getFamilyTree(person.id),
@@ -48,7 +50,10 @@ export default async function PersonOverviewPage({ params }: Props) {
       getGallery(person),
       getLinkedNodes(person.id),
       getPersonThreads(person.id),
+      getPersonHighlights(person.id),
     ]);
+  const achievements = highlights.filter((h) => h.kind === 'ACHIEVEMENT');
+  const trivia = highlights.filter((h) => h.kind === 'TRIVIA');
   const base = `/persons/${params.slug}`;
   // Summary view: own milestones first; skip linked events in a year the person's own
   // timeline already covers (e.g. "Enthronement" vs "Accession of Sejong")
@@ -63,6 +68,13 @@ export default async function PersonOverviewPage({ params }: Props) {
         <section className="card-flat p-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">About</h2>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{person.summary}</p>
+        </section>
+      )}
+
+      {achievements.length > 0 && (
+        <section>
+          <SectionHeader title="Achievements" href={`${base}/legacy`} linkLabel="Legacy" />
+          <AchievementList items={achievements.slice(0, 3)} />
         </section>
       )}
 
@@ -113,6 +125,13 @@ export default async function PersonOverviewPage({ params }: Props) {
               <PersonMiniCard key={r.id} person={r.other} label={r.label} />
             ))}
           </div>
+        </section>
+      )}
+
+      {trivia.length > 0 && (
+        <section>
+          <SectionHeader title="Did You Know?" />
+          <TriviaList items={trivia.slice(0, 2)} />
         </section>
       )}
 

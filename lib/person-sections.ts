@@ -9,17 +9,21 @@ export type PersonTabKey =
   | 'overview'
   | 'timeline'
   | 'relations'
+  | 'legacy'
   | 'related'
   | 'gallery'
   | 'threads'
+  | 'sources'
   | 'stats';
 
 export interface PersonTabCounts {
   timeline: number;
   relations: number;
+  legacy: number;
   related: number;
   gallery: number;
   threads: number;
+  sources: number;
 }
 
 export interface PersonTab {
@@ -33,9 +37,11 @@ export interface PersonTab {
 export const TAB_MIN_ITEMS: Record<keyof PersonTabCounts, number> = {
   timeline: 1,
   relations: 1,
+  legacy: 1,
   related: 1,
   gallery: 2,
   threads: 1,
+  sources: 1,
 };
 
 export function personTabs(slug: string, counts: PersonTabCounts): PersonTab[] {
@@ -43,9 +49,11 @@ export function personTabs(slug: string, counts: PersonTabCounts): PersonTab[] {
   const optional: { key: keyof PersonTabCounts; label: string }[] = [
     { key: 'timeline', label: 'Timeline' },
     { key: 'relations', label: 'Relations' },
+    { key: 'legacy', label: 'Legacy' },
     { key: 'related', label: 'Related' },
     { key: 'gallery', label: 'Gallery' },
     { key: 'threads', label: 'Threads' },
+    { key: 'sources', label: 'Sources' },
   ];
   return [
     { key: 'overview', label: 'Overview', href: base },

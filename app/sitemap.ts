@@ -144,11 +144,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 }
 
-const PERSON_TABS = ['timeline', 'relations', 'related', 'threads'] as const;
+const PERSON_TABS = ['timeline', 'relations', 'legacy', 'related', 'threads', 'sources'] as const;
 
 /** Per-person item counts for each indexable tab, from one query per table */
 async function getPersonTabCounts() {
-  const [timeline, relations, links, threads, threadPersons] = await Promise.all([
+  const [timeline, relations, links, threads, threadPersons, highlights, sources] = await Promise.all([
     fetchAll<{ person_id: string }>((from, to) =>
       supabaseAdmin.from('person_timeline').select('person_id').order('id').range(from, to)
     ),
@@ -174,6 +174,12 @@ async function getPersonTabCounts() {
     fetchAll<{ thread_id: string; person_id: string }>((from, to) =>
       supabaseAdmin.from('thread_persons').select('thread_id, person_id').order('thread_id').order('person_id').range(from, to)
     ),
+    fetchAll<{ person_id: string }>((from, to) =>
+      supabaseAdmin.from('person_highlights').select('person_id').eq('is_deleted', false).order('id').range(from, to)
+    ),
+    fetchAll<{ person_id: string }>((from, to) =>
+      supabaseAdmin.from('person_sources').select('person_id').eq('is_deleted', false).order('id').range(from, to)
+    ),
   ]);
 
   const tally = (ids: string[]) => {
@@ -195,6 +201,8 @@ async function getPersonTabCounts() {
     timeline: tally(timeline.map((r) => r.person_id)),
     relations: tally(relations.flatMap((r) => [r.from_person_id, r.to_person_id])),
     related: tally(links.map((r) => r.person_id)),
+    legacy: tally(highlights.map((r) => r.person_id)),
+    sources: tally(sources.map((r) => r.person_id)),
     threads: tally(Array.from(threadKeys).map((k) => k.split(':')[0])),
   };
 }

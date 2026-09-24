@@ -408,22 +408,107 @@ export const getLifeEvents = cache(async (person: PersonDetail) => {
   );
 });
 
+// ─── Editorial content (facts, highlights, sources) ───
+// Tables may not exist yet before the migration runs — treat errors as "no content".
+
+export interface PersonFact {
+  id: string;
+  label: string;
+  value: string;
+  linked: PersonSummary | null;
+  is_ai_generated: boolean;
+}
+
+export const getPersonFacts = cache(async (personId: string): Promise<PersonFact[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('person_facts')
+    .select('id, label, value, linked_person_id, is_ai_generated')
+    .eq('person_id', personId)
+    .eq('is_deleted', false)
+    .order('sort_order');
+  if (error || !data?.length) return [];
+
+  const linkedIds = data.map((f) => f.linked_person_id).filter((id): id is string => !!id);
+  const { data: people } = linkedIds.length
+    ? await supabaseAdmin
+        .from('persons')
+        .select(SUMMARY_FIELDS)
+        .in('id', linkedIds)
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+    : { data: [] };
+  const byId = new Map((people ?? []).map((p) => [p.id, p as PersonSummary]));
+
+  return data
+    .map((f) => ({
+      id: f.id,
+      label: f.label,
+      value: f.value,
+      linked: f.linked_person_id ? byId.get(f.linked_person_id) ?? null : null,
+      is_ai_generated: f.is_ai_generated,
+    }))
+    // A link-only fact whose person is hidden has nothing to show
+    .filter((f) => f.value || f.linked);
+});
+
+export interface PersonHighlight {
+  id: string;
+  kind: 'ACHIEVEMENT' | 'QUOTE' | 'TRIVIA';
+  title: string;
+  body: string | null;
+  year: number | null;
+  is_ai_generated: boolean;
+}
+
+export const getPersonHighlights = cache(async (personId: string): Promise<PersonHighlight[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('person_highlights')
+    .select('id, kind, title, body, year, is_ai_generated')
+    .eq('person_id', personId)
+    .eq('is_deleted', false)
+    .order('sort_order');
+  return error ? [] : ((data ?? []) as PersonHighlight[]);
+});
+
+export interface PersonSource {
+  id: string;
+  kind: 'PRIMARY' | 'ENCYCLOPEDIA' | 'BOOK' | 'ARTICLE' | 'WEB';
+  title: string;
+  url: string | null;
+  citation: string | null;
+  is_ai_generated: boolean;
+}
+
+export const getPersonSources = cache(async (personId: string): Promise<PersonSource[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('person_sources')
+    .select('id, kind, title, url, citation, is_ai_generated')
+    .eq('person_id', personId)
+    .eq('is_deleted', false)
+    .order('sort_order');
+  return error ? [] : ((data ?? []) as PersonSource[]);
+});
+
 // ─── Tab counts ───
 
 export const getTabCounts = cache(async (person: PersonDetail): Promise<PersonTabCounts> => {
-  const [timeline, relations, nodes, gallery, threads] = await Promise.all([
+  const [timeline, relations, highlights, nodes, gallery, threads, sources] = await Promise.all([
     getTimelineEntries(person.id),
     getPersonRelations(person.id),
+    getPersonHighlights(person.id),
     getLinkedNodes(person.id),
     getGallery(person),
     getPersonThreads(person.id),
+    getPersonSources(person.id),
   ]);
   return {
     timeline: timeline.length,
     relations: relations.length,
+    legacy: highlights.length,
     related: nodes.length,
     gallery: gallery.length,
     threads: threads.length,
+    sources: sources.length,
   };
 });
 

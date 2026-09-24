@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import { fetcher } from '@/lib/fetcher';
@@ -47,11 +48,16 @@ export default function AdminEditPersonPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Edit Figure</h1>
-        <p className="mt-0.5 text-sm text-gray-500">
-          Update information for {data.name_ko}
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Figure</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Update information for {data.name_ko}
+          </p>
+        </div>
+        <Link href={`/admin/persons/${params.slug}/content`} className="btn-ghost text-xs">
+          Facts · Highlights · Sources →
+        </Link>
       </div>
       <PersonForm mode="edit" initialData={data} slug={params.slug} />
     </div>

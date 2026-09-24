@@ -12,11 +12,20 @@ describe('personTabs', () => {
     const tabs = personTabs('sejong-daewang', {
       timeline: 5,
       relations: 0,
+      legacy: 4,
       related: 3,
       gallery: 1,
       threads: 4,
+      sources: 0,
     });
-    expect(tabs.map((t) => t.key)).toEqual(['overview', 'timeline', 'related', 'threads', 'stats']);
+    expect(tabs.map((t) => t.key)).toEqual([
+      'overview',
+      'timeline',
+      'legacy',
+      'related',
+      'threads',
+      'stats',
+    ]);
     expect(tabs[0].href).toBe('/persons/sejong-daewang');
     expect(tabs[1].href).toBe('/persons/sejong-daewang/timeline');
   });
