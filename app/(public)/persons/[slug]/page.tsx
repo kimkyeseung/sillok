@@ -25,6 +25,7 @@ import { isTabVisible } from '@/lib/person-sections';
 import PortrayalList from '@/components/person/PortrayalList';
 import PersonPoll from '@/components/person/PersonPoll';
 import GalleryStrip from '@/components/person/GalleryStrip';
+import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -68,6 +69,7 @@ export default async function PersonOverviewPage({ params }: Props) {
 
   return (
     <>
+      <PersonBreadcrumbJsonLd person={person} />
       {person.summary && (
         <section className="card-flat p-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">About</h2>

@@ -14,6 +14,7 @@ import {
 } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
+import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -64,6 +65,7 @@ export default async function PersonRelationsPage({ params }: Props) {
 
   return (
     <>
+      <PersonBreadcrumbJsonLd person={person} tab={{ label: 'Relations', segment: 'relations' }} />
       {network && network.graph.nodes.length > 2 && (
         <section>
           <SectionHeader title="Relation Network" />

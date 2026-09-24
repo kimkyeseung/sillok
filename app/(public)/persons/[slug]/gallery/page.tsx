@@ -5,6 +5,7 @@ import GalleryStrip from '@/components/person/GalleryStrip';
 import { getGallery, getPersonBySlug, getTabCounts } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
+import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -19,6 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     label: 'Gallery',
     description: (_p, fullName) =>
       `Images related to ${fullName}: portraits, artifacts, historical sites and community photos.`,
+    // Image-only page with little text — keep it out of the index (also excluded from the sitemap)
+    noindex: true,
   });
 }
 
@@ -31,9 +34,12 @@ export default async function PersonGalleryPage({ params }: Props) {
   const images = await getGallery(person);
 
   return (
-    <section>
-      <SectionHeader title={`Gallery (${images.length})`} />
-      <GalleryStrip images={images} size="lg" slug={params.slug} />
-    </section>
+    <>
+      <PersonBreadcrumbJsonLd person={person} tab={{ label: 'Gallery', segment: 'gallery' }} />
+      <section>
+        <SectionHeader title={`Gallery (${images.length})`} />
+        <GalleryStrip images={images} size="lg" slug={params.slug} />
+      </section>
+    </>
   );
 }

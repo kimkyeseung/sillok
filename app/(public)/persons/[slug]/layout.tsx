@@ -9,7 +9,13 @@ import ViewTracker from '@/components/common/ViewTracker';
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { personJsonLd } from '@/lib/jsonld';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
-import { getPersonBySlug, getPersonFacts, getTabCounts } from '@/lib/person-page';
+import {
+  getPersonBySlug,
+  getPersonFacts,
+  getPersonRelations,
+  getPersonSources,
+  getTabCounts,
+} from '@/lib/person-page';
 import AiDraftBadge from '@/components/person/AiDraftBadge';
 import { personTabs } from '@/lib/person-sections';
 import { tagLabel } from '@/lib/tags';
@@ -30,7 +36,25 @@ export default async function PersonLayout({
   const person = await getPersonBySlug(params.slug);
   if (!person) notFound();
 
-  const [counts, facts] = await Promise.all([getTabCounts(person), getPersonFacts(person.id)]);
+  const [counts, facts, relations, sources] = await Promise.all([
+    getTabCounts(person),
+    getPersonFacts(person.id),
+    getPersonRelations(person.id),
+    getPersonSources(person.id),
+  ]);
+  // Structured data: authoritative references + family links help search engines
+  // connect this page to the right real-world person
+  const familyOf = (label: string) =>
+    relations
+      .filter((r) => r.type === 'FAMILY' && r.label === label)
+      .map((r) => ({ name: r.other.name_en, slug: r.other.slug }));
+  const jsonLd = personJsonLd(person, {
+    sameAs: sources.filter((s) => s.kind === 'ENCYCLOPEDIA' && s.url).map((s) => s.url!),
+    parents: familyOf('Parent'),
+    children: familyOf('Child'),
+    spouses: familyOf('Spouse'),
+    siblings: familyOf('Sibling'),
+  });
   const tabs = personTabs(params.slug, counts);
   const lifespan =
     person.birth_year && person.death_year ? person.death_year - person.birth_year : null;
@@ -39,7 +63,7 @@ export default async function PersonLayout({
     <div className="space-y-6">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd(person)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <ViewTracker targetType="PERSON" targetId={person.id} />
 

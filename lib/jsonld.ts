@@ -19,20 +19,49 @@ export function websiteJsonLd() {
   };
 }
 
-export function personJsonLd(person: {
-  name_en: string;
-  name_ko?: string | null;
-  name_hanja?: string | null;
-  summary?: string | null;
-  thumbnail?: string | null;
-  birth_year?: number | null;
-  death_year?: number | null;
+interface PersonRef {
+  name: string;
   slug: string;
-}) {
+}
+
+const personRef = (p: PersonRef) => ({
+  '@type': 'Person',
+  name: p.name,
+  url: `${BASE_URL}/persons/${p.slug}`,
+});
+
+export function personJsonLd(
+  person: {
+    name_en: string;
+    name_ko?: string | null;
+    name_hanja?: string | null;
+    summary?: string | null;
+    thumbnail?: string | null;
+    birth_year?: number | null;
+    death_year?: number | null;
+    birth_place?: string | null;
+    slug: string;
+  },
+  extra: {
+    /** Authoritative pages about the same person (e.g. Wikipedia) */
+    sameAs?: string[];
+    parents?: PersonRef[];
+    children?: PersonRef[];
+    spouses?: PersonRef[];
+    siblings?: PersonRef[];
+  } = {}
+) {
   // Korean + Hanja names help Korean-language search (not shown in the English UI)
   const alternateNames = [person.name_ko, person.name_hanja].filter(
     (v): v is string => !!v
   );
+  const refs = (list?: PersonRef[]) => (list?.length ? list.map(personRef) : undefined);
+  const family = {
+    parent: refs(extra.parents),
+    children: refs(extra.children),
+    spouse: refs(extra.spouses),
+    sibling: refs(extra.siblings),
+  };
   return {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -42,7 +71,33 @@ export function personJsonLd(person: {
     ...(person.thumbnail && { image: person.thumbnail }),
     ...(person.birth_year && { birthDate: String(person.birth_year) }),
     ...(person.death_year && { deathDate: String(person.death_year) }),
+    ...(person.birth_place && { birthPlace: { '@type': 'Place', name: person.birth_place } }),
+    ...(extra.sameAs?.length && { sameAs: extra.sameAs }),
+    ...Object.fromEntries(Object.entries(family).filter(([, v]) => v)),
     url: `${BASE_URL}/persons/${person.slug}`,
+  };
+}
+
+/** Home › Figures › Person (› Tab) */
+export function personBreadcrumbJsonLd(
+  person: { name_en: string; slug: string },
+  tab?: { label: string; segment: string }
+) {
+  const crumbs = [
+    { name: 'Home', url: BASE_URL },
+    { name: 'Figures', url: `${BASE_URL}/persons` },
+    { name: person.name_en, url: `${BASE_URL}/persons/${person.slug}` },
+    ...(tab ? [{ name: tab.label, url: `${BASE_URL}/persons/${person.slug}/${tab.segment}` }] : []),
+  ];
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: crumbs.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.name,
+      item: c.url,
+    })),
   };
 }
 

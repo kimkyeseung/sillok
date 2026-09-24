@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import SectionHeader from '@/components/person/SectionHeader';
 import { getPersonBySlug, getPersonStats } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
+import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -52,6 +53,7 @@ export default async function PersonStatsPage({ params }: Props) {
 
   return (
     <>
+      <PersonBreadcrumbJsonLd person={person} tab={{ label: 'Stats', segment: 'stats' }} />
       {groups.map((g) => (
         <section key={g.title}>
           <SectionHeader title={g.title} />

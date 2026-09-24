@@ -96,23 +96,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const personPages: MetadataRoute.Sitemap = (persons ?? []).flatMap((p) => [
-    {
-      url: `${baseUrl}/persons/${p.slug}`,
-      lastModified: new Date(p.updated_at),
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    },
-    // Tab pages with enough content to stand on their own (gallery/stats excluded)
-    ...PERSON_TABS.filter((tab) => (tabCounts[tab].get(p.id) ?? 0) >= TAB_MIN_ITEMS[tab]).map(
-      (tab) => ({
+  const personPages: MetadataRoute.Sitemap = (persons ?? []).flatMap((p) => {
+    const lastModified = latestDate(
+      p.updated_at,
+      tabCounts.contentUpdated.get(p.id)
+    );
+    return [
+      {
+        url: `${baseUrl}/persons/${p.slug}`,
+        lastModified,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      },
+      // Tab pages with enough content to stand on their own (gallery/stats excluded)
+      ...PERSON_TABS.filter(
+        (tab) => (tabCounts[tab].get(p.id) ?? 0) >= TAB_MIN_ITEMS[tab]
+      ).map((tab) => ({
         url: `${baseUrl}/persons/${p.slug}/${tab}`,
-        lastModified: new Date(p.updated_at),
+        lastModified,
         changeFrequency: 'monthly' as const,
         priority: 0.6,
-      })
-    ),
-  ]);
+      })),
+    ];
+  });
 
   const nodePages: MetadataRoute.Sitemap = (nodes ?? []).map((n) => ({
     url: `${baseUrl}/nodes/${n.slug}`,
@@ -144,13 +150,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 }
 
-const PERSON_TABS = ['timeline', 'relations', 'legacy', 'related', 'threads', 'sources'] as const;
+const PERSON_TABS = [
+  'timeline',
+  'relations',
+  'legacy',
+  'related',
+  'threads',
+  'sources',
+] as const;
 
 /** Per-person item counts for each indexable tab, from one query per table */
 async function getPersonTabCounts() {
-  const [timeline, relations, links, threads, threadPersons, highlights, sources] = await Promise.all([
+  const [
+    timeline,
+    relations,
+    links,
+    threads,
+    threadPersons,
+    highlights,
+    sources,
+    facts,
+  ] = await Promise.all([
     fetchAll<{ person_id: string }>((from, to) =>
-      supabaseAdmin.from('person_timeline').select('person_id').order('id').range(from, to)
+      supabaseAdmin
+        .from('person_timeline')
+        .select('person_id')
+        .order('id')
+        .range(from, to)
     ),
     fetchAll<{ from_person_id: string; to_person_id: string }>((from, to) =>
       supabaseAdmin
@@ -169,16 +195,44 @@ async function getPersonTabCounts() {
         .range(from, to)
     ),
     fetchAll<{ id: string; person_id: string }>((from, to) =>
-      supabaseAdmin.from('threads').select('id, person_id').eq('is_deleted', false).order('id').range(from, to)
+      supabaseAdmin
+        .from('threads')
+        .select('id, person_id')
+        .eq('is_deleted', false)
+        .order('id')
+        .range(from, to)
     ),
     fetchAll<{ thread_id: string; person_id: string }>((from, to) =>
-      supabaseAdmin.from('thread_persons').select('thread_id, person_id').order('thread_id').order('person_id').range(from, to)
+      supabaseAdmin
+        .from('thread_persons')
+        .select('thread_id, person_id')
+        .order('thread_id')
+        .order('person_id')
+        .range(from, to)
     ),
-    fetchAll<{ person_id: string }>((from, to) =>
-      supabaseAdmin.from('person_highlights').select('person_id').eq('is_deleted', false).order('id').range(from, to)
+    fetchAll<{ person_id: string; updated_at: string }>((from, to) =>
+      supabaseAdmin
+        .from('person_highlights')
+        .select('person_id, updated_at')
+        .eq('is_deleted', false)
+        .order('id')
+        .range(from, to)
     ),
-    fetchAll<{ person_id: string }>((from, to) =>
-      supabaseAdmin.from('person_sources').select('person_id').eq('is_deleted', false).order('id').range(from, to)
+    fetchAll<{ person_id: string; updated_at: string }>((from, to) =>
+      supabaseAdmin
+        .from('person_sources')
+        .select('person_id, updated_at')
+        .eq('is_deleted', false)
+        .order('id')
+        .range(from, to)
+    ),
+    fetchAll<{ person_id: string; updated_at: string }>((from, to) =>
+      supabaseAdmin
+        .from('person_facts')
+        .select('person_id, updated_at')
+        .eq('is_deleted', false)
+        .order('id')
+        .range(from, to)
     ),
   ]);
 
@@ -199,17 +253,24 @@ async function getPersonTabCounts() {
 
   return {
     timeline: tally(timeline.map((r) => r.person_id)),
-    relations: tally(relations.flatMap((r) => [r.from_person_id, r.to_person_id])),
+    relations: tally(
+      relations.flatMap((r) => [r.from_person_id, r.to_person_id])
+    ),
     related: tally(links.map((r) => r.person_id)),
     legacy: tally(highlights.map((r) => r.person_id)),
     sources: tally(sources.map((r) => r.person_id)),
+    // Latest editorial edit per person, so lastmod moves when page content changes
+    contentUpdated: latestByPerson([...highlights, ...sources, ...facts]),
     threads: tally(Array.from(threadKeys).map((k) => k.split(':')[0])),
   };
 }
 
 /** Supabase returns at most 1,000 rows per request — page through everything */
 async function fetchAll<T>(
-  page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>
+  page: (
+    from: number,
+    to: number
+  ) => PromiseLike<{ data: unknown[] | null; error: unknown }>
 ): Promise<T[]> {
   const size = 1000;
   const rows: T[] = [];
@@ -221,3 +282,22 @@ async function fetchAll<T>(
   }
   return rows;
 }
+
+/** Most recent updated_at per person */
+function latestByPerson(rows: { person_id: string; updated_at: string }[]) {
+  const latest = new Map<string, string>();
+  rows.forEach((r) => {
+    const prev = latest.get(r.person_id);
+    if (!prev || r.updated_at > prev) latest.set(r.person_id, r.updated_at);
+  });
+  return latest;
+}
+
+const latestDate = (...values: (string | undefined | null)[]) =>
+  new Date(
+    Math.max(
+      ...values
+        .filter((v): v is string => !!v)
+        .map((v) => new Date(v).getTime())
+    )
+  );

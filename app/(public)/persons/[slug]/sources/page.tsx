@@ -5,6 +5,7 @@ import AiDraftBadge from '@/components/person/AiDraftBadge';
 import { getPersonBySlug, getPersonSources, getTabCounts } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
+import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -41,6 +42,7 @@ export default async function PersonSourcesPage({ params }: Props) {
 
   return (
     <>
+      <PersonBreadcrumbJsonLd person={person} tab={{ label: 'Sources', segment: 'sources' }} />
       {KIND_ORDER.map((kind) => {
         const items = sources.filter((s) => s.kind === kind);
         if (!items.length) return null;

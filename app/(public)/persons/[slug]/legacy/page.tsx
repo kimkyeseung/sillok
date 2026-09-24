@@ -5,6 +5,7 @@ import { AchievementList, QuoteList, TriviaList } from '@/components/person/High
 import { getPersonBySlug, getPersonHighlights, getTabCounts } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
+import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -41,6 +42,7 @@ export default async function PersonLegacyPage({ params }: Props) {
 
   return (
     <>
+      <PersonBreadcrumbJsonLd person={person} tab={{ label: 'Legacy', segment: 'legacy' }} />
       {achievements.length > 0 && (
         <section>
           <SectionHeader title={`Achievements (${achievements.length})`} />

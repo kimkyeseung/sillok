@@ -6,6 +6,7 @@ import { getLinkedNodes, getPersonBySlug, getTabCounts } from '@/lib/person-page
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
 import PortrayalList from '@/components/person/PortrayalList';
+import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -47,6 +48,7 @@ export default async function PersonRelatedPage({ params }: Props) {
 
   return (
     <>
+      <PersonBreadcrumbJsonLd person={person} tab={{ label: 'Related', segment: 'related' }} />
       {types.map((type) => {
         const items = nodes.filter((n) => n.node_type === type);
         // Films and dramas get portrayal cards ("Hyun Bin as Jeongjo"); other media stay in the grid

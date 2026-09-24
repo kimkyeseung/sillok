@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eventJsonLd, personJsonLd } from '@/lib/jsonld';
+import { eventJsonLd, personBreadcrumbJsonLd, personJsonLd } from '@/lib/jsonld';
 
 describe('eventJsonLd', () => {
   it('should generate valid Article schema for historical events', () => {
@@ -135,5 +135,42 @@ describe('personJsonLd', () => {
     expect(result).not.toHaveProperty('image');
     expect(result).not.toHaveProperty('birthDate');
     expect(result).not.toHaveProperty('deathDate');
+  });
+});
+
+describe('personJsonLd extras', () => {
+  it('adds sameAs, birthPlace and family links', () => {
+    const result = personJsonLd(
+      { name_en: 'Sejong the Great', slug: 'sejong-daewang', birth_place: 'Hanseong-bu' },
+      {
+        sameAs: ['https://en.wikipedia.org/wiki/Sejong_the_Great'],
+        parents: [{ name: 'Taejong of Joseon', slug: 'taejong-yi-bang-won' }],
+        children: [{ name: 'Munjong of Joseon', slug: 'munjong-yi-hyang' }],
+      }
+    ) as Record<string, unknown>;
+
+    expect(result.sameAs).toEqual(['https://en.wikipedia.org/wiki/Sejong_the_Great']);
+    expect(result.birthPlace).toEqual({ '@type': 'Place', name: 'Hanseong-bu' });
+    expect(result.parent).toEqual([
+      { '@type': 'Person', name: 'Taejong of Joseon', url: 'https://sillok.kr/persons/taejong-yi-bang-won' },
+    ]);
+    expect(result.children).toHaveLength(1);
+    expect(result).not.toHaveProperty('spouse');
+  });
+});
+
+describe('personBreadcrumbJsonLd', () => {
+  it('builds Home › Figures › Person › Tab', () => {
+    const result = personBreadcrumbJsonLd(
+      { name_en: 'Sejong the Great', slug: 'sejong-daewang' },
+      { label: 'Legacy', segment: 'legacy' }
+    );
+    expect(result.itemListElement.map((i) => i.name)).toEqual(['Home', 'Figures', 'Sejong the Great', 'Legacy']);
+    expect(result.itemListElement[3].item).toBe('https://sillok.kr/persons/sejong-daewang/legacy');
+    expect(result.itemListElement[3].position).toBe(4);
+  });
+
+  it('stops at the person on the overview', () => {
+    expect(personBreadcrumbJsonLd({ name_en: 'X', slug: 'x' }).itemListElement).toHaveLength(3);
   });
 });
