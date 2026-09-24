@@ -69,9 +69,10 @@ export default async function PersonLayout({
 
       {/* Profile header */}
       <div className="card-flat overflow-hidden">
-        <div className="h-28 bg-gradient-to-r from-brand-500 to-brand-700" />
-        <div className="px-6 pb-2">
-          <div className="-mt-12 flex flex-wrap items-end gap-5">
+        <div className="h-20 bg-gradient-to-r from-brand-500 to-brand-700 sm:h-24" />
+        <div className="px-4 pb-2 sm:px-6">
+          {/* Avatar overlaps the banner; the name starts just below the banner edge */}
+          <div className="-mt-10 flex items-start gap-4 sm:-mt-12 sm:gap-5">
             {person.thumbnail ? (
               <Image
                 src={person.thumbnail}
@@ -79,10 +80,10 @@ export default async function PersonLayout({
                 width={96}
                 height={96}
                 priority
-                className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-md"
+                className="h-20 w-20 shrink-0 rounded-2xl border-4 border-white object-cover shadow-md sm:h-24 sm:w-24"
               />
             ) : (
-              <div className="h-24 w-24 overflow-hidden rounded-2xl border-4 border-white shadow-md">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-white shadow-md sm:h-24 sm:w-24">
                 <PersonAvatar
                   name={person.name_ko || person.name_en}
                   fieldTag={getPrimaryFieldTag(person.tags)}
@@ -90,8 +91,8 @@ export default async function PersonLayout({
                 />
               </div>
             )}
-            <div className="min-w-0 flex-1 pb-1">
-              <h1 className="text-2xl font-bold text-gray-900">{person.name_en}</h1>
+            <div className="min-w-0 flex-1 pt-12 sm:pt-14">
+              <h1 className="text-xl font-bold leading-tight text-gray-900 sm:text-2xl">{person.name_en}</h1>
               {person.name_hanja && <p className="text-sm text-gray-500">{person.name_hanja}</p>}
             </div>
           </div>

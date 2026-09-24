@@ -6,6 +6,7 @@ import { articleJsonLd } from '@/lib/jsonld';
 import ArticleBody from '@/components/article/ArticleBody';
 import ArticleViewLogger from '@/components/article/ArticleViewLogger';
 import LikeButton from '@/components/thread/LikeButton';
+import { articleTagLabel } from '@/lib/tags';
 
 interface Props {
   params: { slug: string };
@@ -73,9 +74,11 @@ export default async function ArticleDetailPage({ params }: Props) {
                 Notice
               </span>
             )}
-            <span className="badge-gray text-[10px]">
-              {article.tag}
-            </span>
+            {articleTagLabel(article.tag, article.is_notice) && (
+              <span className="badge-gray text-[10px]">
+                {articleTagLabel(article.tag, article.is_notice)}
+              </span>
+            )}
           </div>
 
           <h1 className="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl">

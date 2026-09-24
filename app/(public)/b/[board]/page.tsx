@@ -72,14 +72,14 @@ export default async function BoardPage({ params, searchParams }: Props) {
         }}
       />
       <header className="card-flat overflow-hidden">
-        <div className="h-16 bg-gradient-to-r from-brand-500 to-brand-700" />
+        <div className="h-12 bg-gradient-to-r from-brand-500 to-brand-700 sm:h-14" />
         <div className="px-4 pb-4">
-          <div className="-mt-7 flex items-end gap-3">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-4 border-white bg-white text-3xl shadow">
+          <div className="-mt-6 flex items-start gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-white text-2xl shadow">
               {board.icon}
             </span>
-            <div className="pb-1">
-              <h1 className="text-xl font-bold text-gray-900">{board.label}</h1>
+            <div className="min-w-0 pt-8">
+              <h1 className="text-xl font-bold leading-tight text-gray-900">{board.label}</h1>
               <p className="text-xs text-gray-500">
                 b/{board.slug} · {info.figureCount} figures · {info.threadCount} threads
               </p>

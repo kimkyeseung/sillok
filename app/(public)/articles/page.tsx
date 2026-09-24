@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { articleTagLabel } from '@/lib/tags';
 
 export const metadata: Metadata = {
   title: 'Articles',
@@ -74,9 +75,11 @@ export default async function ArticlesPage() {
                     Notice
                   </span>
                 )}
-                <span className="badge-gray text-[10px]">
-                  {article.tag}
-                </span>
+                {articleTagLabel(article.tag, article.is_notice) && (
+                  <span className="badge-gray text-[10px]">
+                    {articleTagLabel(article.tag, article.is_notice)}
+                  </span>
+                )}
               </div>
               <p className="mt-1.5 text-sm font-semibold text-gray-900 group-hover:text-brand-600 line-clamp-1">
                 {article.title}
