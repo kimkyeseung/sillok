@@ -1,19 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { fetcher } from '@/lib/fetcher';
-import { createSupabaseBrowser } from '@/lib/supabase-browser';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/persons', label: 'Figures' },
   { href: '/age-flow', label: 'Age Flow' },
-  { href: '/space', label: 'Space' },
   { href: '/nodes', label: 'Explore' },
   { href: '/threads', label: 'Threads' },
   { href: '/articles', label: 'Articles' },
@@ -25,20 +23,10 @@ export default function Header() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [profile, setProfile] = useState<{ nickname: string | null; avatar_url: string | null } | null>(null);
-
-  useEffect(() => {
-    if (!user) { setProfile(null); return; }
-    const supabase = createSupabaseBrowser();
-    supabase
-      .from('profiles')
-      .select('nickname, avatar_url')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) setProfile(data);
-      });
-  }, [user]);
+  const { data: profile } = useSWR<{ nickname: string | null; avatar_url: string | null }>(
+    user ? '/api/profile' : null,
+    fetcher
+  );
   const { data: unreadData } = useSWR<{ count: number }>(
     user ? '/api/notifications/unread-count' : null,
     fetcher,

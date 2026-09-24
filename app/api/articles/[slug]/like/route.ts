@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { requireUser } from '@/lib/auth';
+import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // ─── POST /api/articles/:slug/like — Toggle like [USER] ───
@@ -8,9 +8,8 @@ export async function POST(
   request: Request,
   { params }: { params: { slug: string } }
 ) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   // Check article exists
   const { data: article } = await supabaseAdmin

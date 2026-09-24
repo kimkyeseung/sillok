@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { apiFetch } from '@/lib/fetcher';
+import { apiFetch, ApiError } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
-import { createSupabaseBrowser } from '@/lib/supabase-browser';
+import { mutate } from 'swr';
 import ImageCropModal from '@/components/admin/ImageCropModal';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -22,16 +22,12 @@ export default function ProfileClient() {
 
   useEffect(() => {
     if (!user) return;
-    const supabase = createSupabaseBrowser();
-    supabase
-      .from('profiles')
-      .select('nickname, avatar_url')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.nickname) setNickname(data.nickname);
-        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
-      });
+    apiFetch<{ nickname: string | null; avatar_url: string | null }>('/api/profile')
+      .then((data) => {
+        if (data.nickname) setNickname(data.nickname);
+        if (data.avatar_url) setAvatarUrl(data.avatar_url);
+      })
+      .catch(() => {});
   }, [user]);
 
   if (loading) {
@@ -92,13 +88,11 @@ export default function ProfileClient() {
       if (!uploadRes.ok) throw new Error('Upload failed');
 
       const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
-      const supabase = createSupabaseBrowser();
-      const { error } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      await apiFetch('/api/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
+      mutate('/api/profile');
 
       setAvatarUrl(publicUrl);
       toast('Avatar updated');
@@ -113,15 +107,19 @@ export default function ProfileClient() {
     if (!nickname.trim()) return;
     setSaving(true);
     try {
-      const supabase = createSupabaseBrowser();
-      const { error } = await supabase
-        .from('profiles')
-        .update({ nickname: nickname.trim() })
-        .eq('id', user.id);
-      if (error) throw error;
+      await apiFetch('/api/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ nickname: nickname.trim() }),
+      });
+      mutate('/api/profile');
       toast('Profile saved');
-    } catch {
-      toast('Failed to save', 'error');
+    } catch (err) {
+      toast(
+        err instanceof ApiError && err.code === 'DUPLICATE_NICKNAME'
+          ? 'This nickname is already taken'
+          : 'Failed to save',
+        'error'
+      );
     } finally {
       setSaving(false);
     }

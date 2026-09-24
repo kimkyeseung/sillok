@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { searchLimiter } from '@/lib/rate-limit';
+import { sanitizeSearchTerm } from '@/lib/search';
 
 // ─── GET /api/search — Unified search (public) ───
 
 const SearchQuerySchema = z.object({
-  q: z.string().min(1).max(200),
+  q: z.string().max(200).transform(sanitizeSearchTerm).pipe(z.string().min(1)),
   type: z.enum(['person', 'node', 'thread', 'all']).default('all'),
   limit: z.coerce.number().min(1).max(50).default(10),
 });

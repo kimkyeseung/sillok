@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { requireUser, requireAdmin } from '@/lib/auth';
+import { requireAdmin, requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { personRequestLimiter } from '@/lib/rate-limit';
 
@@ -13,9 +13,8 @@ const PersonRequestSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   const { success } = await personRequestLimiter.check(user.id);
   if (!success)

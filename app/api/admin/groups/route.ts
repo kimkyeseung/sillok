@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sanitizeSearchTerm } from '@/lib/search';
 
 // ─── GET /api/admin/groups — List all GROUP nodes (admin, includes unpublished) ───
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),
-  q: z.string().optional(),
+  q: z.string().max(200).transform(sanitizeSearchTerm).optional(),
 });
 
 export async function GET(request: Request) {

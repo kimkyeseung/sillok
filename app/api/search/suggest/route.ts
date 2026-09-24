@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { searchLimiter } from '@/lib/rate-limit';
+import { sanitizeSearchTerm } from '@/lib/search';
 
 // ─── GET /api/search/suggest — Autocomplete suggestions (public) ───
 
 const SuggestSchema = z.object({
-  q: z.string().min(1).max(100),
+  q: z.string().max(100).transform(sanitizeSearchTerm).pipe(z.string().min(1)),
   limit: z.coerce.number().min(1).max(10).default(5),
 });
 

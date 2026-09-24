@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { requireUser } from '@/lib/auth';
+import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // ─── POST /api/collections/:id/items — Add person to collection [OWNER] ───
@@ -13,9 +13,8 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   const { data: collection } = await supabaseAdmin
     .from('collections')
@@ -78,9 +77,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   const { data: collection } = await supabaseAdmin
     .from('collections')

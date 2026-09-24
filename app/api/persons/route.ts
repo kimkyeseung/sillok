@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sanitizeSearchTerm } from '@/lib/search';
 
 // ─── GET /api/persons — Person list (public) ───
 
@@ -11,7 +12,7 @@ const ListQuerySchema = z.object({
   era: z.string().optional(),
   field: z.string().optional(),
   sort: z.enum(['name', 'popular', 'recent', 'birth_year']).default('recent'),
-  q: z.string().optional(),
+  q: z.string().max(200).transform(sanitizeSearchTerm).optional(),
   include_tags: z.enum(['true', 'false']).optional(),
 });
 

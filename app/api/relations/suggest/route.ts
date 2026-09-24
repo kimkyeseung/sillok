@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { requireUser } from '@/lib/auth';
+import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { relationSuggestLimiter } from '@/lib/rate-limit';
 
@@ -24,9 +24,8 @@ const SuggestRelationSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   const { success } = await relationSuggestLimiter.check(user.id);
   if (!success)

@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sanitizeSearchTerm } from '@/lib/search';
 
 // ─── GET /api/admin/members — Member list [ADMIN] ───
 
 const QuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),
-  q: z.string().optional(),
+  q: z.string().max(200).transform(sanitizeSearchTerm).optional(),
   banned: z.coerce.boolean().optional(),
 });
 

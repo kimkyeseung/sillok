@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { requireUser } from '@/lib/auth';
+import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // ─── PUT /api/comments/:id — Update node comment [OWNER] ───
@@ -13,9 +13,8 @@ export async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   const { data: comment } = await supabaseAdmin
     .from('node_comments')
@@ -59,9 +58,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   const { data: comment } = await supabaseAdmin
     .from('node_comments')

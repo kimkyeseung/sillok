@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import RankingSection, { type RankedPerson } from '@/components/ranking/RankingSection';
 import PersonAvatar from '@/components/common/PersonAvatar';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
+import { sanitizeSearchTerm } from '@/lib/search';
 
 export const metadata: Metadata = {
   title: 'Figures',
@@ -43,8 +44,9 @@ export default async function PersonsPage({
     .order('created_at', { ascending: false })
     .limit(40);
 
-  if (searchParams.q) {
-    query = query.or(`name_en.ilike.%${searchParams.q}%,name_ko.ilike.%${searchParams.q}%`);
+  const q = sanitizeSearchTerm(searchParams.q ?? '').slice(0, 200);
+  if (q) {
+    query = query.or(`name_en.ilike.%${q}%,name_ko.ilike.%${q}%`);
   }
 
   const { data: persons } = await query;

@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { requireUser } from '@/lib/auth';
+import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generalLimiter } from '@/lib/rate-limit';
 import { createNotification, getUserNickname } from '@/lib/notifications';
@@ -10,9 +10,8 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   const { success } = await generalLimiter.check(user.id);
   if (!success)

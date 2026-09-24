@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sanitizeSearchTerm } from '@/lib/search';
 
 // ─── GET /api/admin/persons — Person list (admin, including unpublished) ───
 
 const ListQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
   page: z.coerce.number().min(1).default(1),
-  q: z.string().optional(),
+  q: z.string().max(200).transform(sanitizeSearchTerm).optional(),
   missing_year: z.enum(['true', 'false']).optional(),
 });
 

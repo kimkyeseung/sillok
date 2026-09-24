@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { requireUser } from '@/lib/auth';
+import { requireActiveUser, requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
 
@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const ADMIN_BUCKETS: string[] = ['persons', 'articles'];
 
 const PresignedSchema = z.object({
   bucket: z.enum(['avatars', 'threads', 'persons', 'articles']),
@@ -20,9 +21,8 @@ const PresignedSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const user = await requireUser(request);
-  if (!user)
-    return apiError('UNAUTHORIZED', 'Login required.', 401);
+  const { user, error: authError } = await requireActiveUser(request);
+  if (authError) return authError;
 
   let body;
   try {
@@ -36,6 +36,10 @@ export async function POST(request: Request) {
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422, result.error.issues);
 
   const { bucket, content_type, thread_id, person_id } = result.data;
+
+  // Person portraits and article images are admin-managed content
+  if (ADMIN_BUCKETS.includes(bucket) && !(await requireAdmin(request)))
+    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
   const ext = content_type === 'image/webp' ? 'webp' : content_type === 'image/png' ? 'png' : 'jpg';
   const fileId = randomUUID();
 

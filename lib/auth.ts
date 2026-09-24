@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import type { NextResponse } from 'next/server';
+import { apiError } from './api-helpers';
 import { supabaseAdmin } from './supabase-admin';
 
 interface AuthUser {
@@ -87,6 +89,43 @@ export async function requireUser(
 
   if (error || !user) return null;
   return { id: user.id, email: user.email ?? '' };
+}
+
+type ActiveUserResult =
+  | { user: AuthUser; error?: never }
+  | { user?: never; error: NextResponse };
+
+/**
+ * Verify JWT + not banned — use for all user write actions
+ * Returns a ready-to-return error response (401 / 403) on failure
+ */
+export async function requireActiveUser(
+  request: Request
+): Promise<ActiveUserResult> {
+  const user = await requireUser(request);
+  if (!user)
+    return { error: apiError('UNAUTHORIZED', 'Login required.', 401) };
+
+  if (isLocalhostAdminEnabled(request)) return { user };
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('is_banned, ban_until')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const banActive =
+    profile?.is_banned === true &&
+    (!profile.ban_until || new Date(profile.ban_until) > new Date());
+
+  if (banActive)
+    return {
+      error: apiError('USER_BANNED', 'Your account is suspended.', 403, {
+        ban_until: profile.ban_until,
+      }),
+    };
+
+  return { user };
 }
 
 /**
