@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { NodeActions, CommentActions, CommentFormWrapper } from '@/components/thread/NodeInteractions';
 import { eventJsonLd } from '@/lib/jsonld';
 import { DEFAULT_OG_IMAGE, nameWithKorean, truncateDescription, truncateTitle } from '@/lib/seo';
+import ViewTracker from '@/components/common/ViewTracker';
 
 export const revalidate = 0;
 
@@ -131,6 +132,7 @@ export default async function NodeDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      <ViewTracker targetType="NODE" targetId={node.id} />
       {/* JSON-LD */}
       {isEvent && (
         <script
