@@ -17,11 +17,14 @@ import {
   getPersonBySlug,
   getPersonHighlights,
   getPersonRelations,
+  getPortrayals,
   getPersonThreads,
   getTabCounts,
 } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
+import PortrayalList from '@/components/person/PortrayalList';
+import PersonPoll from '@/components/person/PersonPoll';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -52,6 +55,7 @@ export default async function PersonOverviewPage({ params }: Props) {
       getPersonThreads(person.id),
       getPersonHighlights(person.id),
     ]);
+  const portrayals = await getPortrayals(person.id);
   const achievements = highlights.filter((h) => h.kind === 'ACHIEVEMENT');
   const trivia = highlights.filter((h) => h.kind === 'TRIVIA');
   const base = `/persons/${params.slug}`;
@@ -77,6 +81,8 @@ export default async function PersonOverviewPage({ params }: Props) {
           <AchievementList items={achievements.slice(0, 3)} />
         </section>
       )}
+
+      <PersonPoll slug={params.slug} />
 
       {keyMoments.length > 0 && (
         <section>
@@ -172,6 +178,16 @@ export default async function PersonOverviewPage({ params }: Props) {
               </Link>
             ))}
           </div>
+        </section>
+      )}
+
+      {portrayals.length > 0 && (
+        <section>
+          <SectionHeader
+            title="On Screen"
+            href={portrayals.length > 4 ? `${base}/related` : undefined}
+          />
+          <PortrayalList items={portrayals.slice(0, 4)} personName={person.name_en} />
         </section>
       )}
 

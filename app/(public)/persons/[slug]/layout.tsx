@@ -13,6 +13,8 @@ import { getPersonBySlug, getPersonFacts, getTabCounts } from '@/lib/person-page
 import AiDraftBadge from '@/components/person/AiDraftBadge';
 import { personTabs } from '@/lib/person-sections';
 import { tagLabel } from '@/lib/tags';
+import PersonStatusButtons from '@/components/person/PersonStatusButtons';
+import SuggestFactButton from '@/components/person/SuggestFactButton';
 
 // Supabase calls go through fetch — without this, Next 14 caches them indefinitely
 export const dynamic = 'force-dynamic';
@@ -98,6 +100,10 @@ export default async function PersonLayout({
             <VoteTodayButton personSlug={params.slug} />
           </div>
 
+          <div className="mt-3">
+            <PersonStatusButtons slug={params.slug} />
+          </div>
+
           <div className="mt-4">
             <PersonTabs tabs={tabs} />
           </div>
@@ -164,6 +170,14 @@ export default async function PersonLayout({
                 Explore this era in Age Flow →
               </Link>
             )}
+          </div>
+
+          <div className="card-flat p-4">
+            <h2 className="mb-2 text-sm font-semibold text-gray-900">Improve this page</h2>
+            <p className="mb-3 text-xs text-gray-500">
+              Know a fact, source or correction? Editors review every suggestion.
+            </p>
+            <SuggestFactButton slug={params.slug} personName={person.name_en} />
           </div>
 
           <div className="card-flat p-4">

@@ -237,35 +237,71 @@ export interface LinkedNode {
   thumbnail: string | null;
   year: number | null;
   link_type: string | null;
+  /** MEDIA only: actor who played this person */
+  portrayed_by: string | null;
+  /** MEDIA only: 'film' | 'drama' | other media kinds */
+  media_kind: string | null;
+  cast: string[];
+}
+
+const NODE_LINK_FIELDS =
+  'link_type, nodes!inner ( id, slug, node_type, title, thumbnail, metadata, is_deleted, is_published )';
+
+function mediaKind(m: Record<string, unknown>): string | null {
+  const raw = String(m.media_type ?? m.category ?? m.genre ?? '').toLowerCase();
+  if (/drama|series|tv/.test(raw)) return 'drama';
+  if (/film|movie/.test(raw)) return 'film';
+  return raw || null;
 }
 
 export const getLinkedNodes = cache(async (personId: string): Promise<LinkedNode[]> => {
-  const { data } = await supabaseAdmin
-    .from('person_node_links')
-    .select('link_type, nodes!inner ( id, slug, node_type, title, thumbnail, metadata, is_deleted, is_published )')
-    .eq('person_id', personId)
-    .eq('nodes.is_deleted', false);
+  const query = (fields: string) =>
+    supabaseAdmin.from('person_node_links').select(fields).eq('person_id', personId).eq('nodes.is_deleted', false);
+  // portrayed_by arrives with the phase 3 migration — fall back if the column is missing
+  let { data, error } = await query(`portrayed_by, ${NODE_LINK_FIELDS}`);
+  if (error) ({ data, error } = await query(NODE_LINK_FIELDS));
 
   return ((data ?? []) as unknown as {
     link_type: string | null;
+    portrayed_by?: string | null;
     nodes: { id: string; slug: string; node_type: string; title: string; thumbnail: string | null; metadata: Record<string, unknown> | null; is_published: boolean };
   }[])
     .filter((l) => l.nodes.is_published !== false)
-    .map(({ link_type, nodes: n }) => {
+    .map(({ link_type, portrayed_by, nodes: n }) => {
       const m = n.metadata ?? {};
       const year = [m.start_year, m.created_year, m.release_year, m.year].find(
         (v) => typeof v === 'number'
       ) as number | undefined;
-      return { id: n.id, slug: n.slug, node_type: n.node_type, title: n.title, thumbnail: n.thumbnail, year: year ?? null, link_type };
+      const isMedia = n.node_type === 'MEDIA';
+      return {
+        id: n.id,
+        slug: n.slug,
+        node_type: n.node_type,
+        title: n.title,
+        thumbnail: n.thumbnail,
+        year: year ?? null,
+        link_type,
+        portrayed_by: portrayed_by ?? null,
+        media_kind: isMedia ? mediaKind(m) : null,
+        cast: isMedia && Array.isArray(m.cast) ? (m.cast as string[]) : [],
+      };
     })
     .sort((a, b) => (a.year ?? 9999) - (b.year ?? 9999));
 });
+
+/** Films and dramas depicting the person (newest first) */
+export const getPortrayals = cache(async (personId: string) =>
+  (await getLinkedNodes(personId))
+    .filter((n) => n.media_kind === 'film' || n.media_kind === 'drama')
+    .sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
+);
 
 // ─── Threads (primary person or referenced) ───
 
 export interface PersonThread {
   id: string;
   title: string;
+  category: string;
   like_count: number;
   reply_count: number;
   created_at: string;
@@ -280,17 +316,21 @@ export const getPersonThreads = cache(async (personId: string, limit = 50): Prom
     .eq('person_id', personId);
   const refIds = (refs ?? []).map((r) => r.thread_id);
 
-  const { data } = await supabaseAdmin
-    .from('threads')
-    .select(
-      `id, title, like_count, reply_count, created_at,
-       profiles!threads_author_id_fkey ( nickname ),
-       thread_images ( url, sort_order )`
-    )
-    .eq('is_deleted', false)
-    .or(`person_id.eq.${personId}${refIds.length ? `,id.in.(${refIds.join(',')})` : ''}`)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  const query = (extra: string) =>
+    supabaseAdmin
+      .from('threads')
+      .select(
+        `id, title, like_count, reply_count, created_at, ${extra}
+         profiles!threads_author_id_fkey ( nickname ),
+         thread_images ( url, sort_order )`
+      )
+      .eq('is_deleted', false)
+      .or(`person_id.eq.${personId}${refIds.length ? `,id.in.(${refIds.join(',')})` : ''}`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+  // category arrives with the phase 3 migration — fall back if the column is missing
+  let { data, error } = await query('category,');
+  if (error) ({ data, error } = await query(''));
 
   return ((data ?? []) as unknown as {
     id: string;
@@ -298,11 +338,13 @@ export const getPersonThreads = cache(async (personId: string, limit = 50): Prom
     like_count: number;
     reply_count: number;
     created_at: string;
+    category?: string;
     profiles: { nickname: string | null } | null;
     thread_images: { url: string; sort_order: number }[] | null;
   }[]).map((t) => ({
     id: t.id,
     title: t.title,
+    category: t.category ?? 'DISCUSSION',
     like_count: t.like_count,
     reply_count: t.reply_count,
     created_at: t.created_at,

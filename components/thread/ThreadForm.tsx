@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 import ImageUpload from '@/components/common/ImageUpload';
 import PersonPicker from '@/components/person/PersonPicker';
+import { THREAD_CATEGORIES, type ThreadCategory } from '@/lib/community';
 
 interface SelectedPerson {
   id: string;
@@ -39,6 +40,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [category, setCategory] = useState<ThreadCategory>('DISCUSSION');
   const [imageIds, setImageIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
@@ -81,6 +83,7 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
           figures: figureIds,
           title: title.trim(),
           content: content.trim(),
+          category,
           ...(videoUrl ? { video_url: videoUrl } : {}),
           ...(imageIds.length > 0 ? { image_ids: imageIds } : {}),
         }),
@@ -147,6 +150,23 @@ export default function ThreadForm({ personId, personName }: ThreadFormProps) {
             onChange={handleAddPerson}
           />
         )}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Category">
+        {THREAD_CATEGORIES.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            role="radio"
+            aria-checked={category === c.value}
+            onClick={() => setCategory(c.value)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              category === c.value ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
       </div>
 
       <input

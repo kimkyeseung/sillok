@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { threadCreateLimiter } from '@/lib/rate-limit';
 import { notifyFollowers } from '@/lib/notifications';
 import { normalizeThreadList, uniqueFigureIds } from '@/lib/thread-figures';
+import { THREAD_CATEGORY_VALUES } from '@/lib/community';
 
 const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'tv.naver.com'];
 
@@ -96,6 +97,7 @@ const CreateThreadSchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1).max(10000),
   video_url: z.string().url().optional(),
+  category: z.enum(THREAD_CATEGORY_VALUES).default('DISCUSSION'),
   image_ids: z.array(z.string().uuid()).max(3).optional(),
   related_person_ids: z.array(z.string().uuid()).max(5).optional(),
 }).refine((value) => (value.figures?.length ?? 0) > 0 || !!value.person_id, {

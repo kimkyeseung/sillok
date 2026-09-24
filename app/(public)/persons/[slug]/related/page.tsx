@@ -5,6 +5,7 @@ import SectionHeader from '@/components/person/SectionHeader';
 import { getLinkedNodes, getPersonBySlug, getTabCounts } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
+import PortrayalList from '@/components/person/PortrayalList';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -48,10 +49,14 @@ export default async function PersonRelatedPage({ params }: Props) {
     <>
       {types.map((type) => {
         const items = nodes.filter((n) => n.node_type === type);
+        // Films and dramas get portrayal cards ("Hyun Bin as Jeongjo"); other media stay in the grid
+        const screen = items.filter((n) => n.media_kind === 'film' || n.media_kind === 'drama');
+        const rest = items.filter((n) => !screen.includes(n));
         return (
-          <section key={type}>
+          <section key={type} className="space-y-3">
             <SectionHeader title={`${GROUP_TITLES[type] ?? NODE_TYPE_LABELS[type] ?? type} (${items.length})`} />
-            <LinkedNodeGrid nodes={items} />
+            {screen.length > 0 && <PortrayalList items={screen} personName={person.name_en} />}
+            {rest.length > 0 && <LinkedNodeGrid nodes={rest} />}
           </section>
         );
       })}

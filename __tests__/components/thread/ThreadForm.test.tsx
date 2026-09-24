@@ -96,6 +96,27 @@ describe('ThreadForm', () => {
       expect(screen.getByTestId('person-picker')).toBeInTheDocument();
     });
 
+    it('sends the selected category', async () => {
+      mockApiFetch.mockResolvedValueOnce({ id: 'thread-c' });
+      render(<ThreadForm personId="uuid-1" personName="Sejong" />);
+
+      fireEvent.click(screen.getByRole('radio', { name: 'Trivia' }));
+      fillForm('Did you know', 'Sejong loved meat');
+      fireEvent.click(screen.getByRole('button', { name: 'Post Thread' }));
+
+      await waitFor(() => {
+        expect(mockApiFetch).toHaveBeenCalledWith('/api/threads', {
+          method: 'POST',
+          body: JSON.stringify({
+            figures: ['uuid-1'],
+            title: 'Did you know',
+            content: 'Sejong loved meat',
+            category: 'TRIVIA',
+          }),
+        });
+      });
+    });
+
     it('submits with the provided personId', async () => {
       mockApiFetch.mockResolvedValueOnce({ id: 'thread-1' });
       render(<ThreadForm personId="uuid-1" personName="Sejong" />);
@@ -110,6 +131,7 @@ describe('ThreadForm', () => {
             figures: ['uuid-1'],
             title: 'Test Title',
             content: 'Test content body',
+            category: 'DISCUSSION',
           }),
         });
       });
@@ -183,6 +205,7 @@ describe('ThreadForm', () => {
             figures: ['person-uuid-1'],
             title: 'Discussion about Sejong',
             content: 'Great king',
+            category: 'DISCUSSION',
           }),
         });
       });
@@ -212,6 +235,7 @@ describe('ThreadForm', () => {
             figures: ['person-uuid-1', 'person-uuid-2'],
             title: 'Discussion about reforms',
             content: 'Multiple figures involved',
+            category: 'DISCUSSION',
           }),
         });
       });
@@ -266,6 +290,7 @@ describe('ThreadForm', () => {
             figures: ['uuid-1'],
             title: 'Title',
             content: 'Content',
+            category: 'DISCUSSION',
             video_url: 'https://www.youtube.com/watch?v=abc123',
           }),
         });

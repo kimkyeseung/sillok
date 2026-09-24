@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { PersonThread } from '@/lib/person-page';
+import { threadCategory } from '@/lib/community';
 
 export default function PersonThreadList({ threads }: { threads: PersonThread[] }) {
   if (!threads.length)
@@ -30,6 +31,15 @@ export default function PersonThreadList({ threads }: { threads: PersonThread[] 
             </div>
           )}
           <p className={`font-medium text-gray-900 ${thread.image ? 'text-base' : 'text-sm'}`}>
+            {thread.category !== 'DISCUSSION' && (
+              <span
+                className={`mr-1.5 inline-block rounded px-1.5 py-0.5 align-middle text-[10px] font-medium ${
+                  threadCategory(thread.category).badge
+                }`}
+              >
+                {threadCategory(thread.category).label}
+              </span>
+            )}
             {thread.title}
           </p>
           <div className="mt-1 flex gap-3 text-xs text-gray-400">
