@@ -18,8 +18,6 @@ async function getHomeData() {
   const [
     { data: newPersons },
     { data: latestArticles },
-    { count: personCount },
-    { count: threadCount },
     { data: recentThreads },
   ] = await Promise.all([
     supabaseAdmin
@@ -36,14 +34,6 @@ async function getHomeData() {
       .eq('is_published', true)
       .order('created_at', { ascending: false })
       .limit(3),
-    supabaseAdmin
-      .from('persons')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_deleted', false),
-    supabaseAdmin
-      .from('threads')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_deleted', false),
     supabaseAdmin
       .from('threads')
       .select(
@@ -66,12 +56,11 @@ async function getHomeData() {
     newPersons: newPersons ?? [],
     latestArticles: latestArticles ?? [],
     recentThreads: recentThreads ?? [],
-    stats: { persons: personCount ?? 0, threads: threadCount ?? 0 },
   };
 }
 
 export default async function HomePage() {
-  const { newPersons, latestArticles, recentThreads, stats } = await getHomeData();
+  const { newPersons, latestArticles, recentThreads } = await getHomeData();
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -81,28 +70,7 @@ export default async function HomePage() {
       />
       {/* Main Feed */}
       <div className="space-y-6">
-        {/* Hero Card */}
-        <div className="card-flat overflow-hidden">
-          <div className="bg-gradient-to-br from-brand-600 to-brand-800 px-6 py-10 text-center text-white">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Korean Historical Figures Archive
-            </h1>
-            <p className="mt-2 text-brand-200">
-              Connecting notable Korean figures from Dangun to the present as interconnected nodes
-            </p>
-            <div className="mt-5 flex justify-center gap-8">
-              <div>
-                <p className="text-2xl font-bold">{stats.persons.toLocaleString()}</p>
-                <p className="text-xs text-brand-200">Figures</p>
-              </div>
-              <div className="h-10 w-px bg-white/20" />
-              <div>
-                <p className="text-2xl font-bold">{stats.threads.toLocaleString()}</p>
-                <p className="text-xs text-brand-200">Threads</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h1 className="sr-only">Korean Historical Figures Archive</h1>
 
         {/* Latest Articles */}
         {latestArticles.length > 0 && (
