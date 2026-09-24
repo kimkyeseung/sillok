@@ -79,6 +79,12 @@ describe('buildFamilyTree', () => {
     );
   });
 
+  it('ignores duplicate relation rows (no duplicate edges)', () => {
+    const tree = buildFamilyTree('sejong', [...RELS, parent('taejong', 'sejong'), parent('sejong', 'munjong')]);
+    const keys = tree.edges.map((e) => `${e.kind}-${e.from}-${e.to}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
   it('returns just self when there are no relations', () => {
     const tree = buildFamilyTree('solo', []);
     expect(tree.nodes).toEqual([{ id: 'solo', role: 'self', gen: 0, x: 0 }]);

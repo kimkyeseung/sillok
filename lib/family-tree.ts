@@ -75,6 +75,15 @@ export function buildFamilyTree(
       .sort(byAge)
       .slice(0, maxPerGroup);
 
+  // Loaders may return the same row twice (e.g. from both the 1st- and 2nd-hop queries)
+  const seenLinks = new Set<string>();
+  relations = relations.filter((r) => {
+    const key = `${r.family_role}:${r.from_person_id}:${r.to_person_id}`;
+    if (seenLinks.has(key)) return false;
+    seenLinks.add(key);
+    return true;
+  });
+
   const parentLinks = relations.filter((r) => r.family_role === 'PARENT');
   const parentsOf = (id: string) =>
     parentLinks.filter((r) => r.to_person_id === id).map((r) => r.from_person_id);
