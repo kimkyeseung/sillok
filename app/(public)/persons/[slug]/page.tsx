@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import FamilyTree from '@/components/person/FamilyTree';
@@ -25,6 +24,7 @@ import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
 import PortrayalList from '@/components/person/PortrayalList';
 import PersonPoll from '@/components/person/PersonPoll';
+import GalleryStrip from '@/components/person/GalleryStrip';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -161,23 +161,7 @@ export default async function PersonOverviewPage({ params }: Props) {
             title={`Gallery (${gallery.length})`}
             href={isTabVisible('gallery', counts) ? `${base}/gallery` : undefined}
           />
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {gallery.slice(0, 6).map((img) => (
-              <Link
-                key={img.id}
-                href={isTabVisible('gallery', counts) ? `${base}/gallery` : img.href ?? base}
-                className="aspect-square overflow-hidden rounded-lg bg-gray-100"
-              >
-                <Image
-                  src={img.url}
-                  alt={img.caption}
-                  width={160}
-                  height={160}
-                  className="h-full w-full object-cover transition-transform hover:scale-105"
-                />
-              </Link>
-            ))}
-          </div>
+          <GalleryStrip images={gallery} size="sm" />
         </section>
       )}
 
