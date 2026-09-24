@@ -1,5 +1,7 @@
 /**
- * Seed AI-drafted editorial content (facts, highlights, sources) for the 27 Joseon kings.
+ * Seed AI-drafted editorial content (facts, highlights, sources).
+ *   --set kings     27 Joseon monarchs (default)
+ *   --set notables  notable figures (Sejong's court, scholars, Imjin War, independence movement)
  * Rows are inserted with is_ai_generated = true (shown with an "AI draft" label).
  *
  * Usage:
@@ -15,10 +17,18 @@ import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { JOSEON_KINGS, buildRows } from './data/joseon-kings-content.mjs';
+import { NOTABLE_FIGURES, buildNotableRows } from './data/notable-figures-content.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DRY_RUN = process.argv.includes('--dry-run');
 const FORCE = process.argv.includes('--force');
+const SET = process.argv[process.argv.indexOf('--set') + 1] === 'notables' && process.argv.includes('--set')
+  ? 'notables'
+  : 'kings';
+const DATASET =
+  SET === 'notables'
+    ? NOTABLE_FIGURES.map((f) => ({ slug: f.slug, rows: buildNotableRows(f) }))
+    : JOSEON_KINGS.map((k, i) => ({ slug: k.slug, rows: buildRows(k, i) }));
 
 const env = {};
 readFileSync(resolve(__dirname, '../.env.local'), 'utf-8')
@@ -39,17 +49,28 @@ async function main() {
   const { data: persons, error } = await db
     .from('persons')
     .select('id, slug')
-    .in('slug', JOSEON_KINGS.map((k) => k.slug));
+    .in('slug', DATASET.map((d) => d.slug));
   if (error) throw new Error(error.message);
   const idBySlug = new Map(persons.map((p) => [p.slug, p.id]));
-  const missing = JOSEON_KINGS.filter((k) => !idBySlug.has(k.slug)).map((k) => k.slug);
+  const missing = DATASET.filter((d) => !idBySlug.has(d.slug)).map((d) => d.slug);
   if (missing.length) throw new Error(`Persons not found: ${missing.join(', ')}`);
+
+  // Facts may link to people outside the dataset (e.g. a patron king)
+  const linkedSlugs = DATASET.flatMap((d) => d.rows.facts.map((f) => f.linkedSlug).filter(Boolean));
+  const unknown = linkedSlugs.filter((s) => !idBySlug.has(s));
+  if (unknown.length) {
+    const { data: linked } = await db.from('persons').select('id, slug').in('slug', unknown);
+    (linked ?? []).forEach((p) => idBySlug.set(p.slug, p.id));
+    const stillMissing = unknown.filter((s) => !idBySlug.has(s));
+    if (stillMissing.length) throw new Error(`Linked persons not found: ${stillMissing.join(', ')}`);
+  }
 
   let inserted = 0;
   let skipped = 0;
-  for (const [index, king] of JOSEON_KINGS.entries()) {
-    const personId = idBySlug.get(king.slug);
-    const { facts, highlights, sources } = buildRows(king, index);
+  for (const { slug, rows: content } of DATASET) {
+    const king = { slug };
+    const personId = idBySlug.get(slug);
+    const { facts, highlights, sources } = content;
 
     // Existing content check (only AI-drafted rows may be replaced).
     // Plain select, not head:true — HEAD requests hide "table does not exist" errors.
@@ -109,7 +130,7 @@ async function main() {
     console.log(`✓ ${king.slug}`);
     inserted++;
   }
-  console.log(`\n${DRY_RUN ? 'Dry run' : 'Done'}: ${inserted} seeded, ${skipped} skipped\n`);
+  console.log(`\n[${SET}] ${DRY_RUN ? 'Dry run' : 'Done'}: ${inserted} seeded, ${skipped} skipped\n`);
 }
 
 main().catch((err) => {
