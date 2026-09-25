@@ -94,6 +94,9 @@ export default async function PersonLayout({
             <div className="min-w-0 flex-1 pt-12 sm:pt-14">
               <h1 className="text-xl font-bold leading-tight text-gray-900 sm:text-2xl">{person.name_en}</h1>
               {person.name_hanja && <p className="text-sm text-gray-500">{person.name_hanja}</p>}
+              {!!person.aliases_en?.length && (
+                <p className="mt-0.5 text-xs text-gray-500">Also known as {person.aliases_en.join(' · ')}</p>
+              )}
             </div>
           </div>
 

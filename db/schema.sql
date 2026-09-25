@@ -65,6 +65,7 @@ CREATE TABLE persons (
   name_ko          TEXT NOT NULL,
   name_hanja       TEXT,
   name_en          TEXT,
+  aliases_en       TEXT[] NOT NULL DEFAULT '{}',  -- 검색용 영문 별칭 ("King Sejong")
   birth_year       INTEGER,
   birth_date       TEXT,
   death_year       INTEGER,

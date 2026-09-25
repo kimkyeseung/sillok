@@ -22,7 +22,13 @@ export async function personTabMetadata(
   // "Sejong the Great (세종대왕, 世宗大王)" so Korean-name searches can match
   const fullName = nameWithKorean(person.name_en, person.name_ko, person.name_hanja);
   const desc = truncateDescription(description(person, fullName));
-  const title = label ? `${person.name_en} — ${label}` : person.name_en;
+  const aliases = person.aliases_en ?? [];
+  // Overview: "Sejong the Great (King Sejong)" so the common English name matches too
+  const title = label
+    ? `${person.name_en} — ${label}`
+    : aliases[0]
+      ? `${person.name_en} (${aliases[0]})`
+      : person.name_en;
   const ogImage = person.thumbnail ?? DEFAULT_OG_IMAGE;
   const path = `/persons/${slug}${segment ? `/${segment}` : ''}`;
 
@@ -37,7 +43,9 @@ export async function personTabMetadata(
       description: desc,
       images: [ogImage],
     },
-    keywords: [person.name_en, person.name_ko, person.name_hanja].filter((k): k is string => !!k),
+    keywords: [person.name_en, ...aliases, person.name_ko, person.name_hanja].filter(
+      (k): k is string => !!k
+    ),
     ...(noindex && { robots: { index: false, follow: true } }),
   };
 }
