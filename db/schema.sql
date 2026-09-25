@@ -1109,3 +1109,22 @@ CREATE INDEX IF NOT EXISTS threads_feed_hot_idx ON threads (hot_score DESC, id D
 CREATE INDEX IF NOT EXISTS threads_feed_top_idx ON threads (top_score DESC, id DESC) WHERE is_deleted = FALSE;
 CREATE INDEX IF NOT EXISTS threads_feed_new_idx ON threads (created_at DESC, id DESC) WHERE is_deleted = FALSE;
 -- pg_cron: SELECT cron.schedule('refresh-thread-hot-scores', '*/15 * * * *', 'SELECT refresh_thread_hot_scores()');
+
+-- ============================================================
+-- Reigns (age-flow "current king")
+-- One row per reign; a king who returned to the throne has two rows.
+-- Wars are EVENT nodes with metadata.end_year (+ PARTICIPANT person_node_links).
+-- RLS on, no policies → server (service role) access only.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS reigns (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  person_id    UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  reign_start  INTEGER NOT NULL,
+  reign_end    INTEGER NOT NULL,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (reign_end >= reign_start),
+  UNIQUE (person_id, reign_start)
+);
+CREATE INDEX IF NOT EXISTS reigns_start_idx ON reigns (reign_start);
+ALTER TABLE reigns ENABLE ROW LEVEL SECURITY;

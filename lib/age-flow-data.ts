@@ -2,7 +2,7 @@
 
 import { unstable_cache } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { buildAgeFlowData, JOSEON_START, JOSEON_END } from '@/lib/age-flow';
+import { buildAgeFlowData, JOSEON_START, JOSEON_END, type RawReign } from '@/lib/age-flow';
 import type {
   AgeFlowEvent,
   AgeFlowArtifact,
@@ -15,7 +15,7 @@ const EVENT_LIMIT = 500;
 const ARTIFACT_LIMIT = 100;
 
 async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
-  const [personsResult, eventsResult, artifactsResult] = await Promise.all([
+  const [personsResult, eventsResult, artifactsResult, reignsResult] = await Promise.all([
     supabaseAdmin
       .from('persons')
       .select(
@@ -53,11 +53,21 @@ async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
       .not('metadata->created_year', 'is', null)
       .order('created_at', { ascending: false })
       .limit(ARTIFACT_LIMIT),
+
+    supabaseAdmin
+      .from('reigns')
+      .select('reign_start, reign_end, persons:person_id ( slug )')
+      .order('reign_start', { ascending: true }),
   ]);
 
   // throw → unstable_cache가 실패 결과를 캐시하지 않음 (빈 데이터 캐시 방지)
   const error = personsResult.error ?? eventsResult.error ?? artifactsResult.error;
   if (error) throw new Error(`[age-flow] fetch failed: ${error.message}`);
+
+  // Non-fatal: the page still works (without the king HUD) if reigns is unavailable
+  if (reignsResult.error) {
+    console.error('[age-flow] reigns fetch failed:', reignsResult.error.message);
+  }
 
   const rawPersons = personsResult.data ?? [];
   if (rawPersons.length >= PERSON_LIMIT) {
@@ -68,6 +78,7 @@ async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
     persons: rawPersons as Record<string, unknown>[],
     events: (eventsResult.data ?? []) as unknown as AgeFlowEvent[],
     artifacts: (artifactsResult.data ?? []) as unknown as AgeFlowArtifact[],
+    reigns: (reignsResult.data ?? []) as unknown as RawReign[],
   });
 }
 

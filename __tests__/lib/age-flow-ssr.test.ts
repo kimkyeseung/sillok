@@ -173,6 +173,7 @@ describe('AgeFlowInitialData type', () => {
       persons: [],
       events: [],
       artifacts: [],
+      reigns: [],
     };
     expect(data.persons).toEqual([]);
     expect(data.events).toEqual([]);
@@ -198,6 +199,7 @@ describe('AgeFlowInitialData type', () => {
       persons: [person],
       events: [],
       artifacts: [],
+      reigns: [],
     };
 
     expect(data.persons).toHaveLength(1);

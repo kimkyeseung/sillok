@@ -6,6 +6,7 @@ import type {
   AgeFlowTag,
   AgeFlowEvent,
   AgeFlowArtifact,
+  AgeFlowInitialData,
 } from '@/components/age-flow/useAgeFlow';
 
 // Age-flow covers late Goryeo → Joseon → Korean Empire
@@ -73,7 +74,8 @@ export function buildAgeFlowData(raw: {
   persons: Record<string, unknown>[];
   events: AgeFlowEvent[];
   artifacts: AgeFlowArtifact[];
-}): { persons: AgeFlowPerson[]; events: AgeFlowEvent[]; artifacts: AgeFlowArtifact[] } {
+  reigns?: RawReign[];
+}): AgeFlowInitialData {
   const persons = raw.persons
     .map(transformPerson)
     .filter((p): p is AgeFlowPerson => p !== null)
@@ -83,7 +85,72 @@ export function buildAgeFlowData(raw: {
 
   const artifacts = raw.artifacts.filter((a) => a.metadata?.created_year != null);
 
-  return { persons, events, artifacts };
+  const reigns: AgeFlowReign[] = (raw.reigns ?? [])
+    .filter((r) => r.persons?.slug && r.reign_end >= JOSEON_START && r.reign_start <= JOSEON_END)
+    .map((r) => ({ slug: r.persons!.slug, reign_start: r.reign_start, reign_end: r.reign_end }))
+    .sort((a, b) => a.reign_start - b.reign_start);
+
+  return { persons, events, artifacts, reigns };
+}
+
+// ── Reigns (reigns table) ──
+
+export interface AgeFlowReign {
+  slug: string; // person slug
+  reign_start: number;
+  reign_end: number;
+}
+
+export interface RawReign {
+  reign_start: number;
+  reign_end: number;
+  persons: { slug: string } | null;
+}
+
+/** 해당 연도의 재위. 교체 연도에는 먼저 시작한 재위(선왕) — reigns는 reign_start 순 정렬 */
+export function findReign(reigns: AgeFlowReign[], year: number): AgeFlowReign | null {
+  return reigns.find((r) => year >= r.reign_start && year <= r.reign_end) ?? null;
+}
+
+// ── Wars (EVENT nodes of type war/revolt with metadata.end_year) ──
+
+export interface War {
+  slug: string;
+  name: string;
+  startYear: number;
+  endYear: number;
+  participants: string[]; // person slugs
+}
+
+const WAR_EVENT_TYPES = new Set(['war', 'revolt']);
+
+export function getWarsFromEvents(events: AgeFlowEvent[]): War[] {
+  return events
+    .filter(
+      (e) =>
+        WAR_EVENT_TYPES.has(e.metadata?.event_type as string) &&
+        typeof e.metadata?.start_year === 'number' &&
+        typeof e.metadata?.end_year === 'number'
+    )
+    .map((e) => ({
+      slug: e.slug,
+      name: e.title,
+      startYear: e.metadata.start_year as number,
+      endYear: e.metadata.end_year as number,
+      participants: (e.person_node_links ?? [])
+        .map((l) => l.persons?.slug)
+        .filter((slug): slug is string => !!slug),
+    }));
+}
+
+export function getActiveWars(wars: War[], year: number): War[] {
+  return wars.filter((w) => year >= w.startYear && year <= w.endYear);
+}
+
+export function getWarParticipantSlugs(wars: War[]): Set<string> {
+  const slugs = new Set<string>();
+  wars.forEach((w) => w.participants.forEach((s) => slugs.add(s)));
+  return slugs;
 }
 
 // ── Eras ──
@@ -150,4 +217,101 @@ export function getLifeStatus(p: AgeFlowPerson, year: number): LifeStatus {
 export function parseFocusSlug(param: string | string[] | undefined | null): string | null {
   const raw = Array.isArray(param) ? param[0] : param;
   return raw && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(raw) ? raw : null;
+}
+
+// ── Year pages (/age-flow/[year]) ──
+
+/** 이 수 미만이면 noindex + sitemap 제외 (thin content 방지) */
+export const YEAR_PAGE_MIN_FIGURES = 5;
+
+export interface YearSnapshot {
+  year: number;
+  era: AgeFlowEra;
+  alive: AgeFlowPerson[]; // importance order
+  king: AgeFlowPerson | null;
+  wars: War[];
+  events: AgeFlowEvent[]; // started this year
+  born: AgeFlowPerson[];
+  died: AgeFlowPerson[];
+  indexable: boolean;
+}
+
+export function getEraForYear(year: number): AgeFlowEra {
+  if (year < ERA_STARTS['Three Kingdoms']) return 'Ancient';
+  if (year < ERA_STARTS['Goryeo']) return 'Three Kingdoms';
+  if (year < ERA_STARTS['Joseon']) return 'Goryeo';
+  if (year < ERA_STARTS['Modern']) return 'Joseon';
+  return 'Modern';
+}
+
+export function isAliveIn(p: AgeFlowPerson, year: number): boolean {
+  return p.birth_year <= year && (p.is_alive || (p.death_year !== null && p.death_year >= year));
+}
+
+export function getYearSnapshot(data: AgeFlowInitialData, year: number): YearSnapshot {
+  const reign = findReign(data.reigns, year);
+  const king = reign ? data.persons.find((p) => p.slug === reign.slug) ?? null : null;
+  const wars = getActiveWars(getWarsFromEvents(data.events), year);
+  const alive = sortByImportance(
+    data.persons.filter((p) => isAliveIn(p, year)),
+    { kingId: king?.id, warSlugs: getWarParticipantSlugs(wars) }
+  );
+  return {
+    year,
+    era: getEraForYear(year),
+    alive,
+    king,
+    wars,
+    events: data.events.filter((e) => e.metadata?.start_year === year),
+    born: alive.filter((p) => p.birth_year === year),
+    died: alive.filter((p) => p.death_year === year),
+    indexable: alive.length >= YEAR_PAGE_MIN_FIGURES,
+  };
+}
+
+/**
+ * Years worth listing in the sitemap: a war/event starts or a reign begins,
+ * and enough figures are alive to make the page substantial.
+ */
+export function getNotableYears(data: AgeFlowInitialData): number[] {
+  const years = new Set<number>();
+  data.events.forEach((e) => {
+    if (isInYearRange(e.metadata?.start_year)) years.add(e.metadata.start_year as number);
+  });
+  data.reigns.forEach((r) => {
+    if (isInYearRange(r.reign_start)) years.add(r.reign_start);
+  });
+  return Array.from(years)
+    .filter((y) => data.persons.filter((p) => isAliveIn(p, y)).length >= YEAR_PAGE_MIN_FIGURES)
+    .sort((a, b) => a - b);
+}
+
+/** "/age-flow/1592" path segment → year, or null if not an integer in range */
+export function parseYearSegment(segment: string): number | null {
+  if (!/^\d{4}$/.test(segment)) return null;
+  const year = parseInt(segment, 10);
+  return isInYearRange(year) ? year : null;
+}
+
+const displayName = (p: AgeFlowPerson) => p.name_en || p.name_ko;
+
+/** One-sentence summary — year page intro and meta description */
+export function describeYear(s: YearSnapshot): string {
+  const parts: string[] = [];
+  if (s.king) {
+    parts.push(`${displayName(s.king)} (age ${Math.max(1, s.year - s.king.birth_year)}) reigned`);
+  }
+  if (s.wars.length > 0) {
+    parts.push(`the ${s.wars.map((w) => w.name).join(' and the ')} ${s.wars.length > 1 ? 'were' : 'was'} underway`);
+  }
+  const notable = s.alive.filter((p) => p.id !== s.king?.id).slice(0, 3);
+  const figures = `${s.alive.length} historical figure${s.alive.length === 1 ? ' was' : 's were'} alive${
+    notable.length
+      ? `, including ${notable.map((p) => `${displayName(p)} (${Math.max(1, s.year - p.birth_year)})`).join(', ')}`
+      : ''
+  }`;
+  parts.push(figures);
+  const joined =
+    parts.length > 1 ? `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}` : parts[0];
+  return `In ${s.year} (${s.era} era), ${joined}.`;
 }

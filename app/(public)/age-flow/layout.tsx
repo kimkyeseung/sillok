@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { ageFlowJsonLd } from '@/lib/jsonld';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
 export const metadata: Metadata = {
@@ -38,13 +37,5 @@ export default function AgeFlowLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(ageFlowJsonLd()) }}
-      />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

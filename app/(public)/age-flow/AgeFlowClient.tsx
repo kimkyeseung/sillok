@@ -32,6 +32,7 @@ import FigureListSheet, { type FigureListTab } from '@/components/age-flow/Figur
 import FocusBanner from '@/components/age-flow/FocusBanner';
 import { useGridCap } from '@/components/age-flow/useGridCap';
 import { sortByImportance } from '@/lib/age-flow';
+import { useToast } from '@/components/common/Toast';
 
 /** Touch-only devices (no hover) — tap opens the person sheet instead of hover UI */
 function isTouchOnly() {
@@ -244,6 +245,25 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
   const closeFigureList = useCallback(() => setFigureListTab(null), []);
   const openFigureSearch = useCallback(() => setFigureListTab('all'), []);
 
+  const { toast } = useToast();
+  const handleShare = useCallback(async () => {
+    const url = window.location.href; // carries ?year= (and ?focus=) → year share card
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Korea in ${currentYear} — Age Flow`, url });
+      } catch {
+        // cancelled
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied');
+    } catch {
+      toast('Could not copy the link', 'error');
+    }
+  }, [currentYear, toast]);
+
   const handleFieldTagToggle = useCallback((tagId: string) => {
     setHiddenFieldTags((prev) => {
       const next = new Set(prev);
@@ -298,6 +318,7 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
         currentEra={currentEra}
         onEraSelect={scrollToEra}
         onOpenFigures={openFigureSearch}
+        onShare={handleShare}
       />
 
       {/* Scroll container — total height for all years */}

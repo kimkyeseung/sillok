@@ -16,7 +16,19 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { JOSEON_START, JOSEON_END, getEraRangeInAgeFlow, type AgeFlowEra } from '@/lib/age-flow';
+import {
+  JOSEON_START,
+  JOSEON_END,
+  getEraRangeInAgeFlow,
+  getEraForYear,
+  findReign,
+  getWarsFromEvents,
+  getActiveWars,
+  getWarParticipantSlugs,
+  type AgeFlowEra,
+  type AgeFlowReign,
+  type War,
+} from '@/lib/age-flow';
 
 // ── Types ──
 
@@ -121,50 +133,6 @@ export const MAX_YEAR = 2026;
 // Age-flow range lives in lib/age-flow.ts (shared with server loader)
 export { JOSEON_START, JOSEON_END };
 
-// Kings with reign periods (for YearCounter display)
-// Includes late Goryeo kings for smooth transition
-const JOSEON_KINGS: Array<{ slug: string; reignStart: number; reignEnd: number }> = [
-  // Late Goryeo
-  { slug: 'chungsuk-wang-wang-man',    reignStart: 1313, reignEnd: 1330 },
-  { slug: 'chung-hye-wang-wang-jeong', reignStart: 1330, reignEnd: 1332 },
-  { slug: 'chungsuk-wang-wang-man',    reignStart: 1332, reignEnd: 1339 }, // 충숙왕 복위
-  { slug: 'chung-hye-wang-wang-jeong', reignStart: 1339, reignEnd: 1344 }, // 충혜왕 복위
-  { slug: 'chungmok-wang-wang-heun',   reignStart: 1344, reignEnd: 1348 },
-  { slug: 'chungjeong-wang-wang-jeo',  reignStart: 1349, reignEnd: 1351 },
-  { slug: 'gongmin-wang-wang-jeon',    reignStart: 1351, reignEnd: 1374 },
-  { slug: 'u-wang-wang-u',            reignStart: 1374, reignEnd: 1388 },
-  { slug: 'chang-wang-wang-chang',     reignStart: 1388, reignEnd: 1389 },
-  { slug: 'gongyang-wang-wang-yo',     reignStart: 1389, reignEnd: 1392 },
-  // Joseon
-  { slug: 'taejo-yi-seong-gye',    reignStart: 1392, reignEnd: 1398 },
-  { slug: 'jeongjong-yi-bang-gwa',  reignStart: 1399, reignEnd: 1400 },
-  { slug: 'taejong-yi-bang-won',    reignStart: 1400, reignEnd: 1418 },
-  { slug: 'sejong-daewang',         reignStart: 1418, reignEnd: 1450 },
-  { slug: 'munjong-yi-hyang',       reignStart: 1450, reignEnd: 1452 },
-  { slug: 'danjong-yi-hong-wi',     reignStart: 1452, reignEnd: 1455 },
-  { slug: 'sejo-yi-yu',             reignStart: 1455, reignEnd: 1468 },
-  { slug: 'yejong-yi-hwang',        reignStart: 1468, reignEnd: 1469 },
-  { slug: 'seongjong-yi-hyeol',     reignStart: 1469, reignEnd: 1494 },
-  { slug: 'yeonsangun-yi-yung',     reignStart: 1494, reignEnd: 1506 },
-  { slug: 'jungjong-yi-yeok',       reignStart: 1506, reignEnd: 1544 },
-  { slug: 'injong-yi-ho',           reignStart: 1544, reignEnd: 1545 },
-  { slug: 'myeongjong-yi-hwan',     reignStart: 1545, reignEnd: 1567 },
-  { slug: 'seonjo-yi-yeon',         reignStart: 1567, reignEnd: 1608 },
-  { slug: 'gwanghaegun-yi-hon',     reignStart: 1608, reignEnd: 1623 },
-  { slug: 'injo-yi-jong',           reignStart: 1623, reignEnd: 1649 },
-  { slug: 'hyojong-yi-ho',          reignStart: 1649, reignEnd: 1659 },
-  { slug: 'hyeonjong-yi-yeon',      reignStart: 1659, reignEnd: 1674 },
-  { slug: 'sukjong-yi-sun',         reignStart: 1674, reignEnd: 1720 },
-  { slug: 'gyeongjong-yi-yun',      reignStart: 1720, reignEnd: 1724 },
-  { slug: 'yeongjo-yi-geum',        reignStart: 1724, reignEnd: 1776 },
-  { slug: 'jeongjo-yi-san',         reignStart: 1776, reignEnd: 1800 },
-  { slug: 'sunjo-yi-gong',          reignStart: 1800, reignEnd: 1834 },
-  { slug: 'heonjong-yi-hwan',       reignStart: 1834, reignEnd: 1849 },
-  { slug: 'cheoljong-yi-byeon',     reignStart: 1849, reignEnd: 1863 },
-  { slug: 'gojong-yi-myeong-bok',   reignStart: 1863, reignEnd: 1907 },
-  { slug: 'sunjong-yi-cheok',       reignStart: 1907, reignEnd: 1910 },
-];
-
 export const ERA_RANGES: Record<Era, { start: number; label: string }> = {
   'Ancient':        { start: -2333, label: 'Ancient' },
   'Three Kingdoms': { start: 57,    label: 'Three Kingdoms' },
@@ -185,116 +153,8 @@ export const RELATION_STYLES: Record<string, { color: string; dashed: boolean }>
   AFFILIATED: { color: '#64748b', dashed: true },
 };
 
-// ── Wars ──
-
-export interface War {
-  name: string;
-  startYear: number;
-  endYear: number;
-  participants: string[]; // person slugs
-}
-
-const WARS: War[] = [
-  {
-    name: 'Red Turban Invasions',
-    startYear: 1359,
-    endYear: 1362,
-    participants: [
-      'gongmin-wang-wang-jeon',
-      'choe-yeong',
-      'taejo-yi-seong-gye',
-      'jeong-se-un',
-      'an-u',
-      'yi-bang-sil',
-    ],
-  },
-  {
-    name: 'Imjin War',
-    startYear: 1592,
-    endYear: 1598,
-    participants: [
-      'seonjo-yi-yeon',
-      'yi-sun-sin',
-      'gwon-yul',
-      'ryu-seong-ryong',
-      'gwak-jae-u',
-      'yi-eok-gi',
-      'won-gyun',
-      'shin-rip',
-      'kim-si-min',
-      'go-gyeong-myeong',
-      'jeong-gi-ryong',
-      'jo-heon',
-      'yeong-gyu',
-      'kim-cheon-il',
-      'gwak-jun',
-      'jeong-in-hong',
-    ],
-  },
-  {
-    name: 'First Manchu Invasion',
-    startYear: 1627,
-    endYear: 1627,
-    participants: [
-      'injo-yi-jong',
-      'jeong-bong-su',
-      'yi-gwi',
-      'jang-man',
-    ],
-  },
-  {
-    name: 'Second Manchu Invasion',
-    startYear: 1636,
-    endYear: 1637,
-    participants: [
-      'injo-yi-jong',
-      'choe-myeong-gil',
-      'kim-sang-heon',
-      'yun-jip',
-      'oh-dal-je',
-      'im-gyeong-eop',
-    ],
-  },
-  {
-    name: 'Shinmiyangyo',
-    startYear: 1871,
-    endYear: 1871,
-    participants: [
-      'gojong-yi-myeong-bok',
-      'heungseon-daewongun',
-      'eo-jae-yeon',
-    ],
-  },
-  {
-    name: 'Donghak Revolution',
-    startYear: 1894,
-    endYear: 1895,
-    participants: [
-      'gojong-yi-myeong-bok',
-      'jeon-bong-jun',
-      'kim-gae-nam',
-      'son-hwa-jung',
-    ],
-  },
-  {
-    name: 'Russo-Japanese War',
-    startYear: 1904,
-    endYear: 1905,
-    participants: [
-      'gojong-yi-myeong-bok',
-    ],
-  },
-];
-
-export function getActiveWars(year: number): War[] {
-  return WARS.filter((w) => year >= w.startYear && year <= w.endYear);
-}
-
-export function getWarParticipantSlugs(wars: War[]): Set<string> {
-  const slugs = new Set<string>();
-  wars.forEach((w) => w.participants.forEach((s) => slugs.add(s)));
-  return slugs;
-}
+// Wars and reigns come from the DB (EVENT nodes with end_year, reigns table) — see lib/age-flow.ts
+export type { War, AgeFlowReign } from '@/lib/age-flow';
 
 export const ERA_BG_COLORS: Record<Era, string> = {
   'Ancient':        'bg-slate-100/50',
@@ -306,13 +166,7 @@ export const ERA_BG_COLORS: Record<Era, string> = {
 
 // ── Helpers ──
 
-export function getEra(year: number): Era {
-  if (year < 57)   return 'Ancient';
-  if (year < 918)  return 'Three Kingdoms';
-  if (year < 1392) return 'Goryeo';
-  if (year < 1897) return 'Joseon';
-  return 'Modern';
-}
+export const getEra: (year: number) => Era = getEraForYear;
 
 export function getAge(birthYear: number, currentYear: number): number {
   const age = currentYear - birthYear;
@@ -334,6 +188,7 @@ export interface AgeFlowInitialData {
   persons: AgeFlowPerson[];
   events: AgeFlowEvent[];
   artifacts: AgeFlowArtifact[];
+  reigns: AgeFlowReign[];
 }
 
 export function useAgeFlow(
@@ -350,6 +205,7 @@ export function useAgeFlow(
   const [artifacts, setArtifacts] = useState<AgeFlowArtifact[]>(
     initialData?.artifacts ?? []
   );
+  const [reigns, setReigns] = useState<AgeFlowReign[]>(initialData?.reigns ?? []);
   const [currentYear, setCurrentYear] = useState(initialYear);
   const [isLoading, setIsLoading] = useState(!hasInitial);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -370,6 +226,7 @@ export function useAgeFlow(
           setAllPersons(data.persons);
           setEvents(data.events);
           setArtifacts(data.artifacts);
+          setReigns(data.reigns ?? []);
         }
       } catch (err) {
         console.error('Failed to load age-flow data:', err);
@@ -464,17 +321,16 @@ export function useAgeFlow(
 
   const aliveCount = visiblePersons.length;
 
-  // ── 4b. Current king — matched by reign period ──
+  // ── 4b. Current king — matched by reign period (reigns table) ──
   const currentKing = useMemo(() => {
-    const reign = JOSEON_KINGS.find(
-      (k) => currentYear >= k.reignStart && currentYear <= k.reignEnd
-    );
+    const reign = findReign(reigns, currentYear);
     if (!reign) return null;
     return allPersons.find((p) => p.slug === reign.slug) ?? null;
-  }, [allPersons, currentYear]);
+  }, [allPersons, reigns, currentYear]);
 
-  // ── 4c. Current wars ──
-  const currentWars = useMemo(() => getActiveWars(currentYear), [currentYear]);
+  // ── 4c. Current wars (EVENT nodes with end_year) ──
+  const wars = useMemo(() => getWarsFromEvents(events), [events]);
+  const currentWars = useMemo(() => getActiveWars(wars, currentYear), [wars, currentYear]);
   const warParticipantSlugs = useMemo(
     () => getWarParticipantSlugs(currentWars),
     [currentWars]
