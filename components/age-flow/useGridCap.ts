@@ -39,7 +39,9 @@ export function useGridCap(
       ? parseFloat(getComputedStyle(grid.parentElement).paddingBottom) || 0
       : 0;
     const available = window.innerHeight - grid.getBoundingClientRect().top - reserve;
-    const rows = Math.max(1, Math.floor((available + rowGap) / rowHeightRef.current));
+    // The reserve already includes a ~32px buffer, so let the last row use up to half of it
+    const SLACK = 16;
+    const rows = Math.max(1, Math.floor((available + rowGap + SLACK) / rowHeightRef.current));
     const next = rows * cols;
     setCap((prev) => (prev === next ? prev : next));
   }, [gridRef]);

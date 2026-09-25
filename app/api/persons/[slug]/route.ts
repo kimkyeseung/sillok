@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { revalidateAgeFlow } from '@/lib/age-flow-data';
 
 // ─── GET /api/persons/:slug — Person detail (public) ───
 
@@ -147,6 +148,7 @@ export async function PUT(
     .eq('id', existing.id)
     .single();
 
+  revalidateAgeFlow();
   return apiSuccess(updated);
 }
 
@@ -178,5 +180,6 @@ export async function DELETE(
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
+  revalidateAgeFlow();
   return apiSuccess({ deleted: true });
 }

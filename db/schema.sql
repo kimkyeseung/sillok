@@ -878,7 +878,7 @@ CREATE TRIGGER on_auth_user_created
 -- 기본 태그 데이터 (시드)
 -- ============================================================
 
-INSERT INTO tags (name, type) VALUES
+INSERT INTO tags (name_ko, type) VALUES
   -- ERA (시대)
   ('고대', 'ERA'),
   ('삼국', 'ERA'),
@@ -895,7 +895,8 @@ INSERT INTO tags (name, type) VALUES
   ('스포츠', 'FIELD'),
   ('문화/예능', 'FIELD'),
   ('기업인', 'FIELD'),
-  ('종교인', 'FIELD');
+  ('종교인', 'FIELD')
+ON CONFLICT (name_ko) DO NOTHING;
 
 -- ============================================================
 -- Person editorial content (Phase 2)

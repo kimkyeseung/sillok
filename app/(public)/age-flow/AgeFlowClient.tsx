@@ -128,6 +128,14 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
   );
   const moreCount = sortedPersons.length - shownPersons.length;
 
+  // Before the first measurement (SSR + hydration) every card is rendered — crawlers see
+  // them all — so clip the grid to roughly the area the cap will use: the first paint
+  // then matches the capped layout instead of spilling rows behind the bottom bars.
+  // 120px = sticky top (96) + pt-6; 96 / 240 = pb-24 / md:pb-60; banner ≈ 64px.
+  const preMeasureClip = focusPerson
+    ? 'overflow-hidden max-h-[calc(100vh-280px)] md:max-h-[calc(100vh-424px)]'
+    : 'overflow-hidden max-h-[calc(100vh-216px)] md:max-h-[calc(100vh-360px)]';
+
   // Track newborn/dying with state for re-renders, but gate the
   // effect on a stable ID key so it doesn't fire every lerp frame.
   // Skip animation entirely when many cards change at once (fast scroll).
@@ -355,7 +363,9 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
             ) : (
               <div
                 ref={gridRef}
-                className="relative grid grid-cols-1 gap-2 md:grid-cols-4 md:gap-3 lg:grid-cols-5"
+                className={`relative grid grid-cols-1 gap-2 md:grid-cols-4 md:gap-3 lg:grid-cols-5 ${
+                  gridCap === Infinity ? preMeasureClip : ''
+                }`}
               >
                 {shownPersons.map((person) => (
                   <PersonCard

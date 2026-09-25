@@ -19,6 +19,7 @@ import {
 import AiDraftBadge from '@/components/person/AiDraftBadge';
 import { personTabs } from '@/lib/person-sections';
 import { tagLabel } from '@/lib/tags';
+import { isInYearRange } from '@/lib/age-flow';
 import PersonStatusButtons from '@/components/person/PersonStatusButtons';
 import SuggestFactButton from '@/components/person/SuggestFactButton';
 
@@ -194,6 +195,16 @@ export default async function PersonLayout({
               >
                 Explore this era in Age Flow →
               </Link>
+            )}
+            {/* Year pages for the birth / death years (within the Age Flow range) */}
+            {[person.birth_year, person.death_year].some(isInYearRange) && (
+              <p className="mt-2 flex justify-center gap-3 text-xs">
+                {Array.from(new Set([person.birth_year, person.death_year].filter(isInYearRange))).map((year) => (
+                  <Link key={year} href={`/age-flow/${year}`} className="text-brand-600 hover:underline">
+                    Korea in {year}
+                  </Link>
+                ))}
+              </p>
             )}
           </div>
 
