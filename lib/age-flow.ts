@@ -85,3 +85,69 @@ export function buildAgeFlowData(raw: {
 
   return { persons, events, artifacts };
 }
+
+// ── Eras ──
+
+export type AgeFlowEra = 'Ancient' | 'Three Kingdoms' | 'Goryeo' | 'Joseon' | 'Modern';
+
+export const ERA_STARTS: Record<AgeFlowEra, number> = {
+  'Ancient':        -2333,
+  'Three Kingdoms': 57,
+  'Goryeo':         918,
+  'Joseon':         1392,
+  'Modern':         1897,
+};
+
+const ERA_ORDER: AgeFlowEra[] = ['Ancient', 'Three Kingdoms', 'Goryeo', 'Joseon', 'Modern'];
+
+/** 해당 시대 중 age-flow가 다루는 구간. 범위 밖이면 null */
+export function getEraRangeInAgeFlow(era: AgeFlowEra): { start: number; end: number } | null {
+  const i = ERA_ORDER.indexOf(era);
+  const eraStart = ERA_STARTS[era];
+  const eraEnd = i < ERA_ORDER.length - 1 ? ERA_STARTS[ERA_ORDER[i + 1]] - 1 : Infinity;
+  const start = Math.max(eraStart, JOSEON_START);
+  const end = Math.min(eraEnd, JOSEON_END);
+  return start <= end ? { start, end } : null;
+}
+
+// ── Card ordering ──
+
+/**
+ * 한 해에 보이는 인물 정렬: 포커스 → 왕 → 전쟁 참여자 → 조회수 → 출생연도.
+ * 화면에 다 못 담는 해에는 앞쪽만 보이므로 중요한 인물을 앞으로.
+ */
+export function sortByImportance(
+  persons: AgeFlowPerson[],
+  opts: { focusId?: string | null; kingId?: string | null; warSlugs?: Set<string> }
+): AgeFlowPerson[] {
+  const rank = (p: AgeFlowPerson) =>
+    p.id === opts.focusId ? 0 : p.id === opts.kingId ? 1 : opts.warSlugs?.has(p.slug) ? 2 : 3;
+  return [...persons].sort(
+    (a, b) =>
+      rank(a) - rank(b) ||
+      b.view_count - a.view_count ||
+      a.birth_year - b.birth_year
+  );
+}
+
+// ── Focus (contemporaries) mode ──
+
+export type LifeStatus =
+  | { kind: 'unborn'; years: number }
+  | { kind: 'alive'; age: number }
+  | { kind: 'dead'; years: number };
+
+/** 포커스 인물이 해당 연도에 태어나기 전/생존/사후인지 */
+export function getLifeStatus(p: AgeFlowPerson, year: number): LifeStatus {
+  if (year < p.birth_year) return { kind: 'unborn', years: p.birth_year - year };
+  if (!p.is_alive && p.death_year !== null && year > p.death_year) {
+    return { kind: 'dead', years: year - p.death_year };
+  }
+  return { kind: 'alive', age: Math.max(1, year - p.birth_year) };
+}
+
+/** ?focus= 파라미터 → slug 형식이면 그대로, 아니면 null */
+export function parseFocusSlug(param: string | string[] | undefined | null): string | null {
+  const raw = Array.isArray(param) ? param[0] : param;
+  return raw && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(raw) ? raw : null;
+}

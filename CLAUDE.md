@@ -32,7 +32,7 @@ app/
 └── api/             API Routes (feed, persons, threads, replies, nodes, person-item-comments 등)
 components/
 ├── feed/            홈 피드 (Feed, FeedCard, FeedShell, SortTabs, 중간 삽입 모듈)
-├── age-flow/        시대 흐름 시각화 (8 컴포넌트 + useAgeFlow 훅)
+├── age-flow/        시대 흐름 시각화 (12 컴포넌트 + useAgeFlow·useGridCap·usePersonDetail 훅)
 ├── common/          Header, Modal, Toast, PersonAvatar
 ├── person/ thread/ collection/ ranking/ search/ admin/
 lib/
@@ -104,6 +104,7 @@ db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동�
 | Cursor 페이지네이션 | offset 데이터 중복/누락 방지 |
 | view_count 배치 집계 | race condition 방지 |
 | 관계 양방향 1건 저장 | OR 쿼리로 양방향 조회 |
+| age-flow 카드 뷰포트 캡 | sticky 뷰포트라 넘치는 행은 도달 불가 → 중요도(포커스·왕·전쟁·조회수) 순 정렬 후 화면에 맞는 만큼만, 나머지는 "+N more" 목록 |
 | age-flow 전체 메모리 로드 | ~1,000명 OK. 2,000명 이상 시 구간 로드 전환 (SCALABILITY NOTE 참조) |
 | PersonAvatar 태그별 스타일 | FIELD 태그별 배경색·아이콘 분기 (`components/common/PersonAvatar.tsx`) |
 | 홈 기본 정렬 자동 전환 | 최근 7일 새 스레드 5개 미만이면 Top(전체), 이상이면 Hot. 조용할 때 오래된 글 목록처럼 보이지 않게 |

@@ -1,5 +1,5 @@
 import { getAgeFlowData } from '@/lib/age-flow-data';
-import { parseInitialYear } from '@/lib/age-flow';
+import { parseInitialYear, parseFocusSlug } from '@/lib/age-flow';
 import AgeFlowClient from './AgeFlowClient';
 
 // Dynamic: initial year comes from ?year=. Data itself is cached (lib/age-flow-data.ts).
@@ -18,10 +18,17 @@ async function fetchAgeFlowData() {
 export default async function AgeFlowPage({
   searchParams,
 }: {
-  searchParams: { year?: string | string[] };
+  searchParams: { year?: string | string[]; focus?: string | string[] };
 }) {
   const initialData = await fetchAgeFlowData();
-  const initialYear = parseInitialYear(searchParams.year);
+  const initialFocus = parseFocusSlug(searchParams.focus);
+  // ?focus= without ?year= starts at the focused figure's birth
+  const focusBirth = initialFocus
+    ? initialData?.persons.find((p) => p.slug === initialFocus)?.birth_year
+    : undefined;
+  const initialYear = parseInitialYear(
+    searchParams.year ?? (focusBirth !== undefined ? String(focusBirth) : undefined)
+  );
   // If SSR returned no persons, pass undefined so client fetches its own data
   const hasPersons = initialData && initialData.persons.length > 0;
   return (
@@ -30,6 +37,7 @@ export default async function AgeFlowPage({
       <AgeFlowClient
         initialData={hasPersons ? initialData : undefined}
         initialYear={initialYear}
+        initialFocus={initialFocus}
       />
     </>
   );

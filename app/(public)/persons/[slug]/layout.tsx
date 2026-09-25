@@ -189,7 +189,7 @@ export default async function PersonLayout({
             </dl>
             {person.birth_year != null && (
               <Link
-                href={`/age-flow?year=${person.birth_year}`}
+                href={`/age-flow?year=${person.birth_year}&focus=${person.slug}`}
                 className="mt-4 flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-medium text-brand-700 transition-colors hover:bg-brand-100"
               >
                 Explore this era in Age Flow →

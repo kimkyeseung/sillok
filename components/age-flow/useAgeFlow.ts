@@ -16,7 +16,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { JOSEON_START, JOSEON_END } from '@/lib/age-flow';
+import { JOSEON_START, JOSEON_END, getEraRangeInAgeFlow, type AgeFlowEra } from '@/lib/age-flow';
 
 // ── Types ──
 
@@ -75,7 +75,7 @@ export interface AgeFlowEvent {
   person_node_links?: Array<{ persons: AgeFlowEventPerson | null }>;
 }
 
-export type Era = 'Ancient' | 'Three Kingdoms' | 'Goryeo' | 'Joseon' | 'Modern';
+export type Era = AgeFlowEra;
 
 export interface AgeFlowArtifact {
   id: string;
@@ -494,31 +494,31 @@ export function useAgeFlow(
     }
   }, [currentYear]);
 
-  // ── 6. Initial ?year= parameter (after data loads) ──
+  // ── 6. Scroll to the initial year (from ?year= or ?focus=, resolved on the server) ──
   useEffect(() => {
     if (initialScrollDone.current || isLoading) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const yearParam = params.get('year');
-    if (yearParam) {
-      const targetYear = parseInt(yearParam, 10);
-      if (!isNaN(targetYear)) {
-        const targetScroll = (targetYear - minYear) * SCROLL_PER_YEAR;
-        // Reset lerp so it snaps to the restored position
-        displayYearRef.current = -1;
-        window.scrollTo(0, Math.max(0, targetScroll));
-      }
+    if (initialYear > minYear) {
+      // Reset lerp so it snaps to the restored position
+      displayYearRef.current = -1;
+      window.scrollTo(0, (initialYear - minYear) * SCROLL_PER_YEAR);
     }
     initialScrollDone.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minYear, isLoading]);
 
   // ── 7. Keyboard navigation ──
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Don't handle when focused on input elements
+      // Leave keys alone for form fields, open dialogs/sheets, and shortcuts
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement | null;
       if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable ||
+        target?.closest?.('[role="dialog"]')
       ) {
         return;
       }
@@ -568,7 +568,8 @@ export function useAgeFlow(
 
   const scrollToEra = useCallback(
     (era: Era) => {
-      scrollToYear(ERA_RANGES[era].start);
+      const range = getEraRangeInAgeFlow(era);
+      if (range) scrollToYear(range.start);
     },
     [scrollToYear]
   );
