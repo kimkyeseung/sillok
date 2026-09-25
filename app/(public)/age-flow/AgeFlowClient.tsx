@@ -32,9 +32,10 @@ import ArtifactTimeline from '@/components/age-flow/ArtifactTimeline';
 
 interface AgeFlowClientProps {
   initialData?: AgeFlowInitialData;
+  initialYear?: number;
 }
 
-export default function AgeFlowClient({ initialData }: AgeFlowClientProps) {
+export default function AgeFlowClient({ initialData, initialYear }: AgeFlowClientProps) {
   const {
     currentYear,
     currentEra,
@@ -54,7 +55,7 @@ export default function AgeFlowClient({ initialData }: AgeFlowClientProps) {
     scrollToYear,
     scrollToEra,
     containerRef,
-  } = useAgeFlow(initialData);
+  } = useAgeFlow(initialData, initialYear);
 
   const { toast } = useToast();
   const [selectedEra, setSelectedEra] = useState<Era | 'All'>('All');

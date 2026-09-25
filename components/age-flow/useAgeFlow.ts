@@ -16,7 +16,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { tagLabel } from '@/lib/tags';
+import { JOSEON_START, JOSEON_END } from '@/lib/age-flow';
 
 // ── Types ──
 
@@ -118,9 +118,8 @@ export interface UseAgeFlowReturn {
 export const SCROLL_PER_YEAR = 100;
 export const MAX_YEAR = 2026;
 
-// Age-flow covers late Goryeo → Joseon → Korean Empire
-export const JOSEON_START = 1336; // Late Goryeo — Taejo born 1335, visible from age 1
-export const JOSEON_END = 1910;   // End of Joseon/Korean Empire
+// Age-flow range lives in lib/age-flow.ts (shared with server loader)
+export { JOSEON_START, JOSEON_END };
 
 // Kings with reign periods (for YearCounter display)
 // Includes late Goryeo kings for smooth transition
@@ -329,46 +328,6 @@ export function getInitials(name: string): string {
   return name.slice(0, 2);
 }
 
-// ── Transform API response to AgeFlowPerson ──
-
-function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
-  const birthYear = raw.birth_year as number | null;
-  const deathYear = raw.death_year as number | null;
-  const isAlive = raw.is_alive as boolean;
-
-  // birth_year null이면 제외
-  if (birthYear === null || birthYear === undefined) return null;
-  // death_year null이고 is_alive도 아니면 제외
-  if (deathYear === null && !isAlive) return null;
-
-  const personTags = raw.person_tags as Array<{
-    tag_id: string;
-    tags: { id: string; name_en: string; type: string } | null;
-  }> | null;
-
-  const tags: AgeFlowTag[] = (personTags ?? [])
-    .filter((pt) => pt.tags !== null)
-    .map((pt) => ({
-      id: pt.tags!.id,
-      name_en: tagLabel(pt.tags!.name_en),
-      type: pt.tags!.type as 'ERA' | 'FIELD',
-    }));
-
-  return {
-    id: raw.id as string,
-    slug: raw.slug as string,
-    name_en: raw.name_en as string | null,
-    name_ko: raw.name_ko as string,
-    birth_year: birthYear,
-    death_year: deathYear,
-    is_alive: isAlive,
-    thumbnail: raw.thumbnail as string | null,
-    view_count: (raw.view_count as number) ?? 0,
-    follow_count: (raw.follow_count as number) ?? 0,
-    tags,
-  };
-}
-
 // ── Hook ──
 
 export interface AgeFlowInitialData {
@@ -377,7 +336,10 @@ export interface AgeFlowInitialData {
   artifacts: AgeFlowArtifact[];
 }
 
-export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
+export function useAgeFlow(
+  initialData?: AgeFlowInitialData,
+  initialYear: number = JOSEON_START
+): UseAgeFlowReturn {
   const hasInitial = !!initialData;
   const [allPersons, setAllPersons] = useState<AgeFlowPerson[]>(
     initialData?.persons ?? []
@@ -388,7 +350,7 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
   const [artifacts, setArtifacts] = useState<AgeFlowArtifact[]>(
     initialData?.artifacts ?? []
   );
-  const [currentYear, setCurrentYear] = useState(0);
+  const [currentYear, setCurrentYear] = useState(initialYear);
   const [isLoading, setIsLoading] = useState(!hasInitial);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const initialScrollDone = useRef(false);
@@ -403,22 +365,11 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
         const json = await res.json();
 
         if (json.success) {
-          const { persons: rawPersons, events: rawEvents, artifacts: rawArtifacts } = json.data;
-
-          const transformed = (rawPersons as Record<string, unknown>[])
-            .map(transformPerson)
-            .filter((p): p is AgeFlowPerson => p !== null)
-            .filter((p) => {
-              const deathYear = p.is_alive ? JOSEON_END : (p.death_year ?? p.birth_year);
-              return p.birth_year <= JOSEON_END && deathYear >= JOSEON_START;
-            });
-          setAllPersons(transformed);
-          setEvents(rawEvents as AgeFlowEvent[]);
-          setArtifacts(
-            (rawArtifacts as AgeFlowArtifact[]).filter(
-              (a) => a.metadata?.created_year != null
-            )
-          );
+          // Already transformed + range-filtered on the server (lib/age-flow-data.ts)
+          const data = json.data as AgeFlowInitialData;
+          setAllPersons(data.persons);
+          setEvents(data.events);
+          setArtifacts(data.artifacts);
         }
       } catch (err) {
         console.error('Failed to load age-flow data:', err);
@@ -444,17 +395,17 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
   const displayYearRef = useRef(-1); // -1 = not initialised
   const targetYearRef = useRef(0);   // raw from scroll position
 
+  // The rAF loop only runs while the displayed year is catching up to the
+  // scroll position; it stops when settled and restarts on the next scroll.
   useEffect(() => {
-    let rafId: number;
-    let running = true;
+    let rafId = 0;
+    let running = false;
 
     const LERP_SPEED = 0.04; // 0-1, lower = smoother / slower catch-up
     const MAX_STEP = 1.5;    // cap how many years can change per frame
     const SNAP_THRESHOLD = 0.3; // snap when close enough
 
     const tick = () => {
-      if (!running) return;
-
       // Update target from current scroll position
       const scrollY = window.scrollY;
       targetYearRef.current = minYear + scrollY / SCROLL_PER_YEAR;
@@ -478,13 +429,25 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
       const clamped = Math.max(minYear, Math.min(year, maxYear));
       setCurrentYear((prev) => (prev !== clamped ? clamped : prev));
 
+      if (displayYearRef.current === targetYearRef.current) {
+        running = false; // settled — idle until the next scroll
+        return;
+      }
       rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
+    const start = () => {
+      if (running) return;
+      running = true;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    start();
+    window.addEventListener('scroll', start, { passive: true });
     return () => {
-      running = false;
+      window.removeEventListener('scroll', start);
       cancelAnimationFrame(rafId);
+      running = false;
     };
   }, [minYear]);
 
@@ -524,7 +487,10 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
       const now = Date.now();
       if (now - lastReplaceRef.current < 300) return;
       lastReplaceRef.current = now;
-      window.history.replaceState(null, '', `?year=${currentYear}`);
+      // Keep other params (utm 등) and Next.js router state intact
+      const url = new URL(window.location.href);
+      url.searchParams.set('year', String(currentYear));
+      window.history.replaceState(window.history.state, '', url);
     }
   }, [currentYear]);
 

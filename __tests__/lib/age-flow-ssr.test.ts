@@ -5,66 +5,15 @@ import {
   JOSEON_START,
   JOSEON_END,
 } from '@/components/age-flow/useAgeFlow';
+import {
+  transformPerson,
+  isInAgeFlowRange,
+  parseInitialYear,
+  buildAgeFlowData,
+} from '@/lib/age-flow';
+import type { AgeFlowEvent, AgeFlowArtifact } from '@/components/age-flow/useAgeFlow';
 
-// ─── transformPerson logic (extracted for testing) ───
-// Mirrors the transformPerson in page.tsx and useAgeFlow.ts
-
-interface RawPerson {
-  id: string;
-  slug: string;
-  name_en: string | null;
-  name_ko: string;
-  birth_year: number | null;
-  death_year: number | null;
-  is_alive: boolean;
-  thumbnail: string | null;
-  view_count: number;
-  follow_count: number;
-  person_tags: Array<{
-    tag_id: string;
-    tags: { id: string; name_en: string; type: string } | null;
-  }> | null;
-}
-
-function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
-  const birthYear = raw.birth_year as number | null;
-  const deathYear = raw.death_year as number | null;
-  const isAlive = raw.is_alive as boolean;
-
-  if (birthYear === null || birthYear === undefined) return null;
-  if (deathYear === null && !isAlive) return null;
-
-  const personTags = raw.person_tags as RawPerson['person_tags'];
-
-  const tags = (personTags ?? [])
-    .filter((pt) => pt.tags !== null)
-    .map((pt) => ({
-      id: pt.tags!.id,
-      name_en: pt.tags!.name_en,
-      type: pt.tags!.type as 'ERA' | 'FIELD',
-    }));
-
-  return {
-    id: raw.id as string,
-    slug: raw.slug as string,
-    name_en: raw.name_en as string | null,
-    name_ko: raw.name_ko as string,
-    birth_year: birthYear,
-    death_year: deathYear,
-    is_alive: isAlive,
-    thumbnail: raw.thumbnail as string | null,
-    view_count: (raw.view_count as number) ?? 0,
-    follow_count: (raw.follow_count as number) ?? 0,
-    tags,
-  };
-}
-
-function filterJoseonRange(persons: AgeFlowPerson[]): AgeFlowPerson[] {
-  return persons.filter((p) => {
-    const deathYear = p.is_alive ? JOSEON_END : (p.death_year ?? p.birth_year);
-    return p.birth_year <= JOSEON_END && deathYear >= JOSEON_START;
-  });
-}
+const filterJoseonRange = (persons: AgeFlowPerson[]) => persons.filter(isInAgeFlowRange);
 
 // ─── Tests ───
 
@@ -95,7 +44,7 @@ describe('transformPerson', () => {
     expect(result!.birth_year).toBe(1397);
     expect(result!.death_year).toBe(1450);
     expect(result!.tags).toHaveLength(2);
-    expect(result!.tags[0].name_en).toBe('King');
+    expect(result!.tags[0].name_en).toBe('Royalty'); // tagLabel('King')
   });
 
   it('should return null if birth_year is null', () => {
@@ -139,7 +88,7 @@ describe('transformPerson', () => {
     });
     expect(result).not.toBeNull();
     expect(result!.tags).toHaveLength(1);
-    expect(result!.tags[0].name_en).toBe('King');
+    expect(result!.tags[0].name_en).toBe('Royalty'); // tagLabel('King')
   });
 
   it('should default view_count and follow_count to 0', () => {
@@ -253,5 +202,64 @@ describe('AgeFlowInitialData type', () => {
 
     expect(data.persons).toHaveLength(1);
     expect(data.persons[0].slug).toBe('test');
+  });
+});
+
+describe('parseInitialYear', () => {
+  it('defaults to JOSEON_START when missing or invalid', () => {
+    expect(parseInitialYear(undefined)).toBe(JOSEON_START);
+    expect(parseInitialYear(null)).toBe(JOSEON_START);
+    expect(parseInitialYear('abc')).toBe(JOSEON_START);
+  });
+
+  it('parses a valid year', () => {
+    expect(parseInitialYear('1592')).toBe(1592);
+  });
+
+  it('uses the first value of a repeated param', () => {
+    expect(parseInitialYear(['1450', '1600'])).toBe(1450);
+  });
+
+  it('clamps to the age-flow range', () => {
+    expect(parseInitialYear('1000')).toBe(JOSEON_START);
+    expect(parseInitialYear('2000')).toBe(JOSEON_END);
+  });
+});
+
+describe('buildAgeFlowData', () => {
+  const event = (id: string, start_year?: unknown) =>
+    ({ id, slug: id, title: id, metadata: { start_year } }) as unknown as AgeFlowEvent;
+  const artifact = (id: string, created_year?: number) =>
+    ({ id, slug: id, title: id, thumbnail: null, metadata: created_year ? { created_year } : null }) as AgeFlowArtifact;
+
+  it('keeps only events with a numeric start_year in range', () => {
+    const { events } = buildAgeFlowData({
+      persons: [],
+      events: [event('a', 1592), event('b', 1200), event('c', '1592'), event('d')],
+      artifacts: [],
+    });
+    expect(events.map((e) => e.id)).toEqual(['a']);
+  });
+
+  it('drops artifacts without created_year', () => {
+    const { artifacts } = buildAgeFlowData({
+      persons: [],
+      events: [],
+      artifacts: [artifact('a', 1446), artifact('b')],
+    });
+    expect(artifacts.map((a) => a.id)).toEqual(['a']);
+  });
+
+  it('transforms and range-filters persons', () => {
+    const { persons } = buildAgeFlowData({
+      persons: [
+        { id: 'in', slug: 'in', name_ko: 'a', birth_year: 1500, death_year: 1560, is_alive: false },
+        { id: 'out', slug: 'out', name_ko: 'b', birth_year: 1950, death_year: 2000, is_alive: false },
+        { id: 'nobirth', slug: 'x', name_ko: 'c', birth_year: null, death_year: 1500, is_alive: false },
+      ],
+      events: [],
+      artifacts: [],
+    });
+    expect(persons.map((p) => p.id)).toEqual(['in']);
   });
 });

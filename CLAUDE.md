@@ -42,6 +42,8 @@ lib/
 ├── api-helpers.ts      apiError / apiSuccess
 ├── feed.ts             피드 순수 로직 (정렬, 커서, 게시판·토픽, 댓글 트리) — 테스트 대상
 ├── feed-data.ts        피드·홈 모듈 로더 (서버)
+├── age-flow.ts         age-flow 순수 로직 (변환, 범위 필터, ?year= 파싱) — 테스트 대상
+├── age-flow-data.ts    age-flow 데이터 로더 (서버, unstable_cache 5분) — page SSR·API 공유
 ├── person-page.ts      인물 페이지 로더 (React cache로 layout/page/metadata 공유)
 ├── jsonld.ts           구조화 데이터 (Person, DiscussionForumPosting, Breadcrumb 등)
 ├── types.ts            NodeType, RelationType 등
