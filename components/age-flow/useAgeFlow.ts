@@ -21,6 +21,7 @@ import {
   JOSEON_END,
   getEraRangeInAgeFlow,
   getEraForYear,
+  isAliveIn,
   findReign,
   getWarsFromEvents,
   getActiveWars,
@@ -311,11 +312,7 @@ export function useAgeFlow(
   // ── 4. Visible persons ──
   const visiblePersons = useMemo(
     () =>
-      allPersons.filter(
-        (p) =>
-          p.birth_year <= currentYear &&
-          (p.is_alive || (p.death_year !== null && p.death_year >= currentYear))
-      ),
+      allPersons.filter((p) => isAliveIn(p, currentYear)),
     [allPersons, currentYear]
   );
 
@@ -337,18 +334,29 @@ export function useAgeFlow(
   );
 
   // ── 5. URL ?year= sync (throttled to avoid Safari SecurityError) ──
+  // Leading write, then a trailing write so the year you stop on always lands in the URL.
   const lastReplaceRef = useRef(0);
+  const trailingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (currentYear > 0 && initialScrollDone.current) {
-      const now = Date.now();
-      if (now - lastReplaceRef.current < 300) return;
-      lastReplaceRef.current = now;
+    if (currentYear <= 0 || !initialScrollDone.current) return;
+
+    const write = () => {
+      lastReplaceRef.current = Date.now();
       // Keep other params (utm 등) and Next.js router state intact
       const url = new URL(window.location.href);
       url.searchParams.set('year', String(currentYear));
       window.history.replaceState(window.history.state, '', url);
-    }
+    };
+
+    if (trailingTimerRef.current) clearTimeout(trailingTimerRef.current);
+    const wait = 300 - (Date.now() - lastReplaceRef.current);
+    if (wait <= 0) write();
+    else trailingTimerRef.current = setTimeout(write, wait);
   }, [currentYear]);
+
+  useEffect(() => () => {
+    if (trailingTimerRef.current) clearTimeout(trailingTimerRef.current);
+  }, []);
 
   // ── 6. Scroll to the initial year (from ?year= or ?focus=, resolved on the server) ──
   useEffect(() => {

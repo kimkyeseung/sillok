@@ -15,7 +15,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export function useGridCap(
   gridRef: React.RefObject<HTMLDivElement | null>,
   hasItems: boolean,
-  /** Re-measure when this changes (year, banner shown, …) — cheap, cap is stable */
+  /** Re-measure when the layout above the grid changes (e.g. focus banner shown) */
   layoutKey: unknown
 ): number {
   const [cap, setCap] = useState(Infinity);
@@ -46,10 +46,21 @@ export function useGridCap(
     setCap((prev) => (prev === next ? prev : next));
   }, [gridRef]);
 
+  // Initial measure, and when the layout above the grid changes (focus banner)
   useEffect(() => {
     if (!hasItems) return;
     measure();
   }, [hasItems, measure, layoutKey]);
+
+  // Card set / heights change as the year scrolls → the grid resizes. ResizeObserver
+  // runs after layout, so this adds no forced reflow to the scroll path.
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || !hasItems) return;
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [gridRef, hasItems, measure]);
 
   useEffect(() => {
     const onResize = () => {

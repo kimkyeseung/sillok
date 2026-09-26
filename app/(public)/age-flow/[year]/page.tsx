@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -26,11 +27,12 @@ interface Props {
 
 const MAX_FIGURES = 120;
 
-async function getSnapshot(segment: string): Promise<YearSnapshot | null> {
+// cache(): generateMetadata and the page share one snapshot per request
+const getSnapshot = cache(async (segment: string): Promise<YearSnapshot | null> => {
   const year = parseYearSegment(segment);
   if (year === null) return null;
   return getYearSnapshot(await getAgeFlowData(), year);
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const snapshot = await getSnapshot(params.year);

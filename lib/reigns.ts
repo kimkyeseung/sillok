@@ -21,3 +21,16 @@ export async function findPersonId(slug: string): Promise<string | null> {
     .maybeSingle();
   return data?.id ?? null;
 }
+
+export const ReignIdSchema = z.string().uuid();
+
+/** Cursor = "<reign_start>_<id>" of the last row (list is ordered by reign_start, id) */
+export const ReignListSchema = z.object({
+  cursor: z.string().regex(/^-?\d+_[0-9a-f-]{36}$/).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+});
+
+export function parseReignCursor(cursor: string): { start: number; id: string } {
+  const i = cursor.indexOf('_');
+  return { start: parseInt(cursor.slice(0, i), 10), id: cursor.slice(i + 1) };
+}

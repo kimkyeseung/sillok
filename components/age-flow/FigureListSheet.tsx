@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Sheet from './Sheet';
+import { isAliveIn } from '@/lib/age-flow';
 import { AgeFlowPerson, getAge } from './useAgeFlow';
 import PersonAvatar, { getPrimaryFieldTag } from '@/components/common/PersonAvatar';
 
@@ -87,9 +88,7 @@ function FigureListSheetInner({
       ) : (
         <ul className="divide-y divide-gray-100">
           {rows.slice(0, MAX_ROWS).map((p) => {
-            const alive =
-              p.birth_year <= currentYear &&
-              (p.is_alive || (p.death_year !== null && p.death_year >= currentYear));
+            const alive = isAliveIn(p, currentYear);
             const isFocused = p.slug === focusSlug;
             return (
               <li key={p.id} className="flex items-center gap-3 px-4 py-2">

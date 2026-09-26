@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import useSWR from 'swr';
+import useSWRInfinite from 'swr/infinite';
 import { fetcher, apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
 
@@ -12,11 +12,25 @@ interface Reign {
   persons: { id: string; slug: string; name_en: string | null; name_ko: string } | null;
 }
 
+interface ReignPage {
+  items: Reign[];
+  has_next: boolean;
+  next_cursor: string | null;
+}
+
 const EMPTY_FORM = { person_slug: '', reign_start: '', reign_end: '' };
+
+const pageKey = (index: number, prev: ReignPage | null) => {
+  if (prev && !prev.has_next) return null;
+  const cursor = prev?.next_cursor ? `&cursor=${encodeURIComponent(prev.next_cursor)}` : '';
+  return `/api/admin/reigns?limit=200${cursor}`;
+};
 
 export default function AdminReignsPage() {
   const { toast } = useToast();
-  const { data: reigns, isLoading, mutate } = useSWR<Reign[]>('/api/admin/reigns', fetcher);
+  const { data: pages, isLoading, mutate, size, setSize } = useSWRInfinite<ReignPage>(pageKey, fetcher);
+  const reigns = pages?.flatMap((p) => p.items);
+  const hasMore = pages?.[pages.length - 1]?.has_next ?? false;
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Reign | null>(null);
@@ -189,6 +203,14 @@ export default function AdminReignsPage() {
               </button>
             </div>
           ))}
+          {hasMore && (
+            <button
+              onClick={() => setSize(size + 1)}
+              className="w-full py-3 text-center text-sm text-brand-600 hover:bg-gray-50"
+            >
+              Load more
+            </button>
+          )}
         </div>
       )}
     </div>

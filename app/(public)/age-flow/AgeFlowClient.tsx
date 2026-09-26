@@ -31,7 +31,7 @@ import PersonSheet from '@/components/age-flow/PersonSheet';
 import FigureListSheet, { type FigureListTab } from '@/components/age-flow/FigureListSheet';
 import FocusBanner from '@/components/age-flow/FocusBanner';
 import { useGridCap } from '@/components/age-flow/useGridCap';
-import { sortByImportance } from '@/lib/age-flow';
+import { sortByImportance, isAliveIn } from '@/lib/age-flow';
 import { useToast } from '@/components/common/Toast';
 
 /** Touch-only devices (no hover) — tap opens the person sheet instead of hover UI */
@@ -119,7 +119,7 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
   const gridCap = useGridCap(
     gridRef,
     sortedPersons.length > 0,
-    `${currentYear}|${focusPerson?.id ?? ''}`
+    focusPerson?.id ?? null
   );
   const isOverflowing = sortedPersons.length > gridCap;
   const shownPersons = useMemo(
@@ -238,11 +238,10 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
 
       // Jump to the figure's lifetime if they aren't alive in the current year
       const person = slug ? allPersons.find((p) => p.slug === slug) : null;
-      if (person) {
-        const alive =
-          person.birth_year <= currentYear &&
-          (person.is_alive || (person.death_year !== null && person.death_year >= currentYear));
-        if (!alive) scrollToYear(person.birth_year);
+      // Deferred a frame: callers close a sheet in the same tick, and its body scroll
+      // lock must be released first or the smooth scroll gets cancelled (Safari).
+      if (person && !isAliveIn(person, currentYear)) {
+        requestAnimationFrame(() => scrollToYear(person.birth_year));
       }
     },
     [allPersons, currentYear, scrollToYear]
@@ -255,7 +254,10 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
 
   const { toast } = useToast();
   const handleShare = useCallback(async () => {
-    const url = window.location.href; // carries ?year= (and ?focus=) → year share card
+    // Build from the year on screen (the URL write is throttled); keeps ?focus= etc.
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('year', String(currentYear));
+    const url = shareUrl.toString();
     if (navigator.share) {
       try {
         await navigator.share({ title: `Korea in ${currentYear} — Age Flow`, url });

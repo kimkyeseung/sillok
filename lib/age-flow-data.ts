@@ -40,7 +40,9 @@ async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
       .eq('is_deleted', false)
       .eq('is_published', true)
       .eq('node_type', 'EVENT')
-      .not('metadata->start_year', 'is', null)
+      // Range in the query — otherwise events from other eras use up the limit
+      .gte('metadata->start_year', JOSEON_START)
+      .lte('metadata->start_year', JOSEON_END)
       .order('metadata->start_year', { ascending: true })
       .limit(EVENT_LIMIT),
 

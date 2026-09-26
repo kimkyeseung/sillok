@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { revalidateAgeFlow } from '@/lib/age-flow-data';
-import { ReignSchema, findPersonId } from '@/lib/reigns';
+import { ReignSchema, ReignIdSchema, findPersonId } from '@/lib/reigns';
 
 // ─── PUT /api/admin/reigns/:id — Update reign [ADMIN] ───
 
@@ -13,6 +13,9 @@ export async function PUT(
   const admin = await requireAdmin(request);
   if (!admin)
     return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+
+  if (!ReignIdSchema.safeParse(params.id).success)
+    return apiError('VALIDATION_ERROR', 'Invalid reign id.', 422);
 
   let body;
   try {
@@ -33,13 +36,14 @@ export async function PUT(
     .update({ person_id: personId, reign_start: result.data.reign_start, reign_end: result.data.reign_end })
     .eq('id', params.id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     if (error.code === '23505')
       return apiError('VALIDATION_ERROR', 'This reign already exists.', 409);
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
   }
+  if (!data) return apiError('NOT_FOUND', 'Reign not found.', 404);
 
   revalidateAgeFlow();
   return apiSuccess(data);
@@ -55,10 +59,18 @@ export async function DELETE(
   if (!admin)
     return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
 
-  const { error } = await supabaseAdmin.from('reigns').delete().eq('id', params.id);
+  if (!ReignIdSchema.safeParse(params.id).success)
+    return apiError('VALIDATION_ERROR', 'Invalid reign id.', 422);
+
+  const { data, error } = await supabaseAdmin
+    .from('reigns')
+    .delete()
+    .eq('id', params.id)
+    .select('id');
 
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  if (!data || data.length === 0) return apiError('NOT_FOUND', 'Reign not found.', 404);
 
   revalidateAgeFlow();
   return apiSuccess({ deleted: true });

@@ -7,7 +7,9 @@
 -- 2. Wars = EVENT nodes with metadata.end_year (was WARS in useAgeFlow.ts).
 --    Age-flow shows EVENT nodes of type war/revolt that have an end_year as
 --    "At War"; participants are person_node_links (link_type PARTICIPANT).
---    Existing nodes keep their title/description — only end_year is merged.
+--    Existing nodes keep their title/description — only end_year and
+--    event_type are merged. Unpublished/deleted war nodes are NOT republished;
+--    a WARNING lists them at the end (they won't show as "At War").
 --
 -- Idempotent. Rows for persons that don't exist are skipped (join).
 -- Run BEFORE deploying the matching code (age-flow reads reigns).
@@ -100,7 +102,10 @@ VALUES
    '{"start_year": 1904, "end_year": 1905, "event_type": "war", "title_ko": "러일전쟁"}', TRUE)
 ON CONFLICT (slug) DO UPDATE
   SET metadata = COALESCE(nodes.metadata, '{}'::jsonb)
-    || jsonb_build_object('end_year', EXCLUDED.metadata->'end_year');
+    || jsonb_build_object(
+         'end_year',   EXCLUDED.metadata->'end_year',
+         'event_type', EXCLUDED.metadata->'event_type'  -- age-flow only treats war/revolt as wars
+       );
 
 INSERT INTO person_node_links (person_id, node_id, link_type)
 SELECT p.id, n.id, 'PARTICIPANT'
@@ -149,3 +154,21 @@ FROM (VALUES
 JOIN nodes n ON n.slug = v.node_slug
 JOIN persons p ON p.slug = v.person_slug
 ON CONFLICT (person_id, node_id) DO NOTHING;
+
+-- ── 3. Report war nodes that won't show in age-flow ──
+
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT v.slug, n.id IS NULL AS missing, n.is_published, n.is_deleted
+    FROM (VALUES ('red-turban-invasions'), ('imjin-war'), ('jeongmyo-horan'), ('byeongja-horan'),
+                 ('shinmiyangyo'), ('donghak-revolution'), ('russo-japanese-war')) AS v(slug)
+    LEFT JOIN nodes n ON n.slug = v.slug
+    WHERE n.id IS NULL OR n.is_published IS NOT TRUE OR n.is_deleted IS TRUE
+  LOOP
+    RAISE WARNING 'age-flow war node "%" will not show as At War (missing=%, published=%, deleted=%)',
+      r.slug, r.missing, r.is_published, r.is_deleted;
+  END LOOP;
+END $$;
