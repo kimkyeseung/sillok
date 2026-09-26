@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Era, AgeFlowPerson, AgeFlowTag, War, formatCount, getAge } from './useAgeFlow';
 import PersonAvatar, { getPrimaryFieldTag } from '@/components/common/PersonAvatar';
 
@@ -259,6 +260,12 @@ export default function TimelinePanel({
             <p className="mt-1.5 text-xs text-gray-300">
               {formatCount(aliveCount)} alive
             </p>
+            <Link
+              href={`/age-flow/${currentYear}`}
+              className="mt-1 block text-[11px] text-amber-300/80 transition-colors hover:text-amber-200"
+            >
+              About {currentYear} →
+            </Link>
 
             {/* War status */}
             {currentWars.length > 0 && (

@@ -44,7 +44,7 @@ export default async function PersonTimelinePage({ params }: Props) {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Life Timeline</h2>
           {person.birth_year != null && (
             <Link
-              href={`/age-flow?year=${person.birth_year}`}
+              href={`/age-flow?year=${person.birth_year}&focus=${person.slug}`}
               className="text-xs font-medium text-brand-600 hover:text-brand-700"
             >
               View in Age Flow →

@@ -878,7 +878,7 @@ CREATE TRIGGER on_auth_user_created
 -- 기본 태그 데이터 (시드)
 -- ============================================================
 
-INSERT INTO tags (name, type) VALUES
+INSERT INTO tags (name_ko, type) VALUES
   -- ERA (시대)
   ('고대', 'ERA'),
   ('삼국', 'ERA'),
@@ -895,7 +895,8 @@ INSERT INTO tags (name, type) VALUES
   ('스포츠', 'FIELD'),
   ('문화/예능', 'FIELD'),
   ('기업인', 'FIELD'),
-  ('종교인', 'FIELD');
+  ('종교인', 'FIELD')
+ON CONFLICT (name_ko) DO NOTHING;
 
 -- ============================================================
 -- Person editorial content (Phase 2)
@@ -1109,3 +1110,22 @@ CREATE INDEX IF NOT EXISTS threads_feed_hot_idx ON threads (hot_score DESC, id D
 CREATE INDEX IF NOT EXISTS threads_feed_top_idx ON threads (top_score DESC, id DESC) WHERE is_deleted = FALSE;
 CREATE INDEX IF NOT EXISTS threads_feed_new_idx ON threads (created_at DESC, id DESC) WHERE is_deleted = FALSE;
 -- pg_cron: SELECT cron.schedule('refresh-thread-hot-scores', '*/15 * * * *', 'SELECT refresh_thread_hot_scores()');
+
+-- ============================================================
+-- Reigns (age-flow "current king")
+-- One row per reign; a king who returned to the throne has two rows.
+-- Wars are EVENT nodes with metadata.end_year (+ PARTICIPANT person_node_links).
+-- RLS on, no policies → server (service role) access only.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS reigns (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  person_id    UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+  reign_start  INTEGER NOT NULL,
+  reign_end    INTEGER NOT NULL,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (reign_end >= reign_start),
+  UNIQUE (person_id, reign_start)
+);
+CREATE INDEX IF NOT EXISTS reigns_start_idx ON reigns (reign_start);
+ALTER TABLE reigns ENABLE ROW LEVEL SECURITY;
