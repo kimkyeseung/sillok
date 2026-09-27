@@ -55,6 +55,7 @@ const EMPTY_FORM = {
   thumbnail: '',
   is_published: false,
   start_year: '',
+  end_year: '',
   event_type: '' as string,
 };
 
@@ -163,6 +164,7 @@ export default function AdminNodesPage() {
       thumbnail: node.thumbnail ?? '',
       is_published: node.is_published,
       start_year: node.metadata?.start_year != null ? String(node.metadata.start_year) : '',
+      end_year: node.metadata?.end_year != null ? String(node.metadata.end_year) : '',
       event_type: (node.metadata?.event_type as string) ?? '',
     });
     setSelectedPersons(
@@ -183,6 +185,7 @@ export default function AdminNodesPage() {
     try {
       const metadata: Record<string, unknown> = {};
       if (form.start_year.trim()) metadata.start_year = parseInt(form.start_year);
+      if (form.end_year.trim()) metadata.end_year = parseInt(form.end_year);
       if (form.event_type) metadata.event_type = form.event_type;
       if (form.title_ko.trim()) metadata.title_ko = form.title_ko.trim();
 
@@ -198,7 +201,9 @@ export default function AdminNodesPage() {
       const personIds = selectedPersons.map((p) => p.id);
 
       if (editingNode) {
-        const merged = { ...(editingNode.metadata ?? {}), ...metadata };
+        const merged: Record<string, unknown> = { ...(editingNode.metadata ?? {}), ...metadata };
+        // Clearing End year removes the war period (age-flow "At War")
+        if (!form.end_year.trim()) delete merged.end_year;
         await apiFetch(`/api/nodes/${editingNode.slug}`, {
           method: 'PUT',
           body: JSON.stringify({ ...body, metadata: merged, person_ids: personIds }),
@@ -526,7 +531,7 @@ export default function AdminNodesPage() {
           </div>
           {/* Event-specific fields */}
           {form.node_type === 'EVENT' && (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">Year</label>
                 <input
@@ -534,6 +539,18 @@ export default function AdminNodesPage() {
                   value={form.start_year}
                   onChange={(e) => setForm((p) => ({ ...p, start_year: e.target.value }))}
                   placeholder="1592"
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  End year <span className="font-normal text-gray-400">(wars: Age Flow &quot;At War&quot;)</span>
+                </label>
+                <input
+                  type="number"
+                  value={form.end_year}
+                  onChange={(e) => setForm((p) => ({ ...p, end_year: e.target.value }))}
+                  placeholder="1598"
                   className="input"
                 />
               </div>

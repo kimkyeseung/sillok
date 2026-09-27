@@ -95,6 +95,15 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: '/admin/reigns',
+    label: 'Reigns',
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 17l2-10 4.5 5L12 5l2.5 7L19 7l2 10H3zm0 3h18" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/groups',
     label: 'Group Management',
     icon: (

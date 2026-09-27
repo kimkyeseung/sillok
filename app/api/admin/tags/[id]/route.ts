@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { revalidateAgeFlow } from '@/lib/age-flow-data';
 
 // ─── PUT /api/admin/tags/:id — Update tag [ADMIN] ───
 
@@ -43,6 +44,7 @@ export async function PUT(
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
   }
 
+  revalidateAgeFlow();
   return apiSuccess(data);
 }
 
@@ -64,5 +66,6 @@ export async function DELETE(
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
+  revalidateAgeFlow();
   return apiSuccess({ deleted: true });
 }

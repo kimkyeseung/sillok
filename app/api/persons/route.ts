@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sanitizeSearchTerm } from '@/lib/search';
+import { revalidateAgeFlow } from '@/lib/age-flow-data';
 
 // ─── GET /api/persons — Person list (public) ───
 
@@ -200,5 +201,6 @@ export async function POST(request: Request) {
     await supabaseAdmin.from('person_tags').insert(tagLinks);
   }
 
+  revalidateAgeFlow();
   return apiSuccess(person);
 }

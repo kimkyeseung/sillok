@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { revalidateAgeFlow } from '@/lib/age-flow-data';
 
 // ─── POST /api/admin/persons/bulk — Bulk register persons [ADMIN] ───
 
@@ -144,6 +145,7 @@ export async function POST(request: Request) {
   const successCount = results.filter((r) => r.success).length;
   const failCount = results.filter((r) => !r.success).length;
 
+  revalidateAgeFlow();
   return apiSuccess({
     total: results.length,
     success_count: successCount,

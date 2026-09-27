@@ -1,6 +1,7 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { revalidateAgeFlow } from '@/lib/age-flow-data';
 
 // ─── DELETE /api/persons/:slug/hard — Hard delete person [ADMIN] ───
 
@@ -29,5 +30,6 @@ export async function DELETE(
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
+  revalidateAgeFlow();
   return apiSuccess({ hard_deleted: true });
 }

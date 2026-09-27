@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { revalidateAgeFlow } from '@/lib/age-flow-data';
 
 // ─── POST /api/ai/persons — AI auto person creation (secret key auth) ───
 // Single: { slug, name_ko, ... }
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
 
   // 3. Create persons (sequential — track individual errors)
   const results = await Promise.all(items.map(createPerson));
+  if (results.some((r) => r.success)) revalidateAgeFlow();
 
   // 4. Response
   if (!isBulk) {

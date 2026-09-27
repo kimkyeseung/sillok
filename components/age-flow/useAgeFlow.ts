@@ -16,7 +16,20 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { tagLabel } from '@/lib/tags';
+import {
+  JOSEON_START,
+  JOSEON_END,
+  getEraRangeInAgeFlow,
+  getEraForYear,
+  isAliveIn,
+  findReign,
+  getWarsFromEvents,
+  getActiveWars,
+  getWarParticipantSlugs,
+  type AgeFlowEra,
+  type AgeFlowReign,
+  type War,
+} from '@/lib/age-flow';
 
 // ── Types ──
 
@@ -75,7 +88,7 @@ export interface AgeFlowEvent {
   person_node_links?: Array<{ persons: AgeFlowEventPerson | null }>;
 }
 
-export type Era = 'Ancient' | 'Three Kingdoms' | 'Goryeo' | 'Joseon' | 'Modern';
+export type Era = AgeFlowEra;
 
 export interface AgeFlowArtifact {
   id: string;
@@ -118,53 +131,8 @@ export interface UseAgeFlowReturn {
 export const SCROLL_PER_YEAR = 100;
 export const MAX_YEAR = 2026;
 
-// Age-flow covers late Goryeo → Joseon → Korean Empire
-export const JOSEON_START = 1336; // Late Goryeo — Taejo born 1335, visible from age 1
-export const JOSEON_END = 1910;   // End of Joseon/Korean Empire
-
-// Kings with reign periods (for YearCounter display)
-// Includes late Goryeo kings for smooth transition
-const JOSEON_KINGS: Array<{ slug: string; reignStart: number; reignEnd: number }> = [
-  // Late Goryeo
-  { slug: 'chungsuk-wang-wang-man',    reignStart: 1313, reignEnd: 1330 },
-  { slug: 'chung-hye-wang-wang-jeong', reignStart: 1330, reignEnd: 1332 },
-  { slug: 'chungsuk-wang-wang-man',    reignStart: 1332, reignEnd: 1339 }, // 충숙왕 복위
-  { slug: 'chung-hye-wang-wang-jeong', reignStart: 1339, reignEnd: 1344 }, // 충혜왕 복위
-  { slug: 'chungmok-wang-wang-heun',   reignStart: 1344, reignEnd: 1348 },
-  { slug: 'chungjeong-wang-wang-jeo',  reignStart: 1349, reignEnd: 1351 },
-  { slug: 'gongmin-wang-wang-jeon',    reignStart: 1351, reignEnd: 1374 },
-  { slug: 'u-wang-wang-u',            reignStart: 1374, reignEnd: 1388 },
-  { slug: 'chang-wang-wang-chang',     reignStart: 1388, reignEnd: 1389 },
-  { slug: 'gongyang-wang-wang-yo',     reignStart: 1389, reignEnd: 1392 },
-  // Joseon
-  { slug: 'taejo-yi-seong-gye',    reignStart: 1392, reignEnd: 1398 },
-  { slug: 'jeongjong-yi-bang-gwa',  reignStart: 1399, reignEnd: 1400 },
-  { slug: 'taejong-yi-bang-won',    reignStart: 1400, reignEnd: 1418 },
-  { slug: 'sejong-daewang',         reignStart: 1418, reignEnd: 1450 },
-  { slug: 'munjong-yi-hyang',       reignStart: 1450, reignEnd: 1452 },
-  { slug: 'danjong-yi-hong-wi',     reignStart: 1452, reignEnd: 1455 },
-  { slug: 'sejo-yi-yu',             reignStart: 1455, reignEnd: 1468 },
-  { slug: 'yejong-yi-hwang',        reignStart: 1468, reignEnd: 1469 },
-  { slug: 'seongjong-yi-hyeol',     reignStart: 1469, reignEnd: 1494 },
-  { slug: 'yeonsangun-yi-yung',     reignStart: 1494, reignEnd: 1506 },
-  { slug: 'jungjong-yi-yeok',       reignStart: 1506, reignEnd: 1544 },
-  { slug: 'injong-yi-ho',           reignStart: 1544, reignEnd: 1545 },
-  { slug: 'myeongjong-yi-hwan',     reignStart: 1545, reignEnd: 1567 },
-  { slug: 'seonjo-yi-yeon',         reignStart: 1567, reignEnd: 1608 },
-  { slug: 'gwanghaegun-yi-hon',     reignStart: 1608, reignEnd: 1623 },
-  { slug: 'injo-yi-jong',           reignStart: 1623, reignEnd: 1649 },
-  { slug: 'hyojong-yi-ho',          reignStart: 1649, reignEnd: 1659 },
-  { slug: 'hyeonjong-yi-yeon',      reignStart: 1659, reignEnd: 1674 },
-  { slug: 'sukjong-yi-sun',         reignStart: 1674, reignEnd: 1720 },
-  { slug: 'gyeongjong-yi-yun',      reignStart: 1720, reignEnd: 1724 },
-  { slug: 'yeongjo-yi-geum',        reignStart: 1724, reignEnd: 1776 },
-  { slug: 'jeongjo-yi-san',         reignStart: 1776, reignEnd: 1800 },
-  { slug: 'sunjo-yi-gong',          reignStart: 1800, reignEnd: 1834 },
-  { slug: 'heonjong-yi-hwan',       reignStart: 1834, reignEnd: 1849 },
-  { slug: 'cheoljong-yi-byeon',     reignStart: 1849, reignEnd: 1863 },
-  { slug: 'gojong-yi-myeong-bok',   reignStart: 1863, reignEnd: 1907 },
-  { slug: 'sunjong-yi-cheok',       reignStart: 1907, reignEnd: 1910 },
-];
+// Age-flow range lives in lib/age-flow.ts (shared with server loader)
+export { JOSEON_START, JOSEON_END };
 
 export const ERA_RANGES: Record<Era, { start: number; label: string }> = {
   'Ancient':        { start: -2333, label: 'Ancient' },
@@ -186,116 +154,8 @@ export const RELATION_STYLES: Record<string, { color: string; dashed: boolean }>
   AFFILIATED: { color: '#64748b', dashed: true },
 };
 
-// ── Wars ──
-
-export interface War {
-  name: string;
-  startYear: number;
-  endYear: number;
-  participants: string[]; // person slugs
-}
-
-const WARS: War[] = [
-  {
-    name: 'Red Turban Invasions',
-    startYear: 1359,
-    endYear: 1362,
-    participants: [
-      'gongmin-wang-wang-jeon',
-      'choe-yeong',
-      'taejo-yi-seong-gye',
-      'jeong-se-un',
-      'an-u',
-      'yi-bang-sil',
-    ],
-  },
-  {
-    name: 'Imjin War',
-    startYear: 1592,
-    endYear: 1598,
-    participants: [
-      'seonjo-yi-yeon',
-      'yi-sun-sin',
-      'gwon-yul',
-      'ryu-seong-ryong',
-      'gwak-jae-u',
-      'yi-eok-gi',
-      'won-gyun',
-      'shin-rip',
-      'kim-si-min',
-      'go-gyeong-myeong',
-      'jeong-gi-ryong',
-      'jo-heon',
-      'yeong-gyu',
-      'kim-cheon-il',
-      'gwak-jun',
-      'jeong-in-hong',
-    ],
-  },
-  {
-    name: 'First Manchu Invasion',
-    startYear: 1627,
-    endYear: 1627,
-    participants: [
-      'injo-yi-jong',
-      'jeong-bong-su',
-      'yi-gwi',
-      'jang-man',
-    ],
-  },
-  {
-    name: 'Second Manchu Invasion',
-    startYear: 1636,
-    endYear: 1637,
-    participants: [
-      'injo-yi-jong',
-      'choe-myeong-gil',
-      'kim-sang-heon',
-      'yun-jip',
-      'oh-dal-je',
-      'im-gyeong-eop',
-    ],
-  },
-  {
-    name: 'Shinmiyangyo',
-    startYear: 1871,
-    endYear: 1871,
-    participants: [
-      'gojong-yi-myeong-bok',
-      'heungseon-daewongun',
-      'eo-jae-yeon',
-    ],
-  },
-  {
-    name: 'Donghak Revolution',
-    startYear: 1894,
-    endYear: 1895,
-    participants: [
-      'gojong-yi-myeong-bok',
-      'jeon-bong-jun',
-      'kim-gae-nam',
-      'son-hwa-jung',
-    ],
-  },
-  {
-    name: 'Russo-Japanese War',
-    startYear: 1904,
-    endYear: 1905,
-    participants: [
-      'gojong-yi-myeong-bok',
-    ],
-  },
-];
-
-export function getActiveWars(year: number): War[] {
-  return WARS.filter((w) => year >= w.startYear && year <= w.endYear);
-}
-
-export function getWarParticipantSlugs(wars: War[]): Set<string> {
-  const slugs = new Set<string>();
-  wars.forEach((w) => w.participants.forEach((s) => slugs.add(s)));
-  return slugs;
-}
+// Wars and reigns come from the DB (EVENT nodes with end_year, reigns table) — see lib/age-flow.ts
+export type { War, AgeFlowReign } from '@/lib/age-flow';
 
 export const ERA_BG_COLORS: Record<Era, string> = {
   'Ancient':        'bg-slate-100/50',
@@ -307,13 +167,7 @@ export const ERA_BG_COLORS: Record<Era, string> = {
 
 // ── Helpers ──
 
-export function getEra(year: number): Era {
-  if (year < 57)   return 'Ancient';
-  if (year < 918)  return 'Three Kingdoms';
-  if (year < 1392) return 'Goryeo';
-  if (year < 1897) return 'Joseon';
-  return 'Modern';
-}
+export const getEra: (year: number) => Era = getEraForYear;
 
 export function getAge(birthYear: number, currentYear: number): number {
   const age = currentYear - birthYear;
@@ -329,55 +183,19 @@ export function getInitials(name: string): string {
   return name.slice(0, 2);
 }
 
-// ── Transform API response to AgeFlowPerson ──
-
-function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | null {
-  const birthYear = raw.birth_year as number | null;
-  const deathYear = raw.death_year as number | null;
-  const isAlive = raw.is_alive as boolean;
-
-  // birth_year null이면 제외
-  if (birthYear === null || birthYear === undefined) return null;
-  // death_year null이고 is_alive도 아니면 제외
-  if (deathYear === null && !isAlive) return null;
-
-  const personTags = raw.person_tags as Array<{
-    tag_id: string;
-    tags: { id: string; name_en: string; type: string } | null;
-  }> | null;
-
-  const tags: AgeFlowTag[] = (personTags ?? [])
-    .filter((pt) => pt.tags !== null)
-    .map((pt) => ({
-      id: pt.tags!.id,
-      name_en: tagLabel(pt.tags!.name_en),
-      type: pt.tags!.type as 'ERA' | 'FIELD',
-    }));
-
-  return {
-    id: raw.id as string,
-    slug: raw.slug as string,
-    name_en: raw.name_en as string | null,
-    name_ko: raw.name_ko as string,
-    birth_year: birthYear,
-    death_year: deathYear,
-    is_alive: isAlive,
-    thumbnail: raw.thumbnail as string | null,
-    view_count: (raw.view_count as number) ?? 0,
-    follow_count: (raw.follow_count as number) ?? 0,
-    tags,
-  };
-}
-
 // ── Hook ──
 
 export interface AgeFlowInitialData {
   persons: AgeFlowPerson[];
   events: AgeFlowEvent[];
   artifacts: AgeFlowArtifact[];
+  reigns: AgeFlowReign[];
 }
 
-export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
+export function useAgeFlow(
+  initialData?: AgeFlowInitialData,
+  initialYear: number = JOSEON_START
+): UseAgeFlowReturn {
   const hasInitial = !!initialData;
   const [allPersons, setAllPersons] = useState<AgeFlowPerson[]>(
     initialData?.persons ?? []
@@ -388,7 +206,8 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
   const [artifacts, setArtifacts] = useState<AgeFlowArtifact[]>(
     initialData?.artifacts ?? []
   );
-  const [currentYear, setCurrentYear] = useState(0);
+  const [reigns, setReigns] = useState<AgeFlowReign[]>(initialData?.reigns ?? []);
+  const [currentYear, setCurrentYear] = useState(initialYear);
   const [isLoading, setIsLoading] = useState(!hasInitial);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const initialScrollDone = useRef(false);
@@ -403,22 +222,12 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
         const json = await res.json();
 
         if (json.success) {
-          const { persons: rawPersons, events: rawEvents, artifacts: rawArtifacts } = json.data;
-
-          const transformed = (rawPersons as Record<string, unknown>[])
-            .map(transformPerson)
-            .filter((p): p is AgeFlowPerson => p !== null)
-            .filter((p) => {
-              const deathYear = p.is_alive ? JOSEON_END : (p.death_year ?? p.birth_year);
-              return p.birth_year <= JOSEON_END && deathYear >= JOSEON_START;
-            });
-          setAllPersons(transformed);
-          setEvents(rawEvents as AgeFlowEvent[]);
-          setArtifacts(
-            (rawArtifacts as AgeFlowArtifact[]).filter(
-              (a) => a.metadata?.created_year != null
-            )
-          );
+          // Already transformed + range-filtered on the server (lib/age-flow-data.ts)
+          const data = json.data as AgeFlowInitialData;
+          setAllPersons(data.persons);
+          setEvents(data.events);
+          setArtifacts(data.artifacts);
+          setReigns(data.reigns ?? []);
         }
       } catch (err) {
         console.error('Failed to load age-flow data:', err);
@@ -444,17 +253,17 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
   const displayYearRef = useRef(-1); // -1 = not initialised
   const targetYearRef = useRef(0);   // raw from scroll position
 
+  // The rAF loop only runs while the displayed year is catching up to the
+  // scroll position; it stops when settled and restarts on the next scroll.
   useEffect(() => {
-    let rafId: number;
-    let running = true;
+    let rafId = 0;
+    let running = false;
 
     const LERP_SPEED = 0.04; // 0-1, lower = smoother / slower catch-up
     const MAX_STEP = 1.5;    // cap how many years can change per frame
     const SNAP_THRESHOLD = 0.3; // snap when close enough
 
     const tick = () => {
-      if (!running) return;
-
       // Update target from current scroll position
       const scrollY = window.scrollY;
       targetYearRef.current = minYear + scrollY / SCROLL_PER_YEAR;
@@ -478,81 +287,102 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
       const clamped = Math.max(minYear, Math.min(year, maxYear));
       setCurrentYear((prev) => (prev !== clamped ? clamped : prev));
 
+      if (displayYearRef.current === targetYearRef.current) {
+        running = false; // settled — idle until the next scroll
+        return;
+      }
       rafId = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
+    const start = () => {
+      if (running) return;
+      running = true;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    start();
+    window.addEventListener('scroll', start, { passive: true });
     return () => {
-      running = false;
+      window.removeEventListener('scroll', start);
       cancelAnimationFrame(rafId);
+      running = false;
     };
   }, [minYear]);
 
   // ── 4. Visible persons ──
   const visiblePersons = useMemo(
     () =>
-      allPersons.filter(
-        (p) =>
-          p.birth_year <= currentYear &&
-          (p.is_alive || (p.death_year !== null && p.death_year >= currentYear))
-      ),
+      allPersons.filter((p) => isAliveIn(p, currentYear)),
     [allPersons, currentYear]
   );
 
   const aliveCount = visiblePersons.length;
 
-  // ── 4b. Current king — matched by reign period ──
+  // ── 4b. Current king — matched by reign period (reigns table) ──
   const currentKing = useMemo(() => {
-    const reign = JOSEON_KINGS.find(
-      (k) => currentYear >= k.reignStart && currentYear <= k.reignEnd
-    );
+    const reign = findReign(reigns, currentYear);
     if (!reign) return null;
     return allPersons.find((p) => p.slug === reign.slug) ?? null;
-  }, [allPersons, currentYear]);
+  }, [allPersons, reigns, currentYear]);
 
-  // ── 4c. Current wars ──
-  const currentWars = useMemo(() => getActiveWars(currentYear), [currentYear]);
+  // ── 4c. Current wars (EVENT nodes with end_year) ──
+  const wars = useMemo(() => getWarsFromEvents(events), [events]);
+  const currentWars = useMemo(() => getActiveWars(wars, currentYear), [wars, currentYear]);
   const warParticipantSlugs = useMemo(
     () => getWarParticipantSlugs(currentWars),
     [currentWars]
   );
 
   // ── 5. URL ?year= sync (throttled to avoid Safari SecurityError) ──
+  // Leading write, then a trailing write so the year you stop on always lands in the URL.
   const lastReplaceRef = useRef(0);
+  const trailingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (currentYear > 0 && initialScrollDone.current) {
-      const now = Date.now();
-      if (now - lastReplaceRef.current < 300) return;
-      lastReplaceRef.current = now;
-      window.history.replaceState(null, '', `?year=${currentYear}`);
-    }
+    if (currentYear <= 0 || !initialScrollDone.current) return;
+
+    const write = () => {
+      lastReplaceRef.current = Date.now();
+      // Keep other params (utm 등) and Next.js router state intact
+      const url = new URL(window.location.href);
+      url.searchParams.set('year', String(currentYear));
+      window.history.replaceState(window.history.state, '', url);
+    };
+
+    if (trailingTimerRef.current) clearTimeout(trailingTimerRef.current);
+    const wait = 300 - (Date.now() - lastReplaceRef.current);
+    if (wait <= 0) write();
+    else trailingTimerRef.current = setTimeout(write, wait);
   }, [currentYear]);
 
-  // ── 6. Initial ?year= parameter (after data loads) ──
+  useEffect(() => () => {
+    if (trailingTimerRef.current) clearTimeout(trailingTimerRef.current);
+  }, []);
+
+  // ── 6. Scroll to the initial year (from ?year= or ?focus=, resolved on the server) ──
   useEffect(() => {
     if (initialScrollDone.current || isLoading) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const yearParam = params.get('year');
-    if (yearParam) {
-      const targetYear = parseInt(yearParam, 10);
-      if (!isNaN(targetYear)) {
-        const targetScroll = (targetYear - minYear) * SCROLL_PER_YEAR;
-        // Reset lerp so it snaps to the restored position
-        displayYearRef.current = -1;
-        window.scrollTo(0, Math.max(0, targetScroll));
-      }
+    if (initialYear > minYear) {
+      // Reset lerp so it snaps to the restored position
+      displayYearRef.current = -1;
+      window.scrollTo(0, (initialYear - minYear) * SCROLL_PER_YEAR);
     }
     initialScrollDone.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minYear, isLoading]);
 
   // ── 7. Keyboard navigation ──
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Don't handle when focused on input elements
+      // Leave keys alone for form fields, open dialogs/sheets, and shortcuts
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement | null;
       if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable ||
+        target?.closest?.('[role="dialog"]')
       ) {
         return;
       }
@@ -602,7 +432,8 @@ export function useAgeFlow(initialData?: AgeFlowInitialData): UseAgeFlowReturn {
 
   const scrollToEra = useCallback(
     (era: Era) => {
-      scrollToYear(ERA_RANGES[era].start);
+      const range = getEraRangeInAgeFlow(era);
+      if (range) scrollToYear(range.start);
     },
     [scrollToYear]
   );

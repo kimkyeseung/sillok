@@ -1,18 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { AgeFlowPerson, RELATION_STYLES } from './useAgeFlow';
+import { usePersonRelations, type AgeFlowRelation } from './usePersonDetail';
 
-interface RelationData {
-  relation_id: string;
-  other_person_id: string;
-  rel_type: string;
-  direction: string;
-  other_person: {
-    id: string;
-    slug: string;
-  } | null;
-}
+const EMPTY: AgeFlowRelation[] = [];
 
 interface RelationLinesProps {
   hoveredPersonId: string | null;
@@ -22,8 +14,6 @@ interface RelationLinesProps {
   gridRef: React.RefObject<HTMLDivElement | null>;
 }
 
-const relationsCache = new Map<string, RelationData[]>();
-
 export default function RelationLines({
   hoveredPersonId,
   hoveredPersonSlug,
@@ -31,7 +21,7 @@ export default function RelationLines({
   cardRefs,
   gridRef,
 }: RelationLinesProps) {
-  const [relations, setRelations] = useState<RelationData[]>([]);
+  const { data: relations = EMPTY } = usePersonRelations(hoveredPersonSlug);
   const [lines, setLines] = useState<
     Array<{
       key: string;
@@ -45,35 +35,6 @@ export default function RelationLines({
       dashed: boolean;
     }>
   >([]);
-
-  // Fetch relations for hovered person
-  const fetchRelations = useCallback(async (slug: string) => {
-    if (relationsCache.has(slug)) {
-      setRelations(relationsCache.get(slug)!);
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/persons/${slug}/relations`);
-      const json = await res.json();
-      if (json.success) {
-        const data = json.data as RelationData[];
-        relationsCache.set(slug, data);
-        setRelations(data);
-      }
-    } catch {
-      setRelations([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!hoveredPersonSlug) {
-      setRelations([]);
-      setLines([]);
-      return;
-    }
-    fetchRelations(hoveredPersonSlug);
-  }, [hoveredPersonSlug, fetchRelations]);
 
   // Calculate line positions
   useEffect(() => {

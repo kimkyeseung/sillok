@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sanitizeSearchTerm } from '@/lib/search';
+import { revalidateAgeFlow } from '@/lib/age-flow-data';
 
 // ─── GET /api/nodes — Node list (public) ───
 
@@ -101,5 +102,6 @@ export async function POST(request: Request) {
     await supabaseAdmin.from('person_node_links').insert(links);
   }
 
+  revalidateAgeFlow();
   return apiSuccess(node);
 }

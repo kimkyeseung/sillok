@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { TAB_MIN_ITEMS } from '@/lib/person-sections';
 import { BOARDS, TOPICS } from '@/lib/feed';
 import { getBoardInfo, getTopicInfo } from '@/lib/feed-data';
+import { getAgeFlowData } from '@/lib/age-flow-data';
+import { getNotableYears } from '@/lib/age-flow';
 
 // Regenerate hourly — otherwise the sitemap is frozen at build time
 export const revalidate = 3600;
@@ -161,9 +163,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ),
   ];
 
+  // Age-flow year pages: years where an event/reign starts and enough figures are alive
+  const ageFlowYearPages: MetadataRoute.Sitemap = await getAgeFlowData()
+    .then((data) =>
+      getNotableYears(data).map((year) => ({
+        url: `${baseUrl}/age-flow/${year}`,
+        changeFrequency: 'monthly' as const,
+        priority: 0.5,
+      }))
+    )
+    .catch((err) => {
+      console.error('[sitemap] age-flow years skipped:', err);
+      return [];
+    });
+
   return [
     ...staticPages,
     ...communityPages,
+    ...ageFlowYearPages,
     ...personPages,
     ...nodePages,
     ...articlePages,

@@ -25,6 +25,7 @@ app/
 │   ├── page.tsx         홈 = Reddit식 커뮤니티 피드
 │   ├── b/[board]/       시대별 게시판 (ancient, three-kingdoms, unified-silla, goryeo, joseon, modern)
 │   ├── t/[topic]/       토픽 = 스레드 category (discussion, trivia, qna, sources, film-tv)
+│   ├── age-flow/[year]/ 연도 페이지 ("Korea in 1592") — 공유 카드는 /api/og/age-flow/[year]
 │   ├── persons/[slug]/  인물 상세 — 탭별 URL (timeline, relations, legacy, related, gallery, threads, sources, stats)
 │   └── threads/[id]/    스레드 상세 + 대댓글 트리
 ├── (auth)/          로그인/회원가입
@@ -32,7 +33,7 @@ app/
 └── api/             API Routes (feed, persons, threads, replies, nodes, person-item-comments 등)
 components/
 ├── feed/            홈 피드 (Feed, FeedCard, FeedShell, SortTabs, 중간 삽입 모듈)
-├── age-flow/        시대 흐름 시각화 (8 컴포넌트 + useAgeFlow 훅)
+├── age-flow/        시대 흐름 시각화 (12 컴포넌트 + useAgeFlow·useGridCap·usePersonDetail 훅)
 ├── common/          Header, Modal, Toast, PersonAvatar
 ├── person/ thread/ collection/ ranking/ search/ admin/
 lib/
@@ -42,10 +43,13 @@ lib/
 ├── api-helpers.ts      apiError / apiSuccess
 ├── feed.ts             피드 순수 로직 (정렬, 커서, 게시판·토픽, 댓글 트리) — 테스트 대상
 ├── feed-data.ts        피드·홈 모듈 로더 (서버)
+├── age-flow.ts         age-flow 순수 로직 (변환, 범위 필터, 재위·전쟁, 연도 스냅샷) — 테스트 대상
+├── age-flow-data.ts    age-flow 데이터 로더 (서버, unstable_cache 5분) — page SSR·API 공유. 쓰기 API는 `revalidateAgeFlow()` 호출
+├── reigns.ts           재위 어드민 검증 (/admin/reigns)
 ├── person-page.ts      인물 페이지 로더 (React cache로 layout/page/metadata 공유)
 ├── jsonld.ts           구조화 데이터 (Person, DiscussionForumPosting, Breadcrumb 등)
 ├── types.ts            NodeType, RelationType 등
-db/schema.sql           전체 DB 스키마 (40 테이블)
+db/schema.sql           전체 DB 스키마 (41 테이블)
 db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동기화)
 ```
 
@@ -80,7 +84,7 @@ db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동�
 
 ## DB 핵심 규칙
 
-- 전체 스키마: `db/schema.sql` (40 테이블)
+- 전체 스키마: `db/schema.sql` (41 테이블)
 - soft delete: `is_deleted = TRUE` (hard delete는 어드민만)
 - 카운터: 트리거 동기화 (`like_count`, `reply_count` 등)
 - `view_count`: 직접 UPDATE 금지 → `view_logs` + 배치 집계
@@ -102,6 +106,9 @@ db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동�
 | Cursor 페이지네이션 | offset 데이터 중복/누락 방지 |
 | view_count 배치 집계 | race condition 방지 |
 | 관계 양방향 1건 저장 | OR 쿼리로 양방향 조회 |
+| age-flow 카드 뷰포트 캡 | sticky 뷰포트라 넘치는 행은 도달 불가 → 중요도(포커스·왕·전쟁·조회수) 순 정렬 후 화면에 맞는 만큼만, 나머지는 "+N more" 목록 |
+| age-flow 왕·전쟁은 DB | 재위 = `reigns` 테이블, 전쟁 = EVENT 노드(type war/revolt) + `metadata.end_year` + 참여자 person_node_links. 코드에 하드코딩 금지 |
+| age-flow 연도 페이지 색인 | 생존 인물 `YEAR_PAGE_MIN_FIGURES`(5) 미만이면 noindex. sitemap은 사건·즉위 연도만 |
 | age-flow 전체 메모리 로드 | ~1,000명 OK. 2,000명 이상 시 구간 로드 전환 (SCALABILITY NOTE 참조) |
 | PersonAvatar 태그별 스타일 | FIELD 태그별 배경색·아이콘 분기 (`components/common/PersonAvatar.tsx`) |
 | 홈 기본 정렬 자동 전환 | 최근 7일 새 스레드 5개 미만이면 Top(전체), 이상이면 Hot. 조용할 때 오래된 글 목록처럼 보이지 않게 |

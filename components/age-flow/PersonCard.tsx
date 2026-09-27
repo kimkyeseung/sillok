@@ -15,6 +15,8 @@ interface PersonCardProps {
   isKing: boolean;
   isAtWar: boolean;
   onHover: (personId: string | null) => void;
+  /** Touch devices: first tap opens the person sheet instead of navigating */
+  onSelect?: (personId: string, e: React.MouseEvent) => void;
   cardRef: (el: HTMLElement | null) => void;
 }
 
@@ -42,6 +44,7 @@ export default function PersonCard({
   isKing,
   isAtWar,
   onHover,
+  onSelect,
   cardRef,
 }: PersonCardProps) {
   const age = getAge(person.birth_year, currentYear);
@@ -85,6 +88,7 @@ export default function PersonCard({
       style={grayscaleFilter ? { filter: grayscaleFilter } : undefined}
       onMouseEnter={() => onHover(person.id)}
       onMouseLeave={() => onHover(null)}
+      onClick={onSelect ? (e) => onSelect(person.id, e) : undefined}
     >
       {/* Dim overlay — sits above everything including ::before border glow */}
       <div
