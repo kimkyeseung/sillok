@@ -38,6 +38,8 @@ export interface PersonTag {
 
 export interface PersonDetail extends PersonSummary {
   name_hanja: string | null;
+  /** Other English names people search by ("King Sejong", "Yi Do") */
+  aliases_en: string[] | null;
   summary: string | null;
   birth_place: string | null;
   view_count: number | null;

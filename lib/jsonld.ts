@@ -35,6 +35,7 @@ export function personJsonLd(
     name_en: string;
     name_ko?: string | null;
     name_hanja?: string | null;
+    aliases_en?: string[] | null;
     summary?: string | null;
     thumbnail?: string | null;
     birth_year?: number | null;
@@ -51,8 +52,8 @@ export function personJsonLd(
     siblings?: PersonRef[];
   } = {}
 ) {
-  // Korean + Hanja names help Korean-language search (not shown in the English UI)
-  const alternateNames = [person.name_ko, person.name_hanja].filter(
+  // English aliases ("King Sejong") + Korean/Hanja names for Korean-language search
+  const alternateNames = [...(person.aliases_en ?? []), person.name_ko, person.name_hanja].filter(
     (v): v is string => !!v
   );
   const refs = (list?: PersonRef[]) => (list?.length ? list.map(personRef) : undefined);
