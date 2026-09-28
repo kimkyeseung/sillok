@@ -1,17 +1,20 @@
 // 국보·보물 노드 보강 — fetch-heritage(-images).mjs · translate-heritage.mjs 결과를 이미 등록된 노드에 반영
 //
 // metadata: year_start/year_end/year_precision (시대 문자열 규칙 파싱), designation_group(+_size),
-//           region_key, collection(영문), thumbnail_license
+//           region_key, collection(영문, collection-aliases.json 으로 정리), thumbnail_license
+//           (designation_group_size·group_primary·featured_rank 는 heritage-ranks.mts 담당)
 // thumbnail: 상업적 이용 가능한 공공누리 1유형 이미지만 (없으면 비움). 큐레이션 노드(source 없음)는 기존 썸네일 유지
 // node_images: 1유형 + 3유형(변경금지, 크롭 없이 표시) — 노드별로 지우고 다시 넣어 재실행 안전
 //
-// 사용: npx tsx --env-file=.env.local scripts/enrich-heritage.mts [--dry-run]
+// 사용: npx tsx --env-file=.env.local scripts/enrich-heritage.mts [--dry-run] [--skip-images]
+//   --skip-images: metadata·썸네일만 갱신 (node_images 재작성 생략 — 소장처 이름 정리 등에 사용)
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
 import { parseEraYears } from '../lib/heritage-era';
 
 const DRY = process.argv.includes('--dry-run');
+const SKIP_IMAGES = process.argv.includes('--skip-images');
 const DIR = new URL('../data/heritage/', import.meta.url);
 const MODEL = 'gpt-5.4-mini';
 const TRANSLATE_CONCURRENCY = 4;
@@ -180,12 +183,9 @@ if (missingImages)
     `${missingImages} items have no image list yet — run fetch-heritage-images.mjs first`
   );
 
-// 지정번호가 같은 항목 묶음 (조선왕조실록 판본들 등)
+// 지정번호가 같은 항목 묶음 (조선왕조실록 판본들 등) — 크기·대표는 heritage-ranks.mts 가 노드 기준으로 계산
 const groupKey = (x: SourceItem) =>
   `${x.kind === '국보' ? 'national_treasure' : 'treasure'}-${x.designation_no.split('-')[0]}`;
-const groupSize = new Map<string, number>();
-for (const x of source)
-  groupSize.set(groupKey(x), (groupSize.get(groupKey(x)) ?? 0) + 1);
 
 const collections = await translateStrings(
   'collections.json',
@@ -194,19 +194,37 @@ const collections = await translateStrings(
   150
 );
 
+// 소장처 영문명 정리 — 종단명·직함 접미어 제거, 같은 기관 이름 통일, 오역 수정
+const collectionRules = await readJson<{
+  stripSuffixes: string[];
+  aliases: Record<string, string>;
+  koreanFixes: Record<string, string>;
+}>('collection-aliases.json');
+const suffixes = collectionRules.stripSuffixes.map((re) => new RegExp(re));
+function collectionName(admin: string | null): string | null {
+  if (!admin) return null;
+  let name = collectionRules.koreanFixes[admin] ?? collections[admin];
+  if (!name) return null;
+  for (const re of suffixes) name = name.replace(re, '');
+  return collectionRules.aliases[name] ?? name;
+}
+
 // 같은 URL이 두 번 나오기도 함 → (node_id, url) UNIQUE 위반 방지
 const galleryOf = (id: string) =>
   (images[id] ?? [])
     .filter((i) => GALLERY_LICENSES.has(i.license))
     .filter((i, idx, arr) => arr.findIndex((j) => j.url === i.url) === idx);
-const captions = await translateStrings(
-  'image-captions.json',
-  source
-    .flatMap((x) => galleryOf(x.id).map((i) => i.caption_ko))
-    .filter((c): c is string => !!c),
-  'Translate each short Korean photo caption of a Korean cultural heritage item into concise English (Revised Romanization for proper nouns, e.g. "석굴암석굴 감실보살상" → "Bodhisattva in a niche, Seokguram Grotto").',
-  150
-);
+// Captions only matter when node_images is rewritten
+const captions = SKIP_IMAGES
+  ? {}
+  : await translateStrings(
+      'image-captions.json',
+      source
+        .flatMap((x) => galleryOf(x.id).map((i) => i.caption_ko))
+        .filter((c): c is string => !!c),
+      'Translate each short Korean photo caption of a Korean cultural heritage item into concise English (Revised Romanization for proper nouns, e.g. "석굴암석굴 감실보살상" → "Bodhisattva in a niche, Seokguram Grotto").',
+      150
+    );
 
 // 등록된 노드 (heritage_id 기준)
 const nodes: {
@@ -259,10 +277,8 @@ for (const node of nodes) {
     ...(era ?? {}),
     ...(createdYear != null && { created_year: createdYear }),
     designation_group: groupKey(x),
-    designation_group_size: groupSize.get(groupKey(x)),
     region_key: regionKey(x.region),
-    ...(x.admin &&
-      collections[x.admin] && { collection: collections[x.admin] }),
+    collection: collectionName(x.admin),
   };
   const update: Record<string, unknown> = { metadata };
   if (isImported) {
@@ -291,6 +307,8 @@ for (const node of nodes) {
       .update(update)
       .eq('id', node.id);
     if (error) throw error;
+  }
+  if (!DRY && !SKIP_IMAGES) {
     const del = await supabase
       .from('node_images')
       .delete()

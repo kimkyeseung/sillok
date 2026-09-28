@@ -1,0 +1,41 @@
+{
+  "_comment": "English collection name cleanup, applied by scripts/enrich-heritage.mts after collections.json. stripSuffixes are regexes removed from the end; aliases map a (suffix-stripped) name to its canonical name.",
+  "stripSuffixes": [
+    ", Jogye Order of Korean Buddhism$",
+    ", Chief Monk$",
+    " \\(Abbot: [^)]*\\)$",
+    ", etc\\.$",
+    " \\(Permanent Exhibition at [^)]*\\)$",
+    " \\(Mayor of [^)]*\\)$"
+  ],
+  "aliases": {
+    "Gansong Art Museum": "Gansong Art and Culture Foundation",
+    "Gosan Yun Seondo Exhibition Hall": "Gosan Yun Seondo Museum",
+    "Hyeonchungsa Shrine Management Office, Korea Heritage Service": "Hyeonchungsa Shrine Management Office",
+    "National Palace Museum of Korea, Korea Heritage Service": "National Palace Museum of Korea",
+    "Kyujanggak, Seoul National University": "Kyujanggak Institute for Korean Studies, Seoul National University",
+    "Dongguk University Central Library": "Dongguk University Library",
+    "Korea University Central Library": "Korea University Library",
+    "Yeungnam University Central Library": "Yeungnam University Library",
+    "Yonsei University Central Library": "Yonsei University Library",
+    "Haeinsa Holy Relics Museum": "Haeinsa Temple Holy Relics Museum",
+    "Beomeosa Temple Sacred Relics Museum": "Beomeosa Temple Holy Relics Museum",
+    "Museum of Buddhist Art": "Central Buddhist Museum",
+    "Gyeongbuk Hyanggyo Foundation": "Gyeongsangbuk-do Hyanggyo Foundation",
+    "Seongju Hyanggyo Confucian School": "Seongju Hyanggyo",
+    "Cheongju City Hall": "Cheongju City",
+    "Sacheon City Hall, Gyeongnam": "Sacheon City",
+    "Yeongyang County Office": "Yeongyang County",
+    "Ganghwa County Office, Incheon Metropolitan City": "Ganghwa County",
+    "Mayor of Seosan": "Seosan City",
+    "Mayor of Suwon": "Suwon City",
+    "Eunpyeong District": "Eunpyeong-gu",
+    "Namnangsa Temple": "Namjangsa Temple",
+    "Geamsa Temple": "Gaeamsa Temple",
+    "Bureamsa Temple": "Buramsa Temple",
+    "Dharma Temple": "Dalmasa Temple"
+  },
+  "koreanFixes": {
+    "한국국학진흥원": "Korean Studies Advancement Center"
+  }
+}
