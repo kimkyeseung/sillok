@@ -3,6 +3,7 @@
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildAgeFlowData, JOSEON_START, JOSEON_END, type RawReign } from '@/lib/age-flow';
+import { CURATED_NODES_FILTER } from '@/lib/heritage';
 import type {
   AgeFlowEvent,
   AgeFlowArtifact,
@@ -52,6 +53,8 @@ async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
       .eq('is_deleted', false)
       .eq('is_published', true)
       .eq('node_type', 'ARTIFACT')
+      // Bulk-imported heritage (~2,800) would push the curated artifacts past the limit
+      .or(CURATED_NODES_FILTER)
       .not('metadata->created_year', 'is', null)
       .order('created_at', { ascending: false })
       .limit(ARTIFACT_LIMIT),
