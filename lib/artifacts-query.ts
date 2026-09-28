@@ -32,7 +32,7 @@ export type ArtifactFilters = z.infer<typeof ArtifactFilterSchema>;
 export function artifactQuery(
   select: string,
   filters: ArtifactFilters,
-  options?: { count?: 'exact'; ignoreFacets?: boolean }
+  options?: { count?: 'exact'; ignoreFacets?: boolean; expandGroups?: boolean }
 ) {
   let query = supabaseAdmin
     .from('nodes')
@@ -52,6 +52,6 @@ export function artifactQuery(
   if (region) query = query.eq('metadata->>region_key', region);
   if (q)
     query = query.or(`title.ilike.*${q}*,metadata->>title_ko.ilike.*${q}*`);
-  else query = query.or(GROUP_PRIMARY_FILTER);
+  else if (!options?.expandGroups) query = query.or(GROUP_PRIMARY_FILTER);
   return query;
 }

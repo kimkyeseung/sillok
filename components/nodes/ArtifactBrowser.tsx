@@ -2,12 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
 import type { NodeItem } from '@/app/(public)/nodes/page';
 import NodeCard from '@/components/nodes/NodeCard';
 import PeriodHistogram from '@/components/nodes/PeriodHistogram';
 import CollectionFilter from '@/components/nodes/CollectionFilter';
+import type { ArtifactPoints } from '@/components/nodes/ArtifactMap';
+
+// MapLibre is ~800KB — only loaded when the map view is opened
+const ArtifactMap = dynamic(() => import('@/components/nodes/ArtifactMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[70vh] min-h-[420px] animate-pulse rounded-xl bg-gray-50" />
+  ),
+});
 import {
   ARTIFACT_CATEGORIES,
   ARTIFACT_PAGE_SIZE,
@@ -32,6 +42,7 @@ const FILTER_KEYS = [
   'region',
   'collection',
   'q',
+  'view',
 ] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 
@@ -85,6 +96,7 @@ export default function ArtifactBrowser() {
   const region = get('region');
   const collection = get('collection');
   const q = get('q');
+  const isMap = get('view') === 'map';
 
   // Search box is local state, pushed to the URL after typing pauses
   const [searchInput, setSearchInput] = useState(q);
@@ -153,10 +165,17 @@ export default function ArtifactBrowser() {
     { revalidateOnFocus: false, keepPreviousData: true }
   );
 
+  // Map view: every located artifact matching the filters (sets not collapsed)
+  const { data: points } = useSWR<ArtifactPoints>(
+    isMap ? `/api/artifacts/map?${facetsQuery.toString()}` : null,
+    fetchData,
+    { revalidateOnFocus: false, keepPreviousData: true }
+  );
+
   const { data, error, size, setSize, isValidating } =
     useSWRInfinite<ArtifactPage>(
       (index, prev) => {
-        if (prev && !prev.has_next) return null;
+        if (isMap || (prev && !prev.has_next)) return null;
         const params = new URLSearchParams(query);
         if (index > 0 && prev?.next_cursor)
           params.set('cursor', prev.next_cursor);
@@ -234,18 +253,43 @@ export default function ArtifactBrowser() {
             </option>
           ))}
         </select>
-        <select
-          value={sort}
-          onChange={(e) => setFilter('sort', e.target.value)}
-          aria-label="Sort artifacts"
-          className="rounded-full border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none"
+        {!isMap && (
+          <select
+            value={sort}
+            onChange={(e) => setFilter('sort', e.target.value)}
+            aria-label="Sort artifacts"
+            className="rounded-full border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none"
+          >
+            {ARTIFACT_SORTS.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        )}
+        <div
+          className="flex rounded-full border border-gray-200 bg-white p-0.5"
+          role="group"
+          aria-label="View"
         >
-          {ARTIFACT_SORTS.map((s) => (
-            <option key={s.key} value={s.key}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          {(['list', 'map'] as const).map((v) => {
+            const active = (v === 'map') === isMap;
+            return (
+              <button
+                key={v}
+                onClick={() => setFilter('view', v === 'map' ? 'map' : '')}
+                aria-pressed={active}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                  active
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {v === 'map' ? 'Map' : 'List'}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Filters */}
@@ -293,11 +337,15 @@ export default function ArtifactBrowser() {
 
       <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
         <span aria-live="polite">
-          {total != null
-            ? `${total.toLocaleString()} artifacts`
-            : data
-              ? ''
-              : 'Loading…'}
+          {isMap
+            ? points
+              ? `${points.features.length.toLocaleString()} artifacts on the map · museum pieces without a site aren't shown`
+              : 'Loading…'
+            : total != null
+              ? `${total.toLocaleString()} artifacts`
+              : data
+                ? ''
+                : 'Loading…'}
         </span>
         {hasFilters && (
           <button
@@ -309,50 +357,56 @@ export default function ArtifactBrowser() {
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((node) => (
-          <NodeCard key={node.id} node={node} />
-        ))}
-        {!data &&
-          !error &&
-          Array.from({ length: 6 }, (_, i) => (
-            <div
-              key={i}
-              className="h-72 animate-pulse rounded-xl border border-gray-100 bg-gray-50"
-            />
-          ))}
-      </div>
+      {isMap ? (
+        <ArtifactMap points={points} />
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((node) => (
+              <NodeCard key={node.id} node={node} />
+            ))}
+            {!data &&
+              !error &&
+              Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-72 animate-pulse rounded-xl border border-gray-100 bg-gray-50"
+                />
+              ))}
+          </div>
 
-      {error && (
-        <div className="py-10 text-center text-sm text-gray-500">
-          Couldn&apos;t load artifacts.{' '}
-          <button
-            onClick={() => setSize(size)}
-            className="text-brand-600 hover:text-brand-700"
-          >
-            Retry
-          </button>
-        </div>
-      )}
+          {error && (
+            <div className="py-10 text-center text-sm text-gray-500">
+              Couldn&apos;t load artifacts.{' '}
+              <button
+                onClick={() => setSize(size)}
+                className="text-brand-600 hover:text-brand-700"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
-      {data && items.length === 0 && (
-        <div className="flex flex-col items-center py-20 text-gray-400">
-          <span className="text-4xl">🏺</span>
-          <p className="mt-3 text-sm font-medium">No artifacts found</p>
-          <p className="text-xs">Try a different filter or search term</p>
-        </div>
-      )}
+          {data && items.length === 0 && (
+            <div className="flex flex-col items-center py-20 text-gray-400">
+              <span className="text-4xl">🏺</span>
+              <p className="mt-3 text-sm font-medium">No artifacts found</p>
+              <p className="text-xs">Try a different filter or search term</p>
+            </div>
+          )}
 
-      {hasNext && (
-        <div ref={sentinel} className="mt-6 flex justify-center">
-          <button
-            onClick={() => setSize(size + 1)}
-            disabled={isLoadingMore}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-50"
-          >
-            {isLoadingMore ? 'Loading…' : 'Load more'}
-          </button>
-        </div>
+          {hasNext && (
+            <div ref={sentinel} className="mt-6 flex justify-center">
+              <button
+                onClick={() => setSize(size + 1)}
+                disabled={isLoadingMore}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-50"
+              >
+                {isLoadingMore ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
