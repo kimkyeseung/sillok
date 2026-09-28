@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ARTIFACT_PERIODS,
   countByPeriod,
+  countFacets,
   cursorFilter,
   decodeArtifactCursor,
   encodeArtifactCursor,
@@ -101,5 +102,42 @@ describe('countByPeriod', () => {
     expect(out.find((o) => o.period === 'Joseon')?.count).toBe(2);
     expect(out.find((o) => o.period === 'Goryeo')?.count).toBe(1);
     expect(out.find((o) => o.period === 'Baekje')?.count).toBe(0);
+  });
+});
+
+describe('countFacets', () => {
+  const rows = [
+    { period: 'Joseon', collection: 'National Museum of Korea' },
+    { period: 'Joseon', collection: 'National Museum of Korea' },
+    { period: 'Goryeo', collection: 'National Museum of Korea' },
+    { period: 'Goryeo', collection: 'Horim Museum' },
+    { period: 'Silla', collection: null },
+  ];
+  const period = (f: ReturnType<typeof countFacets>, p: string) =>
+    f.periods.find((x) => x.period === p)?.count;
+
+  it('counts both facets over all rows when nothing is selected', () => {
+    const f = countFacets(rows, {});
+    expect(f.collections).toEqual([
+      { collection: 'National Museum of Korea', count: 3 },
+      { collection: 'Horim Museum', count: 1 },
+    ]);
+    expect(period(f, 'Goryeo')).toBe(2);
+    expect(period(f, 'Silla')).toBe(1);
+  });
+
+  it('narrows periods by the selected collection and collections by the selected period', () => {
+    const f = countFacets(rows, {
+      period: 'Goryeo',
+      collection: 'Horim Museum',
+    });
+    // Periods ignore their own selection but respect the collection
+    expect(period(f, 'Goryeo')).toBe(1);
+    expect(period(f, 'Joseon')).toBe(0);
+    // Collections ignore their own selection but respect the period
+    expect(f.collections).toEqual([
+      { collection: 'Horim Museum', count: 1 },
+      { collection: 'National Museum of Korea', count: 1 },
+    ]);
   });
 });

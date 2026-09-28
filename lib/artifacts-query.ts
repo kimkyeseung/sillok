@@ -21,6 +21,8 @@ export const ArtifactFilterSchema = z.object({
   kind: z.enum(keys(HERITAGE_KINDS)).optional(),
   period: z.enum(ARTIFACT_PERIODS).optional(),
   region: z.enum(keys(ARTIFACT_REGIONS)).optional(),
+  // English collection name (metadata.collection) — exact match
+  collection: z.string().trim().min(1).max(200).optional(),
   q: z.string().max(100).transform(sanitizeSearchTerm).optional(),
 });
 
@@ -30,7 +32,7 @@ export type ArtifactFilters = z.infer<typeof ArtifactFilterSchema>;
 export function artifactQuery(
   select: string,
   filters: ArtifactFilters,
-  options?: { count?: 'exact'; ignorePeriod?: boolean }
+  options?: { count?: 'exact'; ignoreFacets?: boolean }
 ) {
   let query = supabaseAdmin
     .from('nodes')
@@ -39,11 +41,14 @@ export function artifactQuery(
     .eq('is_deleted', false)
     .eq('is_published', true);
 
-  const { category, kind, period, region, q } = filters;
+  const { category, kind, period, region, collection, q } = filters;
   if (category) query = query.eq('metadata->>category', category);
   if (kind) query = query.eq('metadata->>heritage_kind', kind);
-  if (period && !options?.ignorePeriod)
+  // Facet counts (period chart, collection filter) apply their selections themselves
+  if (period && !options?.ignoreFacets)
     query = query.eq('metadata->>created_period', period);
+  if (collection && !options?.ignoreFacets)
+    query = query.eq('metadata->>collection', collection);
   if (region) query = query.eq('metadata->>region_key', region);
   if (q)
     query = query.or(`title.ilike.*${q}*,metadata->>title_ko.ilike.*${q}*`);

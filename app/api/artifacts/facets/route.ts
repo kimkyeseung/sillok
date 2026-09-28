@@ -1,9 +1,9 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
-import { countByPeriod } from '@/lib/artifacts';
+import { countFacets, type FacetRow } from '@/lib/artifacts';
 import { ArtifactFilterSchema, artifactQuery } from '@/lib/artifacts-query';
 
-// ─── GET /api/artifacts/periods — Artifact count per period for the current filters (public) ───
-// The period filter itself is ignored so every bar stays clickable.
+// ─── GET /api/artifacts/facets — Period and collection counts for the current filters (public) ───
+// Each facet ignores its own selection so every option stays clickable (see countFacets).
 
 const PAGE = 1000; // PostgREST max rows per request
 
@@ -15,15 +15,13 @@ export async function GET(request: Request) {
   if (!parsed.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  // Only one short column per row (~3k rows) — no GROUP BY in the query builder
-  const periods: Array<string | null> = [];
+  // Two short columns per row (~3k rows) — no GROUP BY in the query builder
+  const rows: FacetRow[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await artifactQuery(
-      'period:metadata->>created_period',
+      'period:metadata->>created_period, collection:metadata->>collection',
       parsed.data,
-      {
-        ignorePeriod: true,
-      }
+      { ignoreFacets: true }
     )
       .order('id', { ascending: true })
       .range(from, from + PAGE - 1);
@@ -33,10 +31,11 @@ export async function GET(request: Request) {
         'An error occurred while processing.',
         500
       );
-    const rows = (data ?? []) as unknown as { period: string | null }[];
-    periods.push(...rows.map((r) => r.period));
-    if (rows.length < PAGE) break;
+    const page = (data ?? []) as unknown as FacetRow[];
+    rows.push(...page);
+    if (page.length < PAGE) break;
   }
 
-  return apiSuccess({ periods: countByPeriod(periods), total: periods.length });
+  const { period, collection } = parsed.data;
+  return apiSuccess(countFacets(rows, { period, collection }));
 }

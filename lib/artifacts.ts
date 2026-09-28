@@ -150,3 +150,44 @@ export function countByPeriod(
     count: counts.get(period) ?? 0,
   }));
 }
+
+export interface FacetRow {
+  period: string | null;
+  collection: string | null;
+}
+
+export interface ArtifactFacets {
+  periods: Array<{ period: ArtifactPeriod; count: number }>;
+  /** Most-held first; ties alphabetical */
+  collections: Array<{ collection: string; count: number }>;
+}
+
+/**
+ * Counts for the period chart and the collection filter from one scan.
+ * Rows match every filter except period and collection — each facet then applies
+ * the *other* selection, so its own options stay clickable.
+ */
+export function countFacets(
+  rows: FacetRow[],
+  selected: { period?: string; collection?: string }
+): ArtifactFacets {
+  const periods = countByPeriod(
+    rows
+      .filter(
+        (r) => !selected.collection || r.collection === selected.collection
+      )
+      .map((r) => r.period)
+  );
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.collection || (selected.period && r.period !== selected.period))
+      continue;
+    counts.set(r.collection, (counts.get(r.collection) ?? 0) + 1);
+  }
+  const collections = [...counts]
+    .map(([collection, count]) => ({ collection, count }))
+    .sort(
+      (a, b) => b.count - a.count || a.collection.localeCompare(b.collection)
+    );
+  return { periods, collections };
+}

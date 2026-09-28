@@ -7,6 +7,7 @@ import useSWRInfinite from 'swr/infinite';
 import type { NodeItem } from '@/app/(public)/nodes/page';
 import NodeCard from '@/components/nodes/NodeCard';
 import PeriodHistogram from '@/components/nodes/PeriodHistogram';
+import CollectionFilter from '@/components/nodes/CollectionFilter';
 import {
   ARTIFACT_CATEGORIES,
   ARTIFACT_PAGE_SIZE,
@@ -29,13 +30,14 @@ const FILTER_KEYS = [
   'kind',
   'period',
   'region',
+  'collection',
   'q',
 ] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 
-interface PeriodStats {
+interface Facets {
   periods: { period: ArtifactPeriod; count: number }[];
-  total: number;
+  collections: { collection: string; count: number }[];
 }
 
 async function fetchData<T>(url: string): Promise<T> {
@@ -81,6 +83,7 @@ export default function ArtifactBrowser() {
   const kind = get('kind');
   const period = get('period');
   const region = get('region');
+  const collection = get('collection');
   const q = get('q');
 
   // Search box is local state, pushed to the URL after typing pauses
@@ -109,7 +112,14 @@ export default function ArtifactBrowser() {
 
   function clearFilters() {
     const params = new URLSearchParams(latestParams.current);
-    for (const k of ['category', 'kind', 'period', 'region', 'q'] as const)
+    for (const k of [
+      'category',
+      'kind',
+      'period',
+      'region',
+      'collection',
+      'q',
+    ] as const)
       params.delete(k);
     setSearchInput('');
     replaceParams(params);
@@ -130,15 +140,15 @@ export default function ArtifactBrowser() {
   if (kind) query.set('kind', kind);
   if (period) query.set('period', period);
   if (region) query.set('region', region);
+  if (collection) query.set('collection', collection);
   if (q) query.set('q', q);
 
-  // Period counts follow every filter except the period itself
-  const statsQuery = new URLSearchParams(query);
-  statsQuery.delete('limit');
-  statsQuery.delete('sort');
-  statsQuery.delete('period');
-  const { data: stats, isValidating: statsLoading } = useSWR<PeriodStats>(
-    `/api/artifacts/periods?${statsQuery.toString()}`,
+  // Period chart + collection filter counts (each ignores its own selection server-side)
+  const facetsQuery = new URLSearchParams(query);
+  facetsQuery.delete('limit');
+  facetsQuery.delete('sort');
+  const { data: facets, isValidating: facetsLoading } = useSWR<Facets>(
+    `/api/artifacts/facets?${facetsQuery.toString()}`,
     fetchData,
     { revalidateOnFocus: false, keepPreviousData: true }
   );
@@ -160,7 +170,14 @@ export default function ArtifactBrowser() {
   const total = data?.[0]?.total ?? null;
   const hasNext = data?.[data.length - 1]?.has_next ?? false;
   const isLoadingMore = isValidating && (!data || data.length < size);
-  const hasFilters = !!(category || kind || period || region || q);
+  const hasFilters = !!(
+    category ||
+    kind ||
+    period ||
+    region ||
+    collection ||
+    q
+  );
 
   // Infinite scroll
   const sentinel = useRef<HTMLDivElement>(null);
@@ -261,11 +278,16 @@ export default function ArtifactBrowser() {
             </Chip>
           ))}
         </div>
+        <CollectionFilter
+          collections={facets?.collections}
+          selected={collection}
+          onSelect={(c) => setFilter('collection', c)}
+        />
         <PeriodHistogram
-          periods={stats?.periods}
+          periods={facets?.periods}
           selected={period}
           onSelect={(p) => setFilter('period', p)}
-          loading={statsLoading}
+          loading={facetsLoading}
         />
       </div>
 
