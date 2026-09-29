@@ -72,8 +72,12 @@ export async function POST(request: Request) {
     if (input.mode === 'manual') {
       const def = FORMAT_DEFS[input.format];
       // drake / its-over take one subject; a second figure is optional context
-      if (input.person_slugs.length < def.figures)
-        return apiError('VALIDATION_ERROR', `"${def.label}" needs two figures.`, 422);
+      if (input.person_slugs.length < def.figures.min || input.person_slugs.length > def.figures.max)
+        return apiError(
+          'VALIDATION_ERROR',
+          `"${def.label}" needs ${def.figures.min === def.figures.max ? def.figures.min : `${def.figures.min}–${def.figures.max}`} figure(s).`,
+          422,
+        );
     }
 
     const [found, event] = await Promise.all([

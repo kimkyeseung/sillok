@@ -8,6 +8,7 @@ import {
   FACE_VARIANTS,
   FORMAT_DEFS,
   HAT_TYPES,
+  formatEntry,
   isTemplateFormat,
   memeThreadBody,
   type FaceVariant,
@@ -17,6 +18,7 @@ import {
   type TextBox,
 } from '@/lib/meme';
 import MemeBoxEditor from './MemeBoxEditor';
+import MemeFieldsForm, { cleanFields } from './MemeFieldsForm';
 
 export interface AdminMeme {
   id: string;
@@ -38,26 +40,6 @@ export interface AdminMeme {
 export const memeImageUrl = (m: Pick<AdminMeme, 'id' | 'updated_at'>) =>
   `/api/og/meme/${m.id}?v=${encodeURIComponent(m.updated_at)}`;
 
-const TEXT_FIELDS: Record<string, { key: string; label: string; list?: boolean }[]> = {
-  'feels-bro': [
-    { key: 'left', label: 'Left caption (figure 1)' },
-    { key: 'right', label: 'Right caption (figure 2)' },
-    { key: 'bottom', label: 'Bottom punchline' },
-  ],
-  drake: [
-    { key: 'reject', label: 'Rejects' },
-    { key: 'prefer', label: 'Prefers' },
-  ],
-  'virgin-chad': [
-    { key: 'virgin', label: 'Virgin traits (one per line)', list: true },
-    { key: 'chad', label: 'Chad traits (one per line)', list: true },
-  ],
-  'its-over': [
-    { key: 'top', label: 'Top caption' },
-    { key: 'bottom', label: 'Bottom punchline' },
-  ],
-};
-
 const HAT_LABELS: Record<HatType, string> = {
   ikseongwan: 'King (ikseongwan)',
   gat: 'Scholar (gat)',
@@ -66,15 +48,9 @@ const HAT_LABELS: Record<HatType, string> = {
   none: 'None (bald)',
 };
 
-/** Drop blank list lines (trait textareas) before preview/save */
-const cleanContent = (c: Record<string, unknown>) =>
-  Object.fromEntries(
-    Object.entries(c).map(([k, v]) =>
-      Array.isArray(v) && v.every((x) => typeof x === 'string') && k !== 'faces' && k !== 'hats'
-        ? [k, (v as string[]).map((s) => s.trim()).filter(Boolean)]
-        : [k, v],
-    ),
-  );
+/** Drop blank list lines / unused optional text before preview and save */
+const cleanContent = (format: string, c: Record<string, unknown>) =>
+  isTemplateFormat(format) ? cleanFields(formatEntry(format).fields, c) : c;
 
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
@@ -117,8 +93,8 @@ export default function MemeEditor({
 
   const debounced = useDebounced(content, 600);
   const previewUrl = useMemo(
-    () => `/api/og/meme/${meme.id}?content=${encodeURIComponent(JSON.stringify(cleanContent(debounced)))}`,
-    [meme.id, debounced],
+    () => `/api/og/meme/${meme.id}?content=${encodeURIComponent(JSON.stringify(cleanContent(meme.format, debounced)))}`,
+    [meme.id, meme.format, debounced],
   );
   useEffect(() => setPreviewError(false), [previewUrl]);
 
@@ -127,7 +103,7 @@ export default function MemeEditor({
   const save = async (status?: MemeStatus) => {
     setSaving(true);
     try {
-      const body: Record<string, unknown> = { content: cleanContent(content), fact: fact.trim() || null };
+      const body: Record<string, unknown> = { content: cleanContent(meme.format, content), fact: fact.trim() || null };
       if (title.trim()) body.title = title.trim();
       if (meme.kind === 'translated') {
         body.source_url = sourceUrl.trim() || null;
@@ -155,30 +131,19 @@ export default function MemeEditor({
   const templateForm = () => {
     if (!isTemplateFormat(meme.format)) return null;
     const def = FORMAT_DEFS[meme.format];
-    const faces = (content.faces as FaceVariant[] | undefined) ?? def.faces;
+    const faces = (content.faces as FaceVariant[] | undefined) ?? (def.faces as readonly FaceVariant[]);
     const hats = content.hats as (HatType | 'auto')[] | undefined;
-    const figureSlots = meme.format === 'drake' || meme.format === 'its-over' ? 1 : 2;
+    const figureSlots = Math.max(1, Math.min(2, meme.figures.length));
 
     return (
       <div className="space-y-4">
-        {TEXT_FIELDS[meme.format].map((f) => (
-          <label key={f.key} className="block">
-            <span className="mb-1 block text-xs font-medium text-gray-600">{f.label}</span>
-            {f.list ? (
-              <textarea
-                className="input min-h-[96px]"
-                value={((content[f.key] as string[] | undefined) ?? []).join('\n')}
-                onChange={(e) => set(f.key, e.target.value.split('\n').slice(0, 5))}
-              />
-            ) : (
-              <textarea
-                className="input min-h-[60px]"
-                value={(content[f.key] as string | undefined) ?? ''}
-                onChange={(e) => set(f.key, e.target.value)}
-              />
-            )}
-          </label>
-        ))}
+        <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">{def.guide.structure}</p>
+        <MemeFieldsForm
+          fields={def.fields}
+          value={content}
+          onChange={(next) => setContent((c) => ({ ...c, ...next }))}
+          names={meme.figures.map((f) => f.name)}
+        />
 
         <div className="grid grid-cols-2 gap-3">
           {def.faces.map((_, slot) => (
@@ -190,7 +155,7 @@ export default function MemeEditor({
                 className="input"
                 value={faces[slot]}
                 onChange={(e) => {
-                  const next = [...faces];
+                  const next = [...faces] as FaceVariant[];
                   next[slot] = e.target.value as FaceVariant;
                   set('faces', next);
                 }}

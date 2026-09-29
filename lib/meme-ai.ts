@@ -11,6 +11,7 @@ import {
   type TextBox,
 } from './meme';
 import type { MemeEventInfo, MemeFigureInfo } from './meme-data';
+import { formatEntry, formatGuide, jsonObject } from './meme-formats';
 
 // ─── Claude calls for the meme generator (server only) ───
 // Structured outputs guarantee the JSON shape; zod re-checks lengths/limits
@@ -90,35 +91,16 @@ Rules:
 - "fact" is one or two plain sentences stating the historical fact the joke is based on. It becomes the body of the community post.
 - "title" is the title of the community post that carries the meme: a short, natural English post title (max ~90 characters) that teases the joke without repeating the captions, e.g. "Seonjo's 1597 personnel decisions, summarized". No hashtags, no emoji.`;
 
-const FORMAT_GUIDE: Record<TemplateFormat, string> = {
-  'feels-bro':
-    'Format "I know that feel bro": two figures commiserate over a shared experience. "left" = figure 1 describes their hardship, "right" = figure 2 describes a parallel hardship, "bottom" = the punchline, usually exactly "I know that feel bro" or a short variant.',
-  drake:
-    'Format "Reject / Prefer" (Drake): figure 1 rejects one option ("reject") and prefers another ("prefer"). The joke is usually that the preferred option was the historically worse or ironic choice. Figure 2 (if given) is context only.',
-  'virgin-chad':
-    'Format "Virgin vs Chad": figure 1 is "the virgin", figure 2 is "the chad". Give 3 short trait bullets for each ("virgin", "chad"), parallel where possible (e.g. "lost 150 ships" vs "12 ships vs 133").',
-  'its-over':
-    'Format "It\'s over": figure 1 at a low point. "top" = the situation in first person ("me when…" / "me after…"), "bottom" = the punchline, usually "it\'s over" or a short variant.',
-};
-
 const str = { type: 'string' };
-const strList = { type: 'array', items: str };
-const CAPTION_FIELDS: Record<TemplateFormat, Record<string, unknown>> = {
-  'feels-bro': { left: str, right: str, bottom: str },
-  drake: { reject: str, prefer: str },
-  'virgin-chad': { virgin: strList, chad: strList },
-  'its-over': { top: str, bottom: str },
-};
 
 function captionSchema(format: TemplateFormat) {
-  const fields = CAPTION_FIELDS[format];
   return {
     type: 'object',
     properties: {
       skip: { type: 'boolean' },
       title: str,
       fact: str,
-      captions: { type: 'object', properties: fields, required: Object.keys(fields), additionalProperties: false },
+      captions: jsonObject(formatEntry(format).fields),
     },
     required: ['skip', 'title', 'fact', 'captions'],
     additionalProperties: false,
@@ -137,7 +119,7 @@ export async function generateCaptions(input: {
   event?: MemeEventInfo | null;
 }): Promise<{ content: TemplateContent; fact: string; title: string }> {
   const lines = [
-    FORMAT_GUIDE[input.format],
+    formatGuide(input.format),
     '',
     ...input.figures.map(describeFigure),
     input.relation

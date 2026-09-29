@@ -146,7 +146,7 @@ export default function AdminMemesPage() {
     }
   };
 
-  const twoFigures = format !== 'story' && FORMAT_DEFS[format].figures === 2;
+  const twoFigures = format !== 'story' && FORMAT_DEFS[format].figures.min === 2;
 
   return (
     <div className="space-y-8">

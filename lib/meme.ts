@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { MEME_FORMATS, TEMPLATE_FORMATS, zodShape, type TemplateFormat } from './meme-formats';
 
-// ─── Meme generator — pure logic (tested) ───
-// Two kinds:
-//   template   → wojak faces + captions composed by /api/og/meme/[id]
+// ─── AI Drafts — pure logic (tested) ───
+// Kinds:
+//   template   → a catalog format (lib/meme-formats.ts) rendered by components/meme/MemeCanvas
 //   translated → an uploaded Korean meme with English text boxes laid over it
+//   story      → text-only short fiction
 
 export const FACE_VARIANTS = ['feels', 'crying', 'smug', 'angry', 'happy', 'npc'] as const;
 export type FaceVariant = (typeof FACE_VARIANTS)[number];
@@ -14,71 +16,32 @@ export type HatType = (typeof HAT_TYPES)[number];
 /** template = wojak image, translated = Korean meme with English boxes, story = text-only short fiction */
 export type MemeKind = 'template' | 'translated' | 'story';
 
-export const TEMPLATE_FORMATS = ['feels-bro', 'drake', 'virgin-chad', 'its-over'] as const;
-export type TemplateFormat = (typeof TEMPLATE_FORMATS)[number];
-
 export const MEME_STATUSES = ['draft', 'published', 'rejected'] as const;
 export type MemeStatus = (typeof MEME_STATUSES)[number];
 
-interface FormatDef {
-  label: string;
-  /** Number of figures (person_ids length) */
-  figures: number;
-  /** Default face per slot */
-  faces: FaceVariant[];
-  description: string;
-}
+// Template formats come from the catalog (lib/meme-formats.ts)
+export { MEME_FORMATS, TEMPLATE_FORMATS, formatEntry, type TemplateFormat } from './meme-formats';
 
-export const FORMAT_DEFS: Record<TemplateFormat, FormatDef> = {
-  'feels-bro': {
-    label: 'I know that feel bro',
-    figures: 2,
-    faces: ['feels', 'feels'],
-    description: 'Two figures who shared the same hardship or bond',
-  },
-  drake: {
-    label: 'Reject / Prefer',
-    figures: 1,
-    faces: ['angry', 'happy'],
-    description: 'One figure rejecting one thing and preferring another',
-  },
-  'virgin-chad': {
-    label: 'Virgin vs Chad',
-    figures: 2,
-    faces: ['crying', 'smug'],
-    description: 'Two rivals compared by traits (first = virgin, second = chad)',
-  },
-  'its-over': {
-    label: "It's over",
-    figures: 1,
-    faces: ['crying'],
-    description: 'A single figure at a low point (war, exile, defeat, death)',
-  },
-};
+/** Format picker info (label, figures, default faces) */
+export const FORMAT_DEFS = MEME_FORMATS;
 
 // ─── Content schemas ───
 
-const line = (max: number) => z.string().trim().min(1).max(max);
 const overrides = {
   faces: z.array(z.enum(FACE_VARIANTS)).max(2).optional(),
   /** 'auto' = headwear from the figure's FIELD tags */
   hats: z.array(z.enum([...HAT_TYPES, 'auto'])).max(2).optional(),
 };
 
-export const TEMPLATE_CONTENT_SCHEMAS = {
-  'feels-bro': z.object({ left: line(80), right: line(80), bottom: line(60), ...overrides }),
-  drake: z.object({ reject: line(90), prefer: line(90), ...overrides }),
-  'virgin-chad': z.object({
-    virgin: z.array(line(50)).min(1).max(4),
-    chad: z.array(line(50)).min(1).max(4),
-    ...overrides,
-  }),
-  'its-over': z.object({ top: line(90), bottom: line(60), ...overrides }),
-} satisfies Record<TemplateFormat, z.ZodTypeAny>;
+export const TEMPLATE_CONTENT_SCHEMAS = Object.fromEntries(
+  TEMPLATE_FORMATS.map((f) => [f, z.object({ ...zodShape(MEME_FORMATS[f].fields), ...overrides })]),
+) as unknown as Record<TemplateFormat, z.ZodObject<z.ZodRawShape>>;
 
-export type TemplateContent<F extends TemplateFormat = TemplateFormat> = z.infer<
-  (typeof TEMPLATE_CONTENT_SCHEMAS)[F]
->;
+/** Validated template content: the format's fields plus optional face/hat overrides */
+export type TemplateContent = Record<string, unknown> & {
+  faces?: FaceVariant[];
+  hats?: (HatType | 'auto')[];
+};
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -187,16 +150,13 @@ export function isMemeEligible(p: {
 }
 
 /** Relation type → template format for auto-generation */
+/** Relation type → a catalog format suited to it (autoFor), picked by `seed` */
 export function formatForRelation(relationType: string, seed = Math.random()): TemplateFormat | null {
-  switch (relationType) {
-    case 'ALLY':
-    case 'FAMILY':
-      return 'feels-bro';
-    case 'RIVAL':
-      return seed < 0.5 ? 'virgin-chad' : 'drake';
-    default:
-      return null;
-  }
+  const fits = TEMPLATE_FORMATS.filter((f) =>
+    ((MEME_FORMATS[f] as { autoFor?: readonly string[] }).autoFor ?? []).includes(relationType),
+  );
+  if (fits.length === 0) return null;
+  return fits[Math.min(fits.length - 1, Math.floor(seed * fits.length))];
 }
 
 /** Short label for memes: "Injo of Joseon" → "Injo" (the era is obvious from context) */
@@ -211,30 +171,33 @@ export function memeName(name: string): string {
  * Approximates glyph width as 0.55em (sans-serif average) and line height 1.15em.
  */
 export function fitFontSize(text: string, w: number, h: number, max = 72, min = 12): number {
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return max;
   for (let size = max; size > min; size -= 2) {
-    const perLine = Math.max(1, Math.floor(w / (size * 0.55)));
-    let lines = 1;
-    let used = 0;
-    for (const word of words) {
-      const len = word.length;
-      if (len > perLine) {
-        // An unbreakable word wider than the box never fits at this size
-        lines = Infinity;
-        break;
-      }
-      const next = used === 0 ? len : used + 1 + len;
-      if (next > perLine) {
-        lines++;
-        used = len;
-      } else {
-        used = next;
-      }
-    }
-    if (lines * size * 1.15 <= h) return size;
+    if (countLines(text, w, size) * size * 1.15 <= h) return size;
   }
   return min;
+}
+
+/**
+ * Lines `text` wraps into at `size` px in a box `w` px wide (word wrap,
+ * glyph ≈ 0.55em). Infinity when a single word is wider than the box.
+ */
+export function countLines(text: string, w: number, size: number): number {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 0;
+  const perLine = Math.max(1, Math.floor(w / (size * 0.55)));
+  let lines = 1;
+  let used = 0;
+  for (const word of words) {
+    if (word.length > perLine) return Infinity;
+    const next = used === 0 ? word.length : used + 1 + word.length;
+    if (next > perLine) {
+      lines++;
+      used = word.length;
+    } else {
+      used = next;
+    }
+  }
+  return lines;
 }
 
 /** Output size of a translated meme: 1080px wide, source aspect ratio, height capped */
@@ -369,7 +332,6 @@ export function memeTranscript(
 ): MemeTranscript {
   const parsed = parseMemeContent(kind, format, content);
   if (!parsed || kind === 'story') return { lines: [], original: [] };
-  const who = (i: number, text: string) => (names[i] ? `${names[i]}: ${text}` : text);
 
   if (kind === 'translated') {
     const boxes = [...(parsed as TranslatedContent).boxes]
@@ -381,28 +343,9 @@ export function memeTranscript(
     };
   }
 
-  switch (format as TemplateFormat) {
-    case 'feels-bro': {
-      const c = parsed as TemplateContent<'feels-bro'>;
-      return { lines: [who(0, c.left), who(1, c.right), c.bottom], original: [] };
-    }
-    case 'drake': {
-      const c = parsed as TemplateContent<'drake'>;
-      const p = names[0] ? `${names[0]} ` : '';
-      return { lines: [`${p}rejects: ${c.reject}`.trim(), `${p}prefers: ${c.prefer}`.trim()], original: [] };
-    }
-    case 'virgin-chad': {
-      const c = parsed as TemplateContent<'virgin-chad'>;
-      const label = (l: string, i: number) => `The ${l}${names[i] ? ` ${names[i]}` : ''}`;
-      return { lines: [`${label('Virgin', 0)}: ${c.virgin.join('; ')}`, `${label('Chad', 1)}: ${c.chad.join('; ')}`], original: [] };
-    }
-    case 'its-over': {
-      const c = parsed as TemplateContent<'its-over'>;
-      return { lines: [who(0, c.top), c.bottom], original: [] };
-    }
-    default:
-      return { lines: [], original: [] };
-  }
+  if (!isTemplateFormat(format)) return { lines: [], original: [] };
+  const lines = MEME_FORMATS[format].transcript(parsed as Record<string, any>, names);
+  return { lines: lines.filter((l: string) => typeof l === 'string' && l.trim()), original: [] };
 }
 
 /**

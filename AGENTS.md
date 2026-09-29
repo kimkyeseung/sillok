@@ -51,11 +51,12 @@ lib/                     순수 로직(테스트 대상)과 서버 로더를 파
 ├── feed.ts · feed-data.ts            피드 로직 / 로더
 ├── age-flow.ts · age-flow-data.ts    age-flow 로직 / 로더(unstable_cache 5분, 쓰기 API는 revalidateAgeFlow())
 ├── artifacts.ts · artifacts-query.ts · heritage.ts · heritage-era.ts   유물 목록·필터 / 국가유산 데이터·연대 파서
-├── meme.ts              AI 초안 로직(포맷·스키마·텍스트) — meme-ai(Claude) · meme-data · meme-render · meme-publish(스레드 발행)
+├── meme-formats.ts      밈 형식 도감 (구조·웃음 포인트·필드) — 검증·AI 프롬프트·편집 폼·이미지 alt가 모두 여기서 파생
+├── meme.ts              AI 초안 로직 — meme-ai(Claude) · meme-data · meme-render · meme-publish(스레드 발행)
 ├── person-page.ts       인물 페이지 로더 (React cache로 layout/page/metadata 공유)
 └── jsonld.ts · seo.ts   구조화 데이터 · 메타 유틸
 db/schema.sql            전체 스키마 (43 테이블) — db/migrations/와 항상 동기화
-scripts/                 데이터 적재 (heritage: fetch → translate → import → images → enrich → ranks)
+scripts/                 데이터 적재 (heritage: fetch → translate → import → images → enrich → ranks) · meme-draft.ts (밈 초안 CLI: formats / preview / create --post)
 ```
 
 **Supabase 클라이언트:** Server Component → `supabaseAdmin`/`supabaseServer` · API Route → `supabaseAdmin` · Client Component → `fetch('/api/...')` + SWR (직접 접근 금지)
@@ -106,6 +107,7 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 | 인물 페이지 탭별 URL | 탭마다 색인. 항목 수 `TAB_MIN_ITEMS` 미만 탭은 숨김·404 |
 | 인물 편집 콘텐츠 AI 초안 | 즉시 공개 + `is_ai_generated` 라벨, 어드민 사후 검수 |
 | AI Drafts (`ai_drafts`) | 워작 밈·번역 짤·짧은 소설을 Claude로 초안 → 어드민 검토 후 게시하면 관리자 명의 **일반 스레드**(`thread_id`)가 됨. 사용자는 테이블을 모름. 밈 PNG는 threads 버킷, 이미지 속 텍스트는 `thread_images.alt` |
+| 밈 형식 = 도감 | 형식 추가는 `lib/meme-formats.ts` 항목 + MemeCanvas 레이아웃 + 테스트 샘플. 남의 밈은 구조만 빌리고 이미지·문구·캐릭터는 가져오지 않음 |
 | AI Drafts 대상·원칙 | 근대 이전 인물만 (1850년 이후 출생·생존·modern 제외 — 명예훼손 방지). 사실 기반, 본문에 근거(`fact`)와 AI 표기. 번역 짤은 출처·크레딧 필수 |
 | age-flow 카드 뷰포트 캡 | sticky 뷰포트 → 중요도(포커스·왕·전쟁·조회수) 순으로 화면에 맞는 만큼, 나머지 "+N more" |
 | age-flow 왕·전쟁은 DB | 재위 `reigns`, 전쟁 = EVENT 노드(war/revolt) + `metadata.end_year` + 참여자 링크. 하드코딩 금지 |

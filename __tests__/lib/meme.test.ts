@@ -52,11 +52,13 @@ describe('isMemeEligible', () => {
 });
 
 describe('formatForRelation', () => {
-  it('maps relation types to formats', () => {
-    expect(formatForRelation('ALLY')).toBe('feels-bro');
-    expect(formatForRelation('FAMILY')).toBe('feels-bro');
-    expect(formatForRelation('RIVAL', 0.1)).toBe('virgin-chad');
-    expect(formatForRelation('RIVAL', 0.9)).toBe('drake');
+  it('picks among the catalog formats marked for the relation type', () => {
+    expect(formatForRelation('FAMILY', 0.5)).toBe('feels-bro');
+    expect(formatForRelation('ALLY', 0.1)).toBe('feels-bro');
+    expect(formatForRelation('ALLY', 0.9)).toBe('texting');
+    expect(formatForRelation('RIVAL', 0.1)).toBe('drake');
+    expect(formatForRelation('RIVAL', 0.5)).toBe('virgin-chad');
+    expect(formatForRelation('RIVAL', 0.99)).toBe('texting');
     expect(formatForRelation('MENTOR')).toBeNull();
   });
 });
@@ -255,6 +257,10 @@ describe('memeTranscript', () => {
 
   it('returns nothing for invalid content', () => {
     expect(memeTranscript('template', 'drake', { reject: '' }, [])).toEqual({ lines: [], original: [] });
+  });
+
+  it('skips an unused optional line', () => {
+    expect(memeTranscript('template', 'pov', { pov: 'you are the envoy', bottom: '' }, []).lines).toEqual(['POV: you are the envoy']);
   });
 });
 
