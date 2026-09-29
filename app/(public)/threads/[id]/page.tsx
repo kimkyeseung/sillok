@@ -24,7 +24,7 @@ async function getThread(id: string) {
     .select(
       `*, profiles!threads_author_id_fkey ( nickname, avatar_url ),
        persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
-       thread_images ( id, url, sort_order ),
+       thread_images ( * ),
        thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )`
     )
     .eq('id', id)
@@ -42,9 +42,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   );
   const title = truncateTitle(thread.title);
 
-  const images = ((thread.thread_images as unknown as { url: string; sort_order: number }[]) ?? [])
+  const images = ((thread.thread_images as unknown as { url: string; alt?: string | null; sort_order: number }[]) ?? [])
     .sort((a, b) => a.sort_order - b.sort_order);
   const ogImage = images[0]?.url;
+  const ogImages = ogImage ? [{ url: ogImage, ...(images[0].alt && { alt: images[0].alt }) }] : [DEFAULT_OG_IMAGE];
 
   return {
     title,
@@ -56,13 +57,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: 'article',
       url: `/threads/${params.id}`,
       publishedTime: thread.created_at,
-      images: [ogImage ?? DEFAULT_OG_IMAGE],
+      images: ogImages,
     },
     twitter: {
       card: ogImage ? 'summary_large_image' : 'summary',
       title,
       description,
-      images: [ogImage ?? DEFAULT_OG_IMAGE],
+      images: ogImages,
     },
   };
 }
@@ -158,6 +159,7 @@ export default async function ThreadDetailPage({ params }: Props) {
         like_count: thread.like_count ?? 0,
         reply_count: thread.reply_count ?? 0,
         image: (firstImage?.url as string) ?? null,
+        imageCaption: (firstImage?.alt as string | null) ?? null,
         figures: figures.map((f: ThreadFigure) => ({ name: f.name_en ?? f.name_ko, slug: f.slug })),
       },
       replyTree.map(({ reply }) => ({
@@ -245,6 +247,7 @@ export default async function ThreadDetailPage({ params }: Props) {
               images={images.map((img) => ({
                 id: img.id as string,
                 url: img.url as string,
+                alt: (img.alt as string | null) ?? undefined,
               }))}
             />
           )}

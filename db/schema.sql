@@ -301,6 +301,7 @@ CREATE TABLE thread_images (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   thread_id  UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
   url        TEXT NOT NULL,
+  alt        TEXT,                 -- description / text inside the image (alt + ImageObject.caption)
   sort_order SMALLINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT max_images_per_thread CHECK (sort_order BETWEEN 0 AND 2)
@@ -1130,3 +1131,42 @@ CREATE TABLE IF NOT EXISTS reigns (
 );
 CREATE INDEX IF NOT EXISTS reigns_start_idx ON reigns (reign_start);
 ALTER TABLE reigns ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- Memes (admin-generated wojak memes + translated Korean memes)
+-- kind 'template': wojak format + captions; kind 'translated': uploaded
+-- Korean meme + English text boxes (0..1 coords). Rendered by /api/og/meme/[id].
+-- Publishing renders a PNG into the 'threads' bucket and creates a thread (thread_id).
+-- Source images live in the public 'memes' storage bucket.
+-- RLS on, no policies → service role only.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS memes (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind             TEXT NOT NULL CHECK (kind IN ('template', 'translated')),
+  format           TEXT NOT NULL,
+  title            TEXT,                 -- thread title when published
+  person_ids       UUID[] NOT NULL DEFAULT '{}',
+  event_node_id    UUID REFERENCES nodes(id) ON DELETE SET NULL,
+  content          JSONB NOT NULL,
+  fact             TEXT,
+  source_image_url TEXT,
+  source_width     INTEGER,
+  source_height    INTEGER,
+  source_url       TEXT,
+  source_credit    TEXT,
+  is_ai_generated  BOOLEAN NOT NULL DEFAULT TRUE,
+  status           TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'rejected')),
+  created_by       UUID REFERENCES profiles(id),
+  thread_id        UUID REFERENCES threads(id) ON DELETE SET NULL,  -- published meme = a thread
+  published_at     TIMESTAMPTZ,
+  is_deleted       BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS memes_admin_list_idx ON memes (status, created_at DESC, id DESC) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS memes_person_ids_idx ON memes USING gin (person_ids);
+CREATE TRIGGER memes_updated_at
+  BEFORE UPDATE ON memes
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+ALTER TABLE memes ENABLE ROW LEVEL SECURITY;

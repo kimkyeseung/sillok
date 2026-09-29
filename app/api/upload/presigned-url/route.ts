@@ -8,10 +8,10 @@ import { randomUUID } from 'crypto';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const ADMIN_BUCKETS: string[] = ['persons', 'articles'];
+const ADMIN_BUCKETS: string[] = ['persons', 'articles', 'memes'];
 
 const PresignedSchema = z.object({
-  bucket: z.enum(['avatars', 'threads', 'persons', 'articles']),
+  bucket: z.enum(['avatars', 'threads', 'persons', 'articles', 'memes']),
   content_type: z.string().refine((v) => ALLOWED_TYPES.includes(v), {
     message: 'Unsupported file type.',
   }),
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const { bucket, content_type, thread_id, person_id } = result.data;
 
-  // Person portraits and article images are admin-managed content
+  // Person portraits, article images and meme sources are admin-managed content
   if (ADMIN_BUCKETS.includes(bucket) && !(await requireAdmin(request)))
     return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
   const ext = content_type === 'image/webp' ? 'webp' : content_type === 'image/png' ? 'png' : 'jpg';
@@ -60,6 +60,12 @@ export async function POST(request: Request) {
       break;
     case 'articles':
       path = `${user.id}/${fileId}.${ext}`;
+      break;
+    case 'memes':
+      // Bucket only accepts jpeg/png (the renderer can't decode webp)
+      if (content_type === 'image/webp')
+        return apiError('UNSUPPORTED_FILE_TYPE', 'Meme images must be JPEG or PNG.', 422);
+      path = `sources/${fileId}.${ext}`;
       break;
   }
 

@@ -172,4 +172,23 @@ describe('ImageLightbox', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(document.body.style.overflow).toBe('');
   });
+
+  // ── Single image ──
+
+  it('shows a single image large (no thumbnail strip) with its alt text', () => {
+    const { container } = render(
+      <ImageLightbox images={[{ id: 'm', url: 'https://example.com/meme.png', alt: 'Seonjo rejects: trusting the admiral' }]} />
+    );
+    const img = container.querySelector('img')!;
+    expect(img.getAttribute('alt')).toBe('Seonjo rejects: trusting the admiral');
+    expect(img.className).toContain('h-auto');
+    expect(container.querySelector('.h-64')).toBeNull();
+  });
+
+  it('opens the lightbox for a single image without a counter', () => {
+    render(<ImageLightbox images={[{ id: 'm', url: 'https://example.com/meme.png' }]} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.queryByText('1 / 1')).toBeNull();
+    expect(document.querySelectorAll('img')).toHaveLength(2);
+  });
 });

@@ -263,6 +263,8 @@ export function discussionJsonLd(
     like_count: number;
     reply_count: number;
     image?: string | null;
+    /** Image description / text inside the image → ImageObject.caption */
+    imageCaption?: string | null;
     figures?: { name: string; slug: string }[];
   },
   replies: ForumReply[] = []
@@ -297,7 +299,17 @@ export function discussionJsonLd(
     datePublished: thread.created_at,
     ...(thread.updated_at && thread.updated_at !== thread.created_at && { dateModified: thread.updated_at }),
     author: authorRef(thread.author),
-    ...(thread.image && { image: thread.image }),
+    ...(thread.image &&
+      (thread.imageCaption
+        ? {
+            image: {
+              '@type': 'ImageObject',
+              contentUrl: thread.image,
+              url: thread.image,
+              caption: thread.imageCaption,
+            },
+          }
+        : { image: thread.image })),
     ...(thread.figures?.length && { about: thread.figures.map(personRef) }),
     interactionStatistic: [
       likeStat(thread.like_count),
