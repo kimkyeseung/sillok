@@ -3,15 +3,40 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { NodeActions, CommentActions, CommentFormWrapper } from '@/components/thread/NodeInteractions';
+import {
+  NodeActions,
+  CommentActions,
+  CommentFormWrapper,
+} from '@/components/thread/NodeInteractions';
 import { eventJsonLd } from '@/lib/jsonld';
-import { DEFAULT_OG_IMAGE, nameWithKorean, truncateDescription, truncateTitle } from '@/lib/seo';
+import {
+  DEFAULT_OG_IMAGE,
+  nameWithKorean,
+  truncateDescription,
+  truncateTitle,
+} from '@/lib/seo';
 import ViewTracker from '@/components/common/ViewTracker';
+import {
+  HERITAGE_SOURCE,
+  getArtifactFacts,
+  isUnreviewedHeritage,
+} from '@/lib/heritage';
+import ArtifactGallery, {
+  type GalleryImage,
+} from '@/components/nodes/ArtifactGallery';
 
 export const revalidate = 0;
 
 interface Props {
   params: { slug: string };
+}
+
+interface SiblingNode {
+  id: string;
+  slug: string;
+  title: string;
+  thumbnail: string | null;
+  period: string | null;
 }
 
 interface LinkedPerson {
@@ -32,7 +57,9 @@ const NODE_TYPE_SEO_LABELS: Record<string, string> = {
 async function getNode(slug: string) {
   const { data } = await supabaseAdmin
     .from('nodes')
-    .select(`*, person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`)
+    .select(
+      `*, person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`
+    )
     .eq('slug', slug)
     .eq('is_deleted', false)
     .single();
@@ -59,6 +86,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: truncateTitle(`${yearPrefix}${node.title}`),
     description,
     alternates: { canonical: `/nodes/${params.slug}` },
+    ...(isUnreviewedHeritage(node.metadata) && {
+      robots: { index: false, follow: true },
+    }),
     openGraph: {
       title: `${yearPrefix}${node.title} - Sillok`,
       description,
@@ -105,16 +135,55 @@ export default async function NodeDetailPage({ params }: Props) {
   const startYear = node.metadata?.start_year as number | undefined;
   const endYear = node.metadata?.end_year as number | undefined;
 
-  const { data: comments } = await supabaseAdmin
-    .from('node_comments')
-    .select(
-      `id, content, like_count, created_at,
-       profiles!node_comments_author_id_fkey ( nickname, avatar_url )`
-    )
-    .eq('node_id', node.id)
-    .eq('is_deleted', false)
-    .order('created_at', { ascending: false })
-    .limit(20);
+  const designationGroup = node.metadata?.designation_group as
+    | string
+    | undefined;
+  const groupSize =
+    (node.metadata?.designation_group_size as number | undefined) ?? 1;
+
+  const [{ data: comments }, { data: images }, { data: siblings }] =
+    await Promise.all([
+      supabaseAdmin
+        .from('node_comments')
+        .select(
+          `id, content, like_count, created_at,
+         profiles!node_comments_author_id_fkey ( nickname, avatar_url )`
+        )
+        .eq('node_id', node.id)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabaseAdmin
+        .from('node_images')
+        .select('id, url, caption_en, license')
+        .eq('node_id', node.id)
+        .order('sort_order', { ascending: true })
+        .limit(300),
+      // Other items under the same designation (e.g. the other Joseon Sillok archive editions)
+      designationGroup && groupSize > 1
+        ? supabaseAdmin
+            .from('nodes')
+            .select(
+              'id, slug, title, thumbnail, period:metadata->>created_period'
+            )
+            .eq('node_type', 'ARTIFACT')
+            .eq('is_deleted', false)
+            .eq('is_published', true)
+            .eq('metadata->>designation_group', designationGroup)
+            .neq('id', node.id)
+            .order('metadata->featured_rank', { ascending: true })
+            .limit(50)
+        : Promise.resolve({ data: [] as SiblingNode[] }),
+    ]);
+
+  const gallery: GalleryImage[] = (images ?? []).map((img) => ({
+    id: img.id,
+    url: img.url,
+    caption: img.caption_en,
+    license: img.license,
+  }));
+  const artifactFacts =
+    node.node_type === 'ARTIFACT' ? getArtifactFacts(node.metadata) : [];
 
   const typeLabel: Record<string, string> = {
     ARTIFACT: 'Artifact',
@@ -170,18 +239,41 @@ export default async function NodeDetailPage({ params }: Props) {
         )}
 
         <div className="p-5">
-          <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${typeColor[node.node_type] ?? 'badge-gray'}`}>
+          <span
+            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${typeColor[node.node_type] ?? 'badge-gray'}`}
+          >
             {typeLabel[node.node_type] ?? node.node_type}
           </span>
           <h1 className="mt-2 text-2xl font-bold text-gray-900">
             {startYear && (
-              <span className="mr-2 text-lg font-medium text-gray-400">{startYear}</span>
+              <span className="mr-2 text-lg font-medium text-gray-400">
+                {startYear}
+              </span>
             )}
             {node.title}
           </h1>
           {node.description && (
             <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
               {node.description}
+            </p>
+          )}
+          {artifactFacts.length > 0 && (
+            <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg bg-gray-50 p-4 text-sm sm:grid-cols-2">
+              {artifactFacts.map((f) => (
+                <div key={f.label} className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-gray-400">{f.label}</dt>
+                  <dd className="text-gray-700">{f.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {node.metadata?.source === HERITAGE_SOURCE && (
+            <p className="mt-3 text-xs text-gray-400">
+              Source: Korea Heritage Service
+              {node.metadata?.thumbnail_license === 'kogl-1' &&
+                ' · Photo under KOGL Type 1'}
+              {node.metadata?.ai_translated === true &&
+                ' · AI-translated summary'}
             </p>
           )}
 
@@ -192,15 +284,73 @@ export default async function NodeDetailPage({ params }: Props) {
               </span>
               <span className="ml-1 text-gray-500">Views</span>
             </div>
-            <NodeActions nodeId={node.id} nodeSlug={params.slug} followCount={node.follow_count ?? 0} />
+            <NodeActions
+              nodeId={node.id}
+              nodeSlug={params.slug}
+              followCount={node.follow_count ?? 0}
+            />
           </div>
         </div>
       </div>
 
+      {(siblings ?? []).length > 0 && (
+        <div className="card-flat p-5">
+          <h2 className="text-sm font-semibold text-gray-900">
+            Also in this designation{' '}
+            <span className="font-normal text-gray-400">
+              {node.metadata?.designation as string}
+            </span>
+          </h2>
+          <ul className="mt-3 divide-y divide-gray-100">
+            {(siblings as SiblingNode[]).map((s) => (
+              <li key={s.id}>
+                <Link
+                  href={`/nodes/${s.slug}`}
+                  className="flex items-center gap-3 py-2 text-sm text-gray-700 hover:text-brand-600"
+                >
+                  {s.thumbnail ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- external heritage host
+                    <img
+                      src={s.thumbnail}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span
+                      className="h-10 w-10 shrink-0 rounded bg-stone-100"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="min-w-0 flex-1 truncate">{s.title}</span>
+                  {s.period && (
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {s.period}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {gallery.length > 0 && (
+        <div className="card-flat p-5">
+          <h2 className="mb-3 text-sm font-semibold text-gray-900">
+            Photos{' '}
+            <span className="font-normal text-gray-400">{gallery.length}</span>
+          </h2>
+          <ArtifactGallery images={gallery} />
+        </div>
+      )}
+
       {/* Linked Persons */}
       {linkedPersons.length > 0 && (
         <div className="card-flat p-5">
-          <h2 className="text-sm font-semibold text-gray-900">Related Figures</h2>
+          <h2 className="text-sm font-semibold text-gray-900">
+            Related Figures
+          </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {linkedPersons.map((person) => (
               <Link
@@ -209,13 +359,21 @@ export default async function NodeDetailPage({ params }: Props) {
                 className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50"
               >
                 {person.thumbnail ? (
-                  <Image src={person.thumbnail} alt="" width={24} height={24} className="h-6 w-6 rounded-full object-cover" />
+                  <Image
+                    src={person.thumbnail}
+                    alt=""
+                    width={24}
+                    height={24}
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">
                     {person.name_ko.slice(0, 1)}
                   </div>
                 )}
-                <span className="font-medium text-gray-700">{person.name_en || person.name_ko}</span>
+                <span className="font-medium text-gray-700">
+                  {person.name_en || person.name_ko}
+                </span>
               </Link>
             ))}
           </div>
@@ -237,7 +395,13 @@ export default async function NodeDetailPage({ params }: Props) {
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xs font-bold text-gray-500">
                     {author?.avatar_url ? (
-                      <Image src={author.avatar_url as string} alt="" width={28} height={28} className="h-full w-full object-cover" />
+                      <Image
+                        src={author.avatar_url as string}
+                        alt=""
+                        width={28}
+                        height={28}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       commentName.charAt(0)
                     )}
@@ -252,14 +416,27 @@ export default async function NodeDetailPage({ params }: Props) {
                 <p className="mt-1.5 pl-[38px] text-sm leading-relaxed text-gray-700">
                   {comment.content as string}
                 </p>
-                <CommentActions commentId={comment.id as string} likeCount={comment.like_count as number} />
+                <CommentActions
+                  commentId={comment.id as string}
+                  likeCount={comment.like_count as number}
+                />
               </div>
             );
           })}
           {(comments ?? []).length === 0 && (
             <div className="flex flex-col items-center py-12 text-gray-400">
-              <svg className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              <svg
+                className="h-10 w-10 text-gray-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
               </svg>
               <p className="mt-2 text-sm">No comments yet</p>
             </div>

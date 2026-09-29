@@ -1133,6 +1133,27 @@ CREATE INDEX IF NOT EXISTS reigns_start_idx ON reigns (reign_start);
 ALTER TABLE reigns ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
+-- node_images (노드 갤러리 이미지 — 국가유산청 API, 스토리지 미러링 없음)
+-- 상업적 이용 가능한 공공누리만 저장: kogl-1(자유), kogl-3(변경금지 → 크롭 없이 표시)
+-- RLS on, no policies → service role only.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS node_images (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  node_id     UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+  url         TEXT NOT NULL,
+  caption_ko  TEXT,
+  caption_en  TEXT,
+  license     TEXT NOT NULL CHECK (license IN ('kogl-1', 'kogl-3')),
+  source      TEXT NOT NULL DEFAULT 'khs',
+  sort_order  SMALLINT NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (node_id, url)
+);
+CREATE INDEX IF NOT EXISTS node_images_node_idx ON node_images (node_id, sort_order);
+ALTER TABLE node_images ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
 -- AI drafts (admin-only workspace: wojak memes, translated memes, short stories)
 -- Users never see this table — publishing turns a draft into a regular thread.
 -- kind 'template': wojak format + captions; kind 'story': text-only short fiction; kind 'translated': uploaded

@@ -5,6 +5,7 @@ import { BOARDS, TOPICS } from '@/lib/feed';
 import { getBoardInfo, getTopicInfo } from '@/lib/feed-data';
 import { getAgeFlowData } from '@/lib/age-flow-data';
 import { getNotableYears } from '@/lib/age-flow';
+import { CURATED_NODES_FILTER } from '@/lib/heritage';
 
 // Regenerate hourly — otherwise the sitemap is frozen at build time
 export const revalidate = 3600;
@@ -28,7 +29,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from('nodes')
       .select('slug, updated_at')
       .eq('is_deleted', false)
-      .eq('is_published', true),
+      .eq('is_published', true)
+      .or(CURATED_NODES_FILTER),
     supabaseAdmin
       .from('articles')
       .select('slug, updated_at')

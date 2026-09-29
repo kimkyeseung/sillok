@@ -50,7 +50,7 @@ lib/
 ├── person-page.ts      인물 페이지 로더 (React cache로 layout/page/metadata 공유)
 ├── jsonld.ts           구조화 데이터 (Person, DiscussionForumPosting, Breadcrumb 등)
 ├── types.ts            NodeType, RelationType 등
-db/schema.sql           전체 DB 스키마 (42 테이블)
+db/schema.sql           전체 DB 스키마 (43 테이블)
 db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동기화)
 ```
 
@@ -85,7 +85,7 @@ db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동�
 
 ## DB 핵심 규칙
 
-- 전체 스키마: `db/schema.sql` (42 테이블)
+- 전체 스키마: `db/schema.sql` (43 테이블)
 - soft delete: `is_deleted = TRUE` (hard delete는 어드민만)
 - 카운터: 트리거 동기화 (`like_count`, `reply_count` 등)
 - `view_count`: 직접 UPDATE 금지 → `view_logs` + 배치 집계
