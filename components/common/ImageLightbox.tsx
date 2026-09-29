@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 
 interface ImageLightboxProps {
-  images: { id: string; url: string }[];
+  /** alt: describe the image (memes pass their text so it is readable by screen readers and search) */
+  images: { id: string; url: string; alt?: string }[];
 }
 
 export default function ImageLightbox({ images }: ImageLightboxProps) {
@@ -40,7 +41,23 @@ export default function ImageLightbox({ images }: ImageLightboxProps) {
 
   return (
     <>
-      {/* Thumbnail strip */}
+      {/* A single image is shown large at its own aspect ratio; several become a thumbnail strip */}
+      {images.length === 1 ? (
+        <button
+          type="button"
+          onClick={() => setActiveIndex(0)}
+          className="mt-4 block w-full cursor-zoom-in overflow-hidden rounded-lg bg-gray-50"
+        >
+          <Image
+            src={images[0].url}
+            alt={images[0].alt ?? ''}
+            width={1200}
+            height={1200}
+            sizes="(max-width: 768px) 100vw, 720px"
+            className="mx-auto h-auto max-h-[80vh] w-auto max-w-full"
+          />
+        </button>
+      ) : (
       <div className="mt-4 flex gap-2 overflow-x-auto">
         {images.map((img, i) => (
           <button
@@ -51,7 +68,7 @@ export default function ImageLightbox({ images }: ImageLightboxProps) {
           >
             <Image
               src={img.url}
-              alt=""
+              alt={img.alt ?? ''}
               fill
               sizes="(max-width: 640px) 80vw, 300px"
               className="object-cover transition-transform duration-200 hover:scale-105"
@@ -59,6 +76,7 @@ export default function ImageLightbox({ images }: ImageLightboxProps) {
           </button>
         ))}
       </div>
+      )}
 
       {/* Fullscreen lightbox */}
       {isOpen &&
@@ -115,7 +133,7 @@ export default function ImageLightbox({ images }: ImageLightboxProps) {
             >
               <Image
                 src={images[activeIndex!].url}
-                alt=""
+                alt={images[activeIndex!].alt ?? ''}
                 width={1200}
                 height={800}
                 className="max-h-[90vh] w-auto rounded-lg object-contain"

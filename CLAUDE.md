@@ -43,13 +43,14 @@ lib/
 ├── api-helpers.ts      apiError / apiSuccess
 ├── feed.ts             피드 순수 로직 (정렬, 커서, 게시판·토픽, 댓글 트리) — 테스트 대상
 ├── feed-data.ts        피드·홈 모듈 로더 (서버)
+├── meme.ts             밈 순수 로직 (포맷·스키마·모자·폰트 맞춤) — 테스트 대상. meme-ai(Claude) / meme-data / meme-publish(스레드 발행) 분리
 ├── age-flow.ts         age-flow 순수 로직 (변환, 범위 필터, 재위·전쟁, 연도 스냅샷) — 테스트 대상
 ├── age-flow-data.ts    age-flow 데이터 로더 (서버, unstable_cache 5분) — page SSR·API 공유. 쓰기 API는 `revalidateAgeFlow()` 호출
 ├── reigns.ts           재위 어드민 검증 (/admin/reigns)
 ├── person-page.ts      인물 페이지 로더 (React cache로 layout/page/metadata 공유)
 ├── jsonld.ts           구조화 데이터 (Person, DiscussionForumPosting, Breadcrumb 등)
 ├── types.ts            NodeType, RelationType 등
-db/schema.sql           전체 DB 스키마 (42 테이블)
+db/schema.sql           전체 DB 스키마 (43 테이블)
 db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동기화)
 ```
 
@@ -84,7 +85,7 @@ db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동�
 
 ## DB 핵심 규칙
 
-- 전체 스키마: `db/schema.sql` (42 테이블)
+- 전체 스키마: `db/schema.sql` (43 테이블)
 - soft delete: `is_deleted = TRUE` (hard delete는 어드민만)
 - 카운터: 트리거 동기화 (`like_count`, `reply_count` 등)
 - `view_count`: 직접 UPDATE 금지 → `view_logs` + 배치 집계
@@ -116,6 +117,8 @@ db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동�
 | 대댓글 최대 4단계 | 초과 시 부모의 부모에 붙임. 부모 댓글은 같은 스레드·미삭제인지 서버 검증 |
 | 인물 페이지 탭별 URL | 탭마다 색인 가능한 페이지. 항목 수가 `TAB_MIN_ITEMS` 미만인 탭은 숨기고 404 |
 | AI 초안 즉시 공개 + 라벨 | `is_ai_generated` 표시로 투명성 확보, 어드민이 사후 검수 |
+| AI 초안 = 평범한 스레드 | `/admin/memes`(메뉴명 AI Drafts)에서 워작 밈·번역 짤·짧은 소설 초안 생성 → `ai_drafts` 테이블(관리자 전용, 사용자는 모름) → 게시하면 관리자 명의 일반 스레드(`ai_drafts.thread_id`). 밈 전용 카테고리·토픽·섹션 없음 (레딧처럼 스레드는 뭐든 올라옴). 이미지 속 텍스트는 `thread_images.alt` → img alt·ImageObject.caption |
+| 밈은 근대 이전 인물만 | 1850년 이후 출생·생존·modern 태그 제외 (명예훼손 방지). 캡션은 사실 기반, `fact` 필드로 근거 표시. 번역 짤은 출처·크레딧 필수 |
 | 빈 게시판·토픽 noindex | 글 0개면 noindex + sitemap 제외 (thin content 방지) |
 
 ---

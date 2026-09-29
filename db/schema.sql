@@ -301,6 +301,7 @@ CREATE TABLE thread_images (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   thread_id  UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
   url        TEXT NOT NULL,
+  alt        TEXT,                 -- description / text inside the image (alt + ImageObject.caption)
   sort_order SMALLINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT max_images_per_thread CHECK (sort_order BETWEEN 0 AND 2)
@@ -1151,3 +1152,43 @@ CREATE TABLE IF NOT EXISTS node_images (
 );
 CREATE INDEX IF NOT EXISTS node_images_node_idx ON node_images (node_id, sort_order);
 ALTER TABLE node_images ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
+-- AI drafts (admin-only workspace: wojak memes, translated memes, short stories)
+-- Users never see this table — publishing turns a draft into a regular thread.
+-- kind 'template': wojak format + captions; kind 'story': text-only short fiction; kind 'translated': uploaded
+-- Korean meme + English text boxes (0..1 coords). Previewed by /api/og/meme/[id].
+-- Publishing renders a PNG into the 'threads' bucket and creates a thread (thread_id); stories become text-only threads.
+-- Source images live in the public 'memes' storage bucket.
+-- RLS on, no policies → service role only.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS ai_drafts (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind             TEXT NOT NULL CHECK (kind IN ('template', 'translated', 'story')),
+  format           TEXT NOT NULL,
+  title            TEXT,                 -- thread title when published
+  person_ids       UUID[] NOT NULL DEFAULT '{}',
+  event_node_id    UUID REFERENCES nodes(id) ON DELETE SET NULL,
+  content          JSONB NOT NULL,
+  fact             TEXT,
+  source_image_url TEXT,
+  source_width     INTEGER,
+  source_height    INTEGER,
+  source_url       TEXT,
+  source_credit    TEXT,
+  is_ai_generated  BOOLEAN NOT NULL DEFAULT TRUE,
+  status           TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'rejected')),
+  created_by       UUID REFERENCES profiles(id),
+  thread_id        UUID REFERENCES threads(id) ON DELETE SET NULL,  -- published meme = a thread
+  published_at     TIMESTAMPTZ,
+  is_deleted       BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ai_drafts_admin_list_idx ON ai_drafts (status, created_at DESC, id DESC) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS ai_drafts_person_ids_idx ON ai_drafts USING gin (person_ids);
+CREATE TRIGGER ai_drafts_updated_at
+  BEFORE UPDATE ON ai_drafts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+ALTER TABLE ai_drafts ENABLE ROW LEVEL SECURITY;

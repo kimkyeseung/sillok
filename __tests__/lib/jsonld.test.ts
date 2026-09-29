@@ -218,3 +218,21 @@ describe('community page JSON-LD', () => {
     expect(bc.itemListElement.map((i) => i.item)).toEqual(['https://sillok.kr', 'https://sillok.kr/b/joseon']);
   });
 });
+
+describe('discussionJsonLd image caption', () => {
+  it('uses an ImageObject when the image has a description', () => {
+    const ld = discussionJsonLd({
+      id: 't1', title: 'T', content: 'C', created_at: '2026-09-29T00:00:00Z', author: 'a',
+      like_count: 0, reply_count: 0, image: 'https://x/meme.png', imageCaption: 'line 1\nline 2',
+    }) as Record<string, any>;
+    expect(ld.image).toEqual({ '@type': 'ImageObject', contentUrl: 'https://x/meme.png', url: 'https://x/meme.png', caption: 'line 1\nline 2' });
+  });
+
+  it('keeps a plain image URL without a caption', () => {
+    const ld = discussionJsonLd({
+      id: 't1', title: 'T', content: 'C', created_at: '2026-09-29T00:00:00Z', author: 'a',
+      like_count: 0, reply_count: 0, image: 'https://x/p.jpg',
+    }) as Record<string, any>;
+    expect(ld.image).toBe('https://x/p.jpg');
+  });
+});

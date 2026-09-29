@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: '%s | Sillok',
   },
   description:
-    'Join discussions about Korean history — threads, polls and trivia on historical figures from Dangun to today, with family trees, timelines and an archive.',
+    'Join discussions about Korean history — threads, memes, polls and trivia on historical figures from Dangun to today, with family trees, timelines and an archive.',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '16x16 32x32' },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Sillok - Korean History Community & Figures Archive',
     description:
-      'Join discussions about Korean history — threads, polls and trivia on historical figures from Dangun to today, with family trees, timelines and an archive.',
+      'Join discussions about Korean history — threads, memes, polls and trivia on historical figures from Dangun to today, with family trees, timelines and an archive.',
     url: 'https://sillok.kr',
     siteName: 'Sillok',
     locale: 'en_US',
