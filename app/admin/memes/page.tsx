@@ -46,7 +46,8 @@ export default function AdminMemesPage() {
   const closeEditor = useCallback(() => setEditing(null), []);
 
   // ─── Generate form ───
-  const [format, setFormat] = useState<TemplateFormat>('feels-bro');
+  // 'story' = text-only short fiction; the rest are wojak templates
+  const [format, setFormat] = useState<TemplateFormat | 'story'>('feels-bro');
   const [slug1, setSlug1] = useState('');
   const [slug2, setSlug2] = useState('');
   const [eventSlug, setEventSlug] = useState('');
@@ -74,13 +75,12 @@ export default function AdminMemesPage() {
         mode === 'auto'
           ? { mode, count: autoCount }
           : {
-              mode,
-              format,
+              ...(format === 'story' ? { mode: 'story' } : { mode, format }),
               person_slugs: [slug1, slug2].map((s) => s.trim()).filter(Boolean),
               ...(eventSlug.trim() && { event_slug: eventSlug.trim() }),
             };
       const res = await apiFetch<CreateResult>('/api/admin/memes', { method: 'POST', body: JSON.stringify(body) });
-      afterCreate(res, res.created.length === 1 ? 'meme' : 'memes');
+      afterCreate(res, format === 'story' && mode === 'manual' ? 'story' : res.created.length === 1 ? 'meme' : 'memes');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Generation failed', 'error');
     } finally {
@@ -146,15 +146,15 @@ export default function AdminMemesPage() {
     }
   };
 
-  const twoFigures = FORMAT_DEFS[format].figures === 2;
+  const twoFigures = format !== 'story' && FORMAT_DEFS[format].figures === 2;
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Memes</h1>
+        <h1 className="text-2xl font-bold text-gray-900">AI Drafts</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          AI-generated wojak memes from figure data, and English versions of Korean memes. Publishing posts the meme as a thread
-          in the feed under its figures.
+          AI-written wojak memes, short stories and English versions of Korean memes. Drafts are private; posting turns a draft
+          into a regular thread under its figures.
         </p>
       </div>
 
@@ -162,18 +162,19 @@ export default function AdminMemesPage() {
         {/* ─── Wojak generator ─── */}
         <section className="card-flat space-y-4 p-5">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Generate wojak meme</h2>
-            <p className="text-xs text-gray-500">Pre-modern, published figures only. Captions are written by Claude from DB facts.</p>
+            <h2 className="text-sm font-semibold text-gray-900">Generate meme or short story</h2>
+            <p className="text-xs text-gray-500">Pre-modern, published figures only. Written by Claude from DB facts.</p>
           </div>
 
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-600">Format</span>
-            <select className="input" value={format} onChange={(e) => setFormat(e.target.value as TemplateFormat)}>
+            <select className="input" value={format} onChange={(e) => setFormat(e.target.value as TemplateFormat | 'story')}>
               {TEMPLATE_FORMATS.map((f) => (
                 <option key={f} value={f}>
                   {FORMAT_DEFS[f].label} — {FORMAT_DEFS[f].description}
                 </option>
               ))}
+              <option value="story">Short story — text-only post with a twist ending</option>
             </select>
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -284,18 +285,28 @@ export default function AdminMemesPage() {
             <span className="text-sm">Loading...</span>
           </div>
         ) : memes.length === 0 ? (
-          <p className="py-12 text-center text-sm text-gray-400">No memes here yet.</p>
+          <p className="py-12 text-center text-sm text-gray-400">No drafts here yet.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {memes.map((m) => (
               <div key={m.id} className="card-flat flex flex-col overflow-hidden">
-                <button type="button" onClick={() => setEditing(m)} className="block bg-gray-50" aria-label="Edit meme">
-                  <img src={memeImageUrl(m)} alt="" loading="lazy" className="aspect-square w-full object-contain" />
+                <button type="button" onClick={() => setEditing(m)} className="block bg-gray-50 text-left" aria-label="Edit">
+                  {m.kind === 'story' ? (
+                    <p className="line-clamp-[10] aspect-square whitespace-pre-wrap p-4 text-sm leading-relaxed text-gray-700">
+                      {(m.content.body as string) ?? ''}
+                    </p>
+                  ) : (
+                    <img src={memeImageUrl(m)} alt="" loading="lazy" className="aspect-square w-full object-contain" />
+                  )}
                 </button>
                 <div className="flex flex-1 flex-col gap-2 p-3">
                   <div className="flex flex-wrap items-center gap-1.5 text-xs">
                     <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700">
-                      {m.kind === 'translated' ? 'Translated' : FORMAT_DEFS[m.format as TemplateFormat]?.label ?? m.format}
+                      {m.kind === 'translated'
+                        ? 'Translated'
+                        : m.kind === 'story'
+                          ? 'Short story'
+                          : FORMAT_DEFS[m.format as TemplateFormat]?.label ?? m.format}
                     </span>
                     {m.is_ai_generated && <span className="rounded bg-violet-50 px-1.5 py-0.5 text-violet-700">AI</span>}
                     {m.figures.length > 0 && <span className="text-gray-500">{m.figures.map((f) => f.name).join(' · ')}</span>}

@@ -10,6 +10,8 @@ import {
   isMemeEligible,
   memeName,
   memeThreadBody,
+  padBox,
+  harmonizeFontSizes,
   memeTranscript,
   memeAltText,
   UpdateMemeSchema,
@@ -263,5 +265,51 @@ describe('memeAltText', () => {
       'Meme — exam results (Original Korean: 성적 발표)',
     );
     expect(memeAltText({ lines: ['x'.repeat(600)], original: [] })).toHaveLength(498);
+  });
+});
+
+describe('short stories', () => {
+  it('validates story content', () => {
+    expect(parseMemeContent('story', 'story', { body: 'A twist.' })).toEqual({ body: 'A twist.' });
+    expect(parseMemeContent('story', 'story', { body: '  ' })).toBeNull();
+    expect(parseMemeContent('story', 'story', { body: 'x'.repeat(1501) })).toBeNull();
+  });
+
+  it('posts the story itself, then what is real, then the AI note', () => {
+    expect(
+      memeThreadBody({ kind: 'story', content: { body: 'Line one.\nTwist.' }, fact: 'The envoys disagreed in 1591.', source_credit: null, source_url: null }),
+    ).toBe("Line one.\nTwist.\n\nWhat's real: The envoys disagreed in 1591.\n\nShort fiction written with AI.");
+  });
+
+  it('has no image text', () => {
+    expect(memeTranscript('story', 'story', { body: 'x' }, ['Seonjo'])).toEqual({ lines: [], original: [] });
+  });
+
+  it('accepts story generation requests with one or two figures', () => {
+    expect(GenerateMemeSchema.safeParse({ mode: 'story', person_slugs: ['seonjo-yi-yeon'] }).success).toBe(true);
+    expect(GenerateMemeSchema.safeParse({ mode: 'story', person_slugs: [] }).success).toBe(false);
+  });
+});
+
+describe('padBox', () => {
+  it('grows the box around its center and stays inside the image', () => {
+    const b = padBox({ x: 0.2, y: 0.5, w: 0.6, h: 0.04 });
+    expect(b.h).toBeCloseTo(0.06);
+    expect(b.y).toBeCloseTo(0.49);
+    expect(b.w).toBeCloseTo(0.62);
+    expect(b.x).toBeCloseTo(0.19);
+    expect(padBox({ x: 0, y: 0.97, w: 1, h: 0.04 }).y + padBox({ x: 0, y: 0.97, w: 1, h: 0.04 }).h).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('harmonizeFontSizes', () => {
+  it('gives same-height boxes the same size and keeps taller boxes bigger', () => {
+    // two 40px lines (one long → fits 18px, one short → fits 40px) and an 80px headline
+    expect(harmonizeFontSizes([18, 40, 70], [40, 40, 80])).toEqual([18, 18, 36]);
+  });
+
+  it('floors at 12, the minimum fitFontSize returns', () => {
+    expect(harmonizeFontSizes([30, 10], [40, 40])).toEqual([12, 12]);
+    expect(harmonizeFontSizes([], [])).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { FORMAT_DEFS, GenerateMemeSchema, MemeListSchema, parseMemeCursor } from '@/lib/meme';
-import { generateCaptions } from '@/lib/meme-ai';
+import { generateCaptions, generateStory } from '@/lib/meme-ai';
 import { loadEventBySlug, loadFiguresBySlugs, loadRelation, pickAutoCandidates } from '@/lib/meme-data';
 import { MEME_COLUMNS, insertMeme, memeAiErrorResponse, withFigures, type MemeRow } from '@/lib/meme-server';
 
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const { status, cursor, limit } = parsed.data;
 
   let query = supabaseAdmin
-    .from('memes')
+    .from('ai_drafts')
     .select(MEME_COLUMNS)
     .eq('is_deleted', false)
     .order('created_at', { ascending: false })
@@ -49,8 +49,9 @@ export async function GET(request: Request) {
   });
 }
 
-// ─── POST /api/admin/memes — Generate wojak meme draft(s) with AI [ADMIN] ───
-// manual: chosen format + figures (+ optional event) → 1 draft
+// ─── POST /api/admin/memes — Generate draft(s) with AI [ADMIN] ───
+// manual: wojak meme, chosen format + figures (+ optional event) → 1 draft
+// story:  twist-ending short fiction about figures (+ optional event) → 1 draft
 // auto:   random RIVAL/ALLY/FAMILY pairs → up to `count` drafts
 
 export async function POST(request: Request) {
@@ -67,13 +68,13 @@ export async function POST(request: Request) {
   if (!parsed.success) return apiError('VALIDATION_ERROR', 'Please check your input.', 422, parsed.error.issues);
   const input = parsed.data;
 
-  if (input.mode === 'manual') {
-    const def = FORMAT_DEFS[input.format];
-    // drake / its-over take one subject; a second figure is optional context
-    const minFigures = def.figures;
-    const maxFigures = 2;
-    if (input.person_slugs.length < minFigures || input.person_slugs.length > maxFigures)
-      return apiError('VALIDATION_ERROR', `"${def.label}" needs ${minFigures === 2 ? 'two figures' : 'one or two figures'}.`, 422);
+  if (input.mode === 'manual' || input.mode === 'story') {
+    if (input.mode === 'manual') {
+      const def = FORMAT_DEFS[input.format];
+      // drake / its-over take one subject; a second figure is optional context
+      if (input.person_slugs.length < def.figures)
+        return apiError('VALIDATION_ERROR', `"${def.label}" needs two figures.`, 422);
+    }
 
     const [found, event] = await Promise.all([
       loadFiguresBySlugs(input.person_slugs),
@@ -90,10 +91,13 @@ export async function POST(request: Request) {
     const relation = figures.length === 2 ? await loadRelation(figures[0].id, figures[1].id) : null;
 
     try {
-      const { content, fact, title } = await generateCaptions({ format: input.format, figures, relation, event });
+      const { content, fact, title } =
+        input.mode === 'story'
+          ? await generateStory({ figures, relation, event })
+          : await generateCaptions({ format: input.format, figures, relation, event });
       const meme = await insertMeme({
-        kind: 'template',
-        format: input.format,
+        kind: input.mode === 'story' ? 'story' : 'template',
+        format: input.mode === 'story' ? 'story' : input.format,
         title: title || null,
         person_ids: figures.map((f) => f.id),
         event_node_id: event?.id ?? null,

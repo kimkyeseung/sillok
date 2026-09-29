@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const input = parsed.data;
 
   const { data: row } = await supabaseAdmin
-    .from('memes')
+    .from('ai_drafts')
     .select(MEME_COLUMNS)
     .eq('id', params.id)
     .eq('is_deleted', false)
@@ -79,7 +79,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   const { data, error } = await supabaseAdmin
-    .from('memes')
+    .from('ai_drafts')
     .update(update)
     .eq('id', params.id)
     .select(MEME_COLUMNS)
@@ -98,7 +98,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   if (!IdSchema.safeParse(params.id).success) return apiError('VALIDATION_ERROR', 'Invalid meme id.', 422);
 
   const { data, error } = await supabaseAdmin
-    .from('memes')
+    .from('ai_drafts')
     .update({ is_deleted: true })
     .eq('id', params.id)
     .select('thread_id')

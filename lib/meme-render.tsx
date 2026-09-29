@@ -14,6 +14,7 @@ export async function buildMemeElement(
   meme: Pick<MemeRow, 'kind' | 'format' | 'content' | 'person_ids' | 'source_image_url' | 'source_width' | 'source_height'>,
   contentOverride?: unknown,
 ): Promise<MemeRenderResult> {
+  if (meme.kind === 'story') return { ok: false, error: 'Stories have no image' };
   const content = parseMemeContent(meme.kind, meme.format, contentOverride ?? meme.content);
   if (!content) return { ok: false, error: 'Invalid content' };
 

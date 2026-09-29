@@ -9,8 +9,10 @@ import {
   FORMAT_DEFS,
   HAT_TYPES,
   isTemplateFormat,
+  memeThreadBody,
   type FaceVariant,
   type HatType,
+  type MemeKind,
   type MemeStatus,
   type TextBox,
 } from '@/lib/meme';
@@ -18,7 +20,7 @@ import MemeBoxEditor from './MemeBoxEditor';
 
 export interface AdminMeme {
   id: string;
-  kind: 'template' | 'translated';
+  kind: MemeKind;
   format: string;
   title: string | null;
   content: Record<string, unknown>;
@@ -321,7 +323,9 @@ export default function MemeEditor({
   );
 
   const heading =
-    meme.kind === 'translated'
+    meme.kind === 'story'
+      ? `Short story · ${meme.figures.map((f) => f.name).join(' & ')}`
+      : meme.kind === 'translated'
       ? 'Translated meme'
       : `${isTemplateFormat(meme.format) ? FORMAT_DEFS[meme.format].label : meme.format} · ${meme.figures.map((f) => f.name).join(' & ')}`;
 
@@ -338,7 +342,15 @@ export default function MemeEditor({
         <div className="grid gap-6 p-6 lg:grid-cols-2">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Preview</p>
-            {previewError ? (
+            {meme.kind === 'story' ? (
+              // Text-only thread: preview what the post will read like
+              <div className="rounded-lg border border-gray-200 p-5">
+                <h3 className="text-lg font-bold text-gray-900">{title || 'Untitled'}</h3>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+                  {memeThreadBody({ kind: 'story', content: { body: (content.body as string) ?? '' }, fact, source_credit: null, source_url: null })}
+                </p>
+              </div>
+            ) : previewError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
                 Preview failed — a caption may be empty or too long.
               </div>
@@ -357,10 +369,26 @@ export default function MemeEditor({
               <span className="mb-1 block text-xs font-medium text-gray-600">Thread title</span>
               <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
             </label>
-            {meme.kind === 'translated' ? translatedForm() : templateForm()}
+            {meme.kind === 'story' ? (
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-gray-600">Story (the twist goes in the last line)</span>
+                <textarea
+                  className="input min-h-[220px]"
+                  value={(content.body as string) ?? ''}
+                  onChange={(e) => set('body', e.target.value)}
+                  maxLength={1500}
+                />
+              </label>
+            ) : meme.kind === 'translated' ? (
+              translatedForm()
+            ) : (
+              templateForm()
+            )}
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-gray-600">
-                Thread body {meme.kind === 'translated' ? '(context for foreign readers)' : '(the history behind the joke)'}
+                {meme.kind === 'story'
+                  ? "What's real (shown under the story)"
+                  : `Thread body ${meme.kind === 'translated' ? '(context for foreign readers)' : '(the history behind the joke)'}`}
               </span>
               <textarea className="input min-h-[60px]" value={fact} onChange={(e) => setFact(e.target.value)} maxLength={500} />
             </label>

@@ -2,8 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import {
   MEME_TITLE_MAX,
+  StoryContentSchema,
   TEMPLATE_CONTENT_SCHEMAS,
-  clampBox,
+  padBox,
+  type StoryContent,
   type TemplateContent,
   type TemplateFormat,
   type TextBox,
@@ -240,7 +242,7 @@ export async function translateMemeImage(imageUrl: string): Promise<{
     .slice(0, 24)
     .map((b) => {
       const bg = b.background.toLowerCase();
-      return clampBox({
+      return padBox({
         x: b.x,
         y: b.y,
         w: b.w,
@@ -258,5 +260,57 @@ export async function translateMemeImage(imageUrl: string): Promise<{
     title: parsed.data.title.trim().slice(0, MEME_TITLE_MAX),
     summary: parsed.data.summary.trim().slice(0, 500),
     creditHint: parsed.data.credit_hint.trim().slice(0, 120),
+  };
+}
+
+// ─── 3. Twist-ending short fiction ("one-tweet story") ───
+
+const STORY_SYSTEM = `You write very short humorous fiction about Korean historical figures for Sillok, an English-language Korean history community. The style is the "one-tweet novel": a few lines of scene-setting and dialogue that read straight, then a final line that flips the meaning — the reader realizes something ironic about the narrator or the situation.
+
+Rules:
+- English only. 40–120 words. Short lines, mostly dialogue. First person works well.
+- The setup must be built on real, well-documented history (people, dates, decisions). The punchline can be invented dialogue, but it must follow from that history — don't invent events.
+- The twist lands in the last line. Don't explain the joke.
+- Punch at irony, vanity, bad decisions and bureaucracy — never at ethnicity, religion, disability, or victims of massacres, war crimes or sexual violence. No sexual content. Don't make light of mass civilian deaths or of executions of children.
+- "title": a short post title (max ~70 characters) that sets up the scene without spoiling the twist.
+- "fact": one or two sentences stating what is historically true in the story, and which part is invented.
+- If there is no good fact-based twist, set "skip" to true (other fields empty).`;
+
+const STORY_SCHEMA = {
+  type: 'object',
+  properties: { skip: { type: 'boolean' }, title: str, story: str, fact: str },
+  required: ['skip', 'title', 'story', 'fact'],
+  additionalProperties: false,
+};
+
+export async function generateStory(input: {
+  figures: MemeFigureInfo[];
+  relation?: { relation_type: string; description: string | null } | null;
+  event?: MemeEventInfo | null;
+}): Promise<{ content: StoryContent; fact: string; title: string }> {
+  const lines = [
+    ...input.figures.map(describeFigure),
+    input.relation
+      ? `Relation between figure 1 and figure 2: ${input.relation.relation_type}${input.relation.description ? ` — ${input.relation.description}` : ''}`
+      : '',
+    input.event
+      ? `Event: ${input.event.title}${input.event.year ? ` (${input.event.year})` : ''}${input.event.description ? ` — ${input.event.description}` : ''}`
+      : '',
+  ].filter(Boolean);
+
+  const raw = (await callJson({
+    system: STORY_SYSTEM,
+    content: [{ type: 'text', text: lines.join('\n') }],
+    schema: STORY_SCHEMA,
+    effort: 'high',
+  })) as { skip?: boolean; title?: string; story?: string; fact?: string };
+
+  if (raw.skip) throw new MemeAiError('SKIPPED', 'No fact-based twist found for these figures.');
+  const parsed = StoryContentSchema.safeParse({ body: raw.story });
+  if (!parsed.success || !raw.title?.trim()) throw new MemeAiError('INVALID_OUTPUT', 'Story failed validation.');
+  return {
+    content: parsed.data,
+    fact: (raw.fact ?? '').trim().slice(0, 500),
+    title: raw.title.trim().slice(0, MEME_TITLE_MAX),
   };
 }

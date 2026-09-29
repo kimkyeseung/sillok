@@ -16,7 +16,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   if (!(await requireAdmin(request))) return new Response('Not found', { status: 404 });
 
   const { data } = await supabaseAdmin
-    .from('memes')
+    .from('ai_drafts')
     .select(MEME_COLUMNS)
     .eq('id', params.id)
     .eq('is_deleted', false)

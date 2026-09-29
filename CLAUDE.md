@@ -117,7 +117,7 @@ db/migrations/          날짜별 마이그레이션 (schema.sql과 항상 동�
 | 대댓글 최대 4단계 | 초과 시 부모의 부모에 붙임. 부모 댓글은 같은 스레드·미삭제인지 서버 검증 |
 | 인물 페이지 탭별 URL | 탭마다 색인 가능한 페이지. 항목 수가 `TAB_MIN_ITEMS` 미만인 탭은 숨기고 404 |
 | AI 초안 즉시 공개 + 라벨 | `is_ai_generated` 표시로 투명성 확보, 어드민이 사후 검수 |
-| 밈 = 평범한 스레드 | 밈 게시 = 관리자 명의 일반 스레드(이미지 1장, `memes.thread_id`). 밈 전용 카테고리·토픽·섹션 없음 (레딧처럼 스레드는 뭐든 올라옴). 이미지 속 텍스트는 `thread_images.alt`에 저장 → img alt·ImageObject.caption |
+| AI 초안 = 평범한 스레드 | `/admin/memes`(메뉴명 AI Drafts)에서 워작 밈·번역 짤·짧은 소설 초안 생성 → `ai_drafts` 테이블(관리자 전용, 사용자는 모름) → 게시하면 관리자 명의 일반 스레드(`ai_drafts.thread_id`). 밈 전용 카테고리·토픽·섹션 없음 (레딧처럼 스레드는 뭐든 올라옴). 이미지 속 텍스트는 `thread_images.alt` → img alt·ImageObject.caption |
 | 밈은 근대 이전 인물만 | 1850년 이후 출생·생존·modern 태그 제외 (명예훼손 방지). 캡션은 사실 기반, `fact` 필드로 근거 표시. 번역 짤은 출처·크레딧 필수 |
 | 빈 게시판·토픽 noindex | 글 0개면 noindex + sitemap 제외 (thin content 방지) |
 

@@ -1133,17 +1133,18 @@ CREATE INDEX IF NOT EXISTS reigns_start_idx ON reigns (reign_start);
 ALTER TABLE reigns ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- Memes (admin-generated wojak memes + translated Korean memes)
--- kind 'template': wojak format + captions; kind 'translated': uploaded
--- Korean meme + English text boxes (0..1 coords). Rendered by /api/og/meme/[id].
--- Publishing renders a PNG into the 'threads' bucket and creates a thread (thread_id).
+-- AI drafts (admin-only workspace: wojak memes, translated memes, short stories)
+-- Users never see this table — publishing turns a draft into a regular thread.
+-- kind 'template': wojak format + captions; kind 'story': text-only short fiction; kind 'translated': uploaded
+-- Korean meme + English text boxes (0..1 coords). Previewed by /api/og/meme/[id].
+-- Publishing renders a PNG into the 'threads' bucket and creates a thread (thread_id); stories become text-only threads.
 -- Source images live in the public 'memes' storage bucket.
 -- RLS on, no policies → service role only.
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS memes (
+CREATE TABLE IF NOT EXISTS ai_drafts (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  kind             TEXT NOT NULL CHECK (kind IN ('template', 'translated')),
+  kind             TEXT NOT NULL CHECK (kind IN ('template', 'translated', 'story')),
   format           TEXT NOT NULL,
   title            TEXT,                 -- thread title when published
   person_ids       UUID[] NOT NULL DEFAULT '{}',
@@ -1164,9 +1165,9 @@ CREATE TABLE IF NOT EXISTS memes (
   created_at       TIMESTAMPTZ DEFAULT NOW(),
   updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS memes_admin_list_idx ON memes (status, created_at DESC, id DESC) WHERE is_deleted = FALSE;
-CREATE INDEX IF NOT EXISTS memes_person_ids_idx ON memes USING gin (person_ids);
-CREATE TRIGGER memes_updated_at
-  BEFORE UPDATE ON memes
+CREATE INDEX IF NOT EXISTS ai_drafts_admin_list_idx ON ai_drafts (status, created_at DESC, id DESC) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS ai_drafts_person_ids_idx ON ai_drafts USING gin (person_ids);
+CREATE TRIGGER ai_drafts_updated_at
+  BEFORE UPDATE ON ai_drafts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-ALTER TABLE memes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_drafts ENABLE ROW LEVEL SECURITY;

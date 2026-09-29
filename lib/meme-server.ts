@@ -1,4 +1,5 @@
 import { apiError } from './api-helpers';
+import type { MemeKind } from './meme';
 import { MemeAiError } from './meme-ai';
 import { supabaseAdmin } from './supabase-admin';
 import { loadFiguresByIds } from './meme-data';
@@ -10,7 +11,7 @@ export const MEME_COLUMNS =
 
 export interface MemeRow {
   id: string;
-  kind: 'template' | 'translated';
+  kind: MemeKind;
   format: string;
   title: string | null;
   person_ids: string[];
@@ -43,7 +44,7 @@ export async function withFigures<T extends Pick<MemeRow, 'person_ids'>>(memes: 
 }
 
 export async function insertMeme(row: Record<string, unknown>) {
-  const { data, error } = await supabaseAdmin.from('memes').insert(row).select(MEME_COLUMNS).single();
+  const { data, error } = await supabaseAdmin.from('ai_drafts').insert(row).select(MEME_COLUMNS).single();
   if (error) throw new Error(`[meme] insert failed: ${error.message}`);
   return data as unknown as MemeRow;
 }

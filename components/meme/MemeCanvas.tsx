@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import {
   FORMAT_DEFS,
   fitFontSize,
+  harmonizeFontSizes,
   translatedSize,
   type FaceVariant,
   type HatType,
@@ -209,12 +210,15 @@ export function renderTranslatedMeme(
   boxes: TextBox[],
 ): { element: ReactElement; width: number; height: number } {
   const { width, height } = translatedSize(srcW, srcH);
+  const visible = boxes.filter((b) => b.text.trim());
+  const sizes = harmonizeFontSizes(
+    visible.map((b) => fitFontSize(b.text, Math.round(b.w * width) - 8, Math.round(b.h * height) - 8, 72, 12)),
+    visible.map((b) => b.h * height),
+  );
   const element = (
     <div style={{ display: 'flex', position: 'relative', width, height, background: '#000000', fontFamily: 'sans-serif' }}>
       <img src={imageUrl} width={width} height={height} alt="" style={{ position: 'absolute', left: 0, top: 0, objectFit: 'fill' }} />
-      {boxes
-        .filter((b) => b.text.trim())
-        .map((b, i) => {
+      {visible.map((b, i) => {
           const w = Math.round(b.w * width);
           const h = Math.round(b.h * height);
           const outlined = b.background === null;
@@ -234,7 +238,7 @@ export function renderTranslatedMeme(
                 padding: 4,
                 background: b.background ?? 'transparent',
                 color: b.color,
-                fontSize: fitFontSize(b.text, w - 8, h - 8, 72, 12),
+                fontSize: sizes[i],
                 lineHeight: 1.15,
                 ...(outlined && { textShadow: OUTLINE }),
               }}

@@ -8,7 +8,8 @@ import { buildMemeElement } from './meme-render';
 import type { MemeRow } from './meme-server';
 
 // ─── Publish a meme as a regular thread (server only) ───
-// PNG → 'threads' bucket → thread + thread_persons + thread_images.
+// PNG → 'threads' bucket → thread + thread_persons + thread_images
+// (stories: text-only thread, no image).
 // Re-running on an already-published meme updates the same thread in place.
 
 export class MemePublishError extends Error {}
@@ -22,13 +23,18 @@ export async function syncMemeThread(meme: MemeRow, adminId: string): Promise<st
   const figureIds = Array.from(new Set(meme.person_ids ?? []));
   if (figureIds.length === 0) throw new MemePublishError('Add at least one figure before publishing — threads belong to a figure.');
 
-  const rendered = await buildMemeElement(meme);
-  const names = (await loadFiguresByIds(figureIds)).map((f) => f.name);
-  const alt = memeAltText(memeTranscript(meme.kind, meme.format, meme.content, names));
-  if (!rendered.ok) throw new MemePublishError(`Could not render the meme: ${rendered.error}`);
-  const png = Buffer.from(
-    await new ImageResponse(rendered.element, { width: rendered.width, height: rendered.height }).arrayBuffer(),
-  );
+  // Stories are text-only threads; memes carry one rendered image
+  let png: Buffer | null = null;
+  let alt: string | null = null;
+  if (meme.kind !== 'story') {
+    const rendered = await buildMemeElement(meme);
+    if (!rendered.ok) throw new MemePublishError(`Could not render the meme: ${rendered.error}`);
+    png = Buffer.from(
+      await new ImageResponse(rendered.element, { width: rendered.width, height: rendered.height }).arrayBuffer(),
+    );
+    const names = (await loadFiguresByIds(figureIds)).map((f) => f.name);
+    alt = memeAltText(memeTranscript(meme.kind, meme.format, meme.content, names));
+  }
 
   // Existing thread keeps its author and id
   let threadId = meme.thread_id;
@@ -46,10 +52,12 @@ export async function syncMemeThread(meme: MemeRow, adminId: string): Promise<st
   threadId ??= randomUUID();
 
   // New file name per render so CDN/browser caches never show a stale image
-  const path = `${authorId}/${threadId}/meme-${Date.now()}.png`;
-  const upload = await supabaseAdmin.storage.from('threads').upload(path, png, { contentType: 'image/png' });
-  if (upload.error) throw new Error(`[meme] image upload failed: ${upload.error.message}`);
-  const imageUrl = `${THREADS_PUBLIC()}${path}`;
+  let path: string | null = null;
+  if (png) {
+    path = `${authorId}/${threadId}/meme-${Date.now()}.png`;
+    const upload = await supabaseAdmin.storage.from('threads').upload(path, png, { contentType: 'image/png' });
+    if (upload.error) throw new Error(`[meme] image upload failed: ${upload.error.message}`);
+  }
 
   const threadFields = {
     title,
@@ -70,14 +78,14 @@ export async function syncMemeThread(meme: MemeRow, adminId: string): Promise<st
   } else {
     const { error } = await supabaseAdmin.from('threads').insert({ id: threadId, author_id: authorId, ...threadFields });
     if (error) {
-      await supabaseAdmin.storage.from('threads').remove([path]);
+      if (path) await supabaseAdmin.storage.from('threads').remove([path]);
       throw new Error(`[meme] thread insert failed: ${error.message}`);
     }
   }
 
   await Promise.all([
     // alt = the words in the image, so the meme's text is searchable
-    supabaseAdmin.from('thread_images').insert({ thread_id: threadId, url: imageUrl, alt, sort_order: 0 }),
+    path && supabaseAdmin.from('thread_images').insert({ thread_id: threadId, url: `${THREADS_PUBLIC()}${path}`, alt, sort_order: 0 }),
     supabaseAdmin.from('thread_persons').insert(
       figureIds.map((pid, i) => ({ thread_id: threadId, person_id: pid, is_primary: i === 0, sort_order: i })),
     ),

@@ -11,6 +11,9 @@ export type FaceVariant = (typeof FACE_VARIANTS)[number];
 export const HAT_TYPES = ['ikseongwan', 'gat', 'helmet', 'topknot', 'none'] as const;
 export type HatType = (typeof HAT_TYPES)[number];
 
+/** template = wojak image, translated = Korean meme with English boxes, story = text-only short fiction */
+export type MemeKind = 'template' | 'translated' | 'story';
+
 export const TEMPLATE_FORMATS = ['feels-bro', 'drake', 'virgin-chad', 'its-over'] as const;
 export type TemplateFormat = (typeof TEMPLATE_FORMATS)[number];
 
@@ -98,8 +101,18 @@ export const TranslatedContentSchema = z.object({
 });
 export type TranslatedContent = z.infer<typeof TranslatedContentSchema>;
 
+/** Twist-ending short fiction ("one-tweet story"), posted as a text-only thread */
+export const StoryContentSchema = z.object({
+  body: z.string().trim().min(1).max(1500),
+});
+export type StoryContent = z.infer<typeof StoryContentSchema>;
+
 /** Validate content for a meme's kind/format. Returns the parsed content or null. */
-export function parseMemeContent(kind: 'template' | 'translated', format: string, content: unknown) {
+export function parseMemeContent(kind: MemeKind, format: string, content: unknown) {
+  if (kind === 'story') {
+    const r = StoryContentSchema.safeParse(content);
+    return r.success ? r.data : null;
+  }
   if (kind === 'translated') {
     const r = TranslatedContentSchema.safeParse(content);
     return r.success ? r.data : null;
@@ -124,6 +137,27 @@ export function clampBox<T extends { x: number; y: number; w: number; h: number 
     x: Math.min(Math.max(b.x, 0), 1 - w),
     y: Math.min(Math.max(b.y, 0), 1 - h),
   };
+}
+
+/**
+ * Grow a detected text box so it fully covers the original glyphs
+ * (vision boxes tend to hug the text): +50% height, +2% width, centered.
+ */
+export function padBox<T extends { x: number; y: number; w: number; h: number }>(b: T): T {
+  const h = b.h * 1.5;
+  const w = b.w + 0.02;
+  return clampBox({ ...b, x: b.x - (w - b.w) / 2, y: b.y - (h - b.h) / 2, w, h });
+}
+
+/**
+ * Text size proportional to box height (≈ the original text size), so lines that
+ * were the same size stay the same size and a big headline stays big.
+ * k = the largest px-per-box-height that still fits every box.
+ */
+export function harmonizeFontSizes(fitted: number[], heights: number[]): number[] {
+  if (fitted.length === 0) return [];
+  const k = Math.min(...fitted.map((f, i) => f / Math.max(heights[i], 1)));
+  return fitted.map((f, i) => Math.max(12, Math.min(f, Math.floor(k * heights[i]))));
 }
 
 // ─── Figure → hat / eligibility ───
@@ -230,19 +264,28 @@ export function parseMemeCursor(cursor: string): { createdAt: string; id: string
 }
 
 // ─── Threads ───
-// A published meme is a regular thread: title + body + the rendered PNG.
+// A published meme is a regular thread: title + body + the rendered PNG
+// (stories: title + the story itself, no image).
 
 /** Same limit as thread titles (POST /api/threads) */
 export const MEME_TITLE_MAX = 200;
 
 /** Thread body for a published meme (threads render plain text) */
 export function memeThreadBody(m: {
-  kind: 'template' | 'translated';
+  kind: MemeKind;
+  content?: unknown;
   fact: string | null;
   source_credit: string | null;
   source_url: string | null;
 }): string {
   const parts: string[] = [];
+  if (m.kind === 'story') {
+    const story = StoryContentSchema.safeParse(m.content);
+    if (story.success) parts.push(story.data.body);
+    if (m.fact?.trim()) parts.push(`What's real: ${m.fact.trim()}`);
+    parts.push('Short fiction written with AI.');
+    return parts.join('\n\n');
+  }
   if (m.fact?.trim()) parts.push(m.fact.trim());
   if (m.kind === 'translated') {
     const credit = m.source_credit?.trim();
@@ -269,6 +312,11 @@ export const GenerateMemeSchema = z.union([
   z.object({
     mode: z.literal('auto'),
     count: z.number().int().min(1).max(5),
+  }),
+  z.object({
+    mode: z.literal('story'),
+    person_slugs: z.array(slug).min(1).max(2),
+    event_slug: slug.optional(),
   }),
 ]);
 
@@ -314,13 +362,13 @@ export interface MemeTranscript {
 }
 
 export function memeTranscript(
-  kind: 'template' | 'translated',
+  kind: MemeKind,
   format: string,
   content: unknown,
   names: string[],
 ): MemeTranscript {
   const parsed = parseMemeContent(kind, format, content);
-  if (!parsed) return { lines: [], original: [] };
+  if (!parsed || kind === 'story') return { lines: [], original: [] };
   const who = (i: number, text: string) => (names[i] ? `${names[i]}: ${text}` : text);
 
   if (kind === 'translated') {

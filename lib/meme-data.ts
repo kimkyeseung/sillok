@@ -145,7 +145,7 @@ export async function pickAutoCandidates(limit: number): Promise<MemeCandidate[]
       .eq('is_approved', true)
       .in('relation_type', ['RIVAL', 'ALLY', 'FAMILY'])
       .limit(5000),
-    supabaseAdmin.from('memes').select('person_ids').eq('kind', 'template').eq('is_deleted', false).limit(5000),
+    supabaseAdmin.from('ai_drafts').select('person_ids').eq('kind', 'template').eq('is_deleted', false).limit(5000),
   ]);
   if (relations.error) throw new Error(`[meme] relations fetch failed: ${relations.error.message}`);
 
