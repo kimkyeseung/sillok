@@ -1,8 +1,17 @@
 # Sillok — 한국 인물·문화 아카이브 플랫폼 SPEC
 
-> **버전:** 2.4 (커뮤니티 피드 홈 · 인물 페이지 탭/커뮤니티 기능 반영)
+> **버전:** 2.5 (age-flow 연도 페이지 · 국보·보물 유물 · AI Drafts 반영)
 > **작성 목적:** Claude Code 기반 자동 개발을 위한 전체 명세서
 > **기술 스택:** Next.js 14 (App Router) + Supabase + Vercel
+
+### v2.4 → v2.5 변경 사항
+
+- **age-flow 연도 페이지**: `/age-flow/{year}` ("Korea in 1592") + 공유 카드 `/api/og/age-flow/{year}`. 왕 = `reigns` 테이블(어드민 `/admin/reigns`), 전쟁 = EVENT 노드(war/revolt) + `metadata.end_year`. 생존 인물 5명 미만 연도는 noindex
+- **조선 왕 별칭 검색**: `persons.aliases_en` ("King Sejong" 등)
+- **국보·보물 일괄 등록**: 국가유산청 API로 ARTIFACT 노드 ~2,800건 (`metadata.source = 'khs'`, AI 번역 초안 → 검수 전 noindex·큐레이션 제외). 유물 탭: 목록/지도(MapLibre + MapTiler), 지정·유형·시대·지역·소장처 필터, 커서 페이지네이션 (`/api/artifacts`, `/facets`, `/map`). 이미지는 미러링 없이 공공누리 1·3유형만 `node_images`에 저장
+- **AI Drafts** (`/admin/memes`, 테이블 `ai_drafts`): Claude로 워작 밈·한국 짤 영어 번역·짧은 소설 초안 생성 → 어드민 검토 후 게시하면 관리자 명의 **일반 스레드**가 됨 (밈 전용 카테고리·섹션 없음). 근대 이전 인물만 (섹션 8)
+- **스레드 이미지**: 한 장이면 원본 비율로 크게 표시. `thread_images.alt` 추가 → img alt · og:image:alt · `ImageObject.caption` (이미지 속 텍스트 검색 노출)
+- **환경 변수**: `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_MAPTILER_KEY` 추가 (섹션 14)
 
 ### v2.3 → v2.4 변경 사항
 
@@ -683,6 +692,7 @@ CREATE TABLE thread_images (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   thread_id  UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
   url        TEXT NOT NULL,
+  alt        TEXT,             -- 이미지 설명/이미지 속 텍스트 (img alt, ImageObject.caption)
   sort_order SMALLINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT max_images_per_thread CHECK (sort_order BETWEEN 0 AND 2)
@@ -1037,7 +1047,24 @@ CREATE TABLE person_sources (        -- 사료·백과·도서
 - 댓글: 1~1000자, soft delete, 신고 대상 `PERSON_ITEM_COMMENT`
 - 이미지 첨부 없음 (댓글 이미지 금지 원칙 유지)
 
-> 4-26 ~ 4-28의 모든 테이블: RLS 켜고 정책 없음 — service role(서버)로만 접근
+### 4-29. 재위 (reigns)
+
+- 왕 1인 1재위 1행 (복위한 왕은 2행). `UNIQUE (person_id, reign_start)`, `reign_end >= reign_start`
+- age-flow의 "현재 왕"·연도 페이지가 사용. 어드민 `/admin/reigns`
+
+### 4-30. 노드 이미지 (node_images)
+
+- 국가유산청 API 이미지 URL (스토리지 미러링 없음). `license` ∈ `kogl-1`(자유), `kogl-3`(변경금지 → 크롭 없이 표시)
+- `caption_ko` / `caption_en`, `UNIQUE (node_id, url)`
+
+### 4-31. AI 초안 (ai_drafts)
+
+- 어드민 전용 작업 공간. `kind` ∈ `template`(워작 밈) / `translated`(한국 짤 번역) / `story`(짧은 소설)
+- `content` JSONB: 캡션 · 번역 박스(0..1 좌표) · 소설 본문. `title`, `fact`(역사적 근거), `person_ids`, 번역 원본(`source_image_url`, `source_url`, `source_credit`)
+- `status` draft / published / rejected. 게시하면 `thread_id`로 일반 스레드와 연결 (수정 시 스레드 갱신, 게시 취소·삭제 시 스레드 soft delete)
+- 번역할 원본 이미지는 public `memes` 버킷 (jpeg/png)
+
+> 4-26 ~ 4-31의 모든 테이블: RLS 켜고 정책 없음 — service role(서버)로만 접근
 
 ### DB 트리거 목록
 
@@ -1647,6 +1674,16 @@ const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com'];
 ### 스레드 관리
 - 스레드 pin/unpin, 삭제 관리
 
+### 재위 관리 (`/admin/reigns`)
+- age-flow용 왕 재위 기간 CRUD (인물 slug + 시작·종료 연도)
+
+### AI Drafts (`/admin/memes`)
+- **워작 밈**: 포맷 4종(I know that feel bro · Reject/Prefer · Virgin vs Chad · It's over) + 인물 1~2명(+사건). 캡션·제목은 Claude가 DB 사실로 작성. 모자(익선관·갓·투구·상투)는 FIELD 태그로 자동. 자동 생성은 쓰지 않은 RIVAL/ALLY/FAMILY 쌍에서 1~5개
+- **짧은 소설**: 반전으로 끝나는 초단편, 이미지 없는 스레드. 본문 뒤 "What's real:" + AI 표기
+- **한국 짤 번역**: 업로드 → Claude가 한국어 위치 탐지·번역 → 영어 박스(드래그·크기 조절 편집). 게시하려면 인물 지정 + 출처·크레딧
+- 편집기 실시간 미리보기(`/api/og/meme/{id}`, 어드민 전용) → "Save & post as thread"
+- 대상: 게시된 근대 이전 인물만 (1850년 이후 출생·생존·modern 태그 제외 — 명예훼손 방지). 모델 `claude-opus-5-5` (`ANTHROPIC_API_KEY`)
+
 ### 회원 관리
 ```
 검색: 닉네임, 이메일
@@ -1904,17 +1941,22 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=          # 서버/빌드 전용 (노출 금지)
 
-# 소셜 로그인 (현재 구현)
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-DISCORD_CLIENT_ID=
-DISCORD_CLIENT_SECRET=
+# 소셜 로그인 (Google, Discord): Supabase Auth 대시보드에서 설정 — 앱 환경 변수 없음
 
 # 파일 업로드
 MAX_FILE_SIZE_MB=5
 
 # 앱
 NEXT_PUBLIC_APP_URL=https://sillok.kr
+
+# AI Drafts (어드민 밈·번역·소설 생성, 서버 전용)
+ANTHROPIC_API_KEY=
+
+# 유물 지도 (MapTiler — 대시보드에서 허용 origin 제한)
+NEXT_PUBLIC_MAPTILER_KEY=
+
+# 외부 AI 인물 등록 API (/api/ai/persons, X-API-Key 헤더)
+AI_API_SECRET_KEY=
 
 # 광고 (Milestone 2)
 NEXT_PUBLIC_ADSENSE_CLIENT=
