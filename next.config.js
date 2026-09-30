@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Vercel Hobby image optimization quota exhausted → new images got 402. Serve originals directly.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
