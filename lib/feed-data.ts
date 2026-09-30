@@ -13,6 +13,7 @@ import {
   kstMonthDay,
   onThisDay,
   pickDefaultSort,
+  pickRelatedThreads,
   rotate,
   type DatedPerson,
   type FeedSort,
@@ -413,6 +414,65 @@ export const getSiteStats = cache(async () => {
   ]);
   return { figures, nodes, threads };
 });
+
+// ─── Thread detail sidebar ───
+
+export interface RelatedThread {
+  id: string;
+  title: string;
+  reply_count: number;
+  like_count: number;
+  created_at: string;
+}
+
+const RELATED_FIELDS = 'id, title, reply_count, like_count, created_at';
+
+/** Threads about the same figures, then more from the same topic (hot first) */
+export const getRelatedThreads = cache(
+  async (threadId: string, figureIds: string[], category: string | null, limit = 5) => {
+    const pool = limit * 3;
+    const [primary, linked, topic] = await Promise.all([
+      figureIds.length
+        ? supabaseAdmin
+            .from('threads')
+            .select(RELATED_FIELDS)
+            .in('person_id', figureIds)
+            .eq('is_deleted', false)
+            .order('hot_score', { ascending: false })
+            .limit(pool)
+        : null,
+      figureIds.length
+        ? supabaseAdmin.from('thread_persons').select('thread_id').in('person_id', figureIds).limit(pool)
+        : null,
+      category
+        ? supabaseAdmin
+            .from('threads')
+            .select(RELATED_FIELDS)
+            .eq('category', category)
+            .eq('is_deleted', false)
+            .order('hot_score', { ascending: false })
+            .limit(pool)
+        : null,
+    ]);
+
+    // Threads that only tag the figure (not as primary person)
+    const primaryRows = (primary?.data ?? []) as RelatedThread[];
+    const known = new Set(primaryRows.map((t) => t.id));
+    const extraIds = Array.from(new Set((linked?.data ?? []).map((r) => r.thread_id as string))).filter(
+      (id) => id !== threadId && !known.has(id)
+    );
+    const { data: extra } = extraIds.length
+      ? await supabaseAdmin.from('threads').select(RELATED_FIELDS).in('id', extraIds).eq('is_deleted', false)
+      : { data: [] };
+
+    return pickRelatedThreads(
+      threadId,
+      [...primaryRows, ...((extra ?? []) as RelatedThread[])],
+      (topic?.data ?? []) as RelatedThread[],
+      limit
+    );
+  }
+);
 
 // ─── Board header ───
 

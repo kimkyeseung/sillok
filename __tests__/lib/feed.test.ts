@@ -11,6 +11,8 @@ import {
   buildReplyTree,
   findBoard,
   findTopic,
+  findTopicByCategory,
+  pickRelatedThreads,
 } from '@/lib/feed';
 
 describe('pickDefaultSort', () => {
@@ -114,5 +116,21 @@ describe('boards & topics', () => {
     expect(findBoard('joseon')?.label).toBe('Joseon');
     expect(findBoard('nope')).toBeNull();
     expect(findTopic('film-tv')?.category).toBe('MEDIA');
+    expect(findTopicByCategory('QNA')?.slug).toBe('qna');
+    expect(findTopicByCategory(null)).toBeNull();
+  });
+});
+
+describe('pickRelatedThreads', () => {
+  const t = (id: string) => ({ id });
+  it('drops the current thread and de-duplicates across lists', () => {
+    const r = pickRelatedThreads('a', [t('a'), t('b'), t('c')], [t('c'), t('d'), t('a')]);
+    expect(r.byFigure.map((x) => x.id)).toEqual(['b', 'c']);
+    expect(r.byTopic.map((x) => x.id)).toEqual(['d']);
+  });
+  it('keeps overflow figure threads available for the topic list', () => {
+    const r = pickRelatedThreads('x', [t('a'), t('b'), t('c')], [t('c'), t('d')], 2);
+    expect(r.byFigure.map((x) => x.id)).toEqual(['a', 'b']);
+    expect(r.byTopic.map((x) => x.id)).toEqual(['c', 'd']);
   });
 });

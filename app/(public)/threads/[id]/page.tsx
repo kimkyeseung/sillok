@@ -8,7 +8,10 @@ import ViewLogger from '@/components/thread/ViewLogger';
 import ImageLightbox from '@/components/common/ImageLightbox';
 import { normalizeThreadFigures, type ThreadFigure } from '@/lib/thread-figures';
 import { DEFAULT_OG_IMAGE, stripMarkdown, truncateDescription, truncateTitle } from '@/lib/seo';
-import { buildReplyTree } from '@/lib/feed';
+import { buildReplyTree, findTopicByCategory } from '@/lib/feed';
+import { getRelatedThreads } from '@/lib/feed-data';
+import FeedShell from '@/components/feed/FeedShell';
+import ThreadSidebar, { RelatedThreads } from '@/components/thread/ThreadSidebar';
 import { breadcrumbJsonLd, discussionJsonLd } from '@/lib/jsonld';
 
 export const dynamic = 'force-dynamic';
@@ -129,21 +132,29 @@ export default async function ThreadDetailPage({ params }: Props) {
   const thread = await getThread(params.id);
   if (!thread) notFound();
 
-  const { data: replies } = await supabaseAdmin
-    .from('thread_replies')
-    .select(
-      `id, parent_id, content, depth, like_count, created_at,
-       profiles!thread_replies_author_id_fkey ( nickname, avatar_url )`
-    )
-    .eq('thread_id', params.id)
-    .eq('is_deleted', false)
-    .order('created_at', { ascending: true })
-    .limit(200);
+  const figures = thread.figures ?? [];
+  const topic = findTopicByCategory(thread.category);
+  const [{ data: replies }, related] = await Promise.all([
+    supabaseAdmin
+      .from('thread_replies')
+      .select(
+        `id, parent_id, content, depth, like_count, created_at,
+         profiles!thread_replies_author_id_fkey ( nickname, avatar_url )`
+      )
+      .eq('thread_id', params.id)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: true })
+      .limit(200),
+    getRelatedThreads(
+      params.id,
+      figures.map((f: ThreadFigure) => f.id),
+      (thread.category as string | null) ?? null
+    ),
+  ]);
   const replyTree = buildReplyTree((replies ?? []) as Array<Record<string, unknown> & { id: string; parent_id: string | null; created_at: string }>);
 
   const author = thread.profiles as Record<string, unknown>;
   const images = (thread.thread_images ?? []) as Array<Record<string, unknown>>;
-  const figures = thread.figures ?? [];
   const authorName = (author?.nickname as string) ?? 'Anonymous';
   const firstImage = [...images].sort((a, b) => (a.sort_order as number) - (b.sort_order as number))[0];
 
@@ -178,8 +189,13 @@ export default async function ThreadDetailPage({ params }: Props) {
     ]),
   ];
 
+  const sidebarProps = { figures, byFigure: related.byFigure, byTopic: related.byTopic, topic };
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <FeedShell
+      active={topic ? { kind: 'topic', slug: topic.slug } : undefined}
+      sidebar={<ThreadSidebar {...sidebarProps} />}
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
@@ -323,6 +339,11 @@ export default async function ThreadDetailPage({ params }: Props) {
         {/* Comment Form */}
         <ReplyFormWrapper threadId={params.id} />
       </div>
-    </div>
+
+      {/* Desktop shows these in the sidebar */}
+      <div className="space-y-3 lg:hidden">
+        <RelatedThreads {...sidebarProps} />
+      </div>
+    </FeedShell>
   );
 }

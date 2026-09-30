@@ -168,6 +168,35 @@ export const TOPICS = [
   { slug: 'film-tv', category: 'MEDIA', label: 'Film & TV', icon: '🎬' },
 ] as const;
 export const findTopic = (slug: string) => TOPICS.find((t) => t.slug === slug) ?? null;
+export const findTopicByCategory = (category: string | null | undefined) =>
+  TOPICS.find((t) => t.category === category) ?? null;
+
+// ─── Related threads (thread detail sidebar) ───
+
+/**
+ * Split candidates into "same figure" and "same topic" lists without the current thread
+ * or duplicates across lists. Input order (ranking) is preserved.
+ */
+export function pickRelatedThreads<T extends { id: string }>(
+  currentId: string,
+  byFigure: T[],
+  byTopic: T[],
+  limit = 5
+): { byFigure: T[]; byTopic: T[] } {
+  const seen = new Set([currentId]);
+  const take = (list: T[]) => {
+    const out: T[] = [];
+    for (const t of list) {
+      if (out.length >= limit) break;
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      out.push(t);
+    }
+    return out;
+  };
+  const figure = take(byFigure);
+  return { byFigure: figure, byTopic: take(byTopic) };
+}
 
 // ─── Relative time ───
 
