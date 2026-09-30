@@ -50,12 +50,14 @@ export interface PersonDetail extends PersonSummary {
 }
 
 export const getPersonBySlug = cache(async (slug: string): Promise<PersonDetail | null> => {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('persons')
     .select('*, person_tags ( tags ( id, name_ko, name_en, type ) )')
     .eq('slug', slug)
     .eq('is_deleted', false)
     .single();
+  // Throw on real DB errors (not "no rows") so ISR keeps the last good page instead of caching a 404
+  if (error && error.code !== 'PGRST116') throw new Error(`[person] fetch failed: ${error.message}`);
   if (!data) return null;
   const { person_tags, ...person } = data;
   const tags = ((person_tags ?? []) as { tags: PersonTag | null }[])

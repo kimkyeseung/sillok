@@ -1,6 +1,6 @@
 // age-flow 데이터 로더 (서버 전용) — page SSR과 /api/persons/age-flow가 공유
 
-import { unstable_cache, revalidateTag } from 'next/cache';
+import { unstable_cache, revalidateTag, revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildAgeFlowData, JOSEON_START, JOSEON_END, type RawReign } from '@/lib/age-flow';
 import { CURATED_NODES_FILTER } from '@/lib/heritage';
@@ -92,7 +92,9 @@ export const getAgeFlowData = unstable_cache(loadAgeFlowData, ['age-flow-data'],
   tags: ['age-flow'],
 });
 
-/** Call after admin writes to persons / nodes / tags / links so age-flow updates now, not in 5 min */
+/** Call after admin writes to persons / nodes / tags / links so age-flow and the ISR person/node pages update now, not in 5 min */
 export function revalidateAgeFlow() {
   revalidateTag('age-flow');
+  revalidatePath('/persons/[slug]', 'layout');
+  revalidatePath('/nodes/[slug]', 'page');
 }

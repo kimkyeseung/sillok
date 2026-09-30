@@ -8,8 +8,7 @@ import { isTabVisible } from '@/lib/person-sections';
 import PortrayalList from '@/components/person/PortrayalList';
 import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const revalidate = 300;
 
 interface Props {
   params: { slug: string };

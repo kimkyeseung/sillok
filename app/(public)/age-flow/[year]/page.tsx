@@ -18,8 +18,13 @@ import PersonAvatar from '@/components/common/PersonAvatar';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
 import type { AgeFlowPerson } from '@/components/age-flow/useAgeFlow';
 
-// Data is cached in getAgeFlowData (5 min); errors throw so nothing empty is cached
-export const dynamic = 'force-dynamic';
+// ISR 5 min, same as getAgeFlowData; errors throw so nothing empty is cached
+export const revalidate = 300;
+
+// No pages at build time; each slug renders on first request, then is cached (ISR)
+export function generateStaticParams() {
+  return [];
+}
 
 interface Props {
   params: { year: string };

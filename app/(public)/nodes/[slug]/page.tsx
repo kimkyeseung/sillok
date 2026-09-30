@@ -25,7 +25,12 @@ import ArtifactGallery, {
   type GalleryImage,
 } from '@/components/nodes/ArtifactGallery';
 
-export const revalidate = 0;
+export const revalidate = 300;
+
+// No pages at build time; each slug renders on first request, then is cached (ISR)
+export function generateStaticParams() {
+  return [];
+}
 
 interface Props {
   params: { slug: string };
@@ -55,7 +60,7 @@ const NODE_TYPE_SEO_LABELS: Record<string, string> = {
 };
 
 async function getNode(slug: string) {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from('nodes')
     .select(
       `*, person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`
@@ -63,6 +68,8 @@ async function getNode(slug: string) {
     .eq('slug', slug)
     .eq('is_deleted', false)
     .single();
+  // Throw on real DB errors (not "no rows") so ISR keeps the last good page instead of caching a 404
+  if (error && error.code !== 'PGRST116') throw new Error(`[node] fetch failed: ${error.message}`);
   return data;
 }
 

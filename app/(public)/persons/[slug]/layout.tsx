@@ -23,9 +23,14 @@ import { isInYearRange } from '@/lib/age-flow';
 import PersonStatusButtons from '@/components/person/PersonStatusButtons';
 import SuggestFactButton from '@/components/person/SuggestFactButton';
 
-// Supabase calls go through fetch — without this, Next 14 caches them indefinitely
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+// ISR: served from the CDN, re-rendered at most every 5 min (also bounds Supabase fetch caching).
+// Loaders throw on DB errors so a failed render never replaces the cached page.
+export const revalidate = 300;
+
+// No pages at build time; each slug renders on first request, then is cached (ISR)
+export function generateStaticParams() {
+  return [];
+}
 
 export default async function PersonLayout({
   children,

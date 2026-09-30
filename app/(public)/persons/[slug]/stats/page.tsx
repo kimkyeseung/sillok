@@ -5,8 +5,7 @@ import { getPersonBySlug, getPersonStats } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
 import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const revalidate = 300;
 
 interface Props {
   params: { slug: string };

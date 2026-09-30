@@ -27,8 +27,7 @@ import PersonPoll from '@/components/person/PersonPoll';
 import GalleryStrip from '@/components/person/GalleryStrip';
 import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const revalidate = 300;
 
 interface Props {
   params: { slug: string };
