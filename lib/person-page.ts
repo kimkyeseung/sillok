@@ -6,6 +6,7 @@
 import { cache } from 'react';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { mediaKind } from '@/lib/media';
+import { dynastiesOf, type Dynasty } from '@/lib/monarchs';
 import { buildFamilyTree, type FamilyRelation } from '@/lib/family-tree';
 import {
   buildLifeEvents,
@@ -583,4 +584,34 @@ export const getPersonStats = cache(async (person: PersonDetail) => {
     contemporaries: contemporaries.length,
     ...counts,
   };
+});
+
+// ─── Monarch navbox ("Kings of Joseon") ───
+
+export interface MonarchNav {
+  dynasty: Dynasty;
+  /** Slugs in this dynasty with a published page (the rest render unlinked) */
+  linked: string[];
+  /** slug → portrait for the published ones */
+  thumbnails: Record<string, string>;
+}
+
+export const getMonarchNavs = cache(async (slug: string): Promise<MonarchNav[]> => {
+  const dynasties = dynastiesOf(slug);
+  if (!dynasties.length) return [];
+  const slugs = Array.from(
+    new Set(dynasties.flatMap((d) => d.monarchs.map((x) => x.slug).filter((s): s is string => !!s)))
+  );
+  const { data, error } = await supabaseAdmin
+    .from('persons')
+    .select('slug, thumbnail')
+    .in('slug', slugs)
+    .eq('is_deleted', false)
+    .eq('is_published', true);
+  if (error) throw new Error(`[person] monarch fetch failed: ${error.message}`);
+  const linked = (data ?? []).map((p) => p.slug as string);
+  const thumbnails = Object.fromEntries(
+    (data ?? []).filter((p) => p.thumbnail).map((p) => [p.slug as string, p.thumbnail as string])
+  );
+  return dynasties.map((dynasty) => ({ dynasty, linked, thumbnails }));
 });

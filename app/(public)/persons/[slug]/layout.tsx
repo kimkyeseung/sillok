@@ -15,7 +15,9 @@ import {
   getPersonRelations,
   getPersonSources,
   getTabCounts,
+  getMonarchNavs,
 } from '@/lib/person-page';
+import MonarchNavbox from '@/components/person/MonarchNavbox';
 import AiDraftBadge from '@/components/person/AiDraftBadge';
 import { personTabs } from '@/lib/person-sections';
 import { tagLabel } from '@/lib/tags';
@@ -42,11 +44,12 @@ export default async function PersonLayout({
   const person = await getPersonBySlug(params.slug);
   if (!person) notFound();
 
-  const [counts, facts, relations, sources] = await Promise.all([
+  const [counts, facts, relations, sources, monarchNavs] = await Promise.all([
     getTabCounts(person),
     getPersonFacts(person.id),
     getPersonRelations(person.id),
     getPersonSources(person.id),
+    getMonarchNavs(person.slug),
   ]);
   // Structured data: authoritative references + family links help search engines
   // connect this page to the right real-world person
@@ -144,8 +147,19 @@ export default async function PersonLayout({
         </div>
       </div>
 
+      {/* Succession navbox for rulers: every king of the dynasty, 1st → last */}
+      {monarchNavs.map((nav) => (
+        <MonarchNavbox
+          key={nav.dynasty.id}
+          dynasty={nav.dynasty}
+          currentSlug={person.slug}
+          linked={nav.linked}
+          thumbnails={nav.thumbnails}
+        />
+      ))}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-        <div className="min-w-0 space-y-6">{children}</div>
+        <div className="flex min-w-0 flex-col gap-6">{children}</div>
 
         <aside className="space-y-6">
           {/* At a glance: editorial facts + computed life facts */}
