@@ -25,7 +25,7 @@ type CenturyKey = number | null;
 
 const SECTION_ID = (c: CenturyKey) => `century-${c ?? 'undated'}`;
 
-/** Where a section's sticky header pins (site header, + the chip bar on mobile) */
+/** Where a section's sticky header pins (site header + chip bar on mobile, + filter bar on desktop) */
 function stickyTop(section: HTMLElement): number {
   const header = section.querySelector('header');
   return header ? parseFloat(getComputedStyle(header).top) || 0 : 56;
@@ -167,6 +167,7 @@ export default function ArtifactChronology({
   centuries,
   fromCentury,
   onJump,
+  onActiveChange,
   children,
 }: {
   /** Oldest first, as loaded so far */
@@ -177,6 +178,8 @@ export default function ArtifactChronology({
   fromCentury: number | null;
   /** Restart the list at a century that isn't loaded yet (null = from the start) */
   onJump: (century: number | null) => void;
+  /** Called when the century in view changes */
+  onActiveChange?: (century: number | null) => void;
   /** Load-more sentinel / states, rendered after the last section */
   children?: React.ReactNode;
 }) {
@@ -238,6 +241,10 @@ export default function ArtifactChronology({
     };
   }, [sections.length]);
 
+  useEffect(() => {
+    onActiveChange?.(active);
+  }, [active, onActiveChange]);
+
   // Keep the active chip visible in the mobile rail (horizontal only — no page jump)
   const chipBar = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -277,7 +284,7 @@ export default function ArtifactChronology({
     <div className="lg:grid lg:grid-cols-[150px_1fr] lg:gap-8">
       {/* Century rail — desktop: sticky column */}
       <nav aria-label="Centuries" className="hidden lg:block">
-        <ol className="sticky top-20 max-h-[calc(100vh-6rem)] space-y-0.5 overflow-y-auto border-l border-gray-200 pb-4">
+        <ol className="sticky top-[124px] max-h-[calc(100vh-8.5rem)] space-y-0.5 overflow-y-auto border-l border-gray-200 pb-4">
           {railItems.map(({ century, count }) => {
             const isActive = century === active;
             return (
@@ -304,10 +311,10 @@ export default function ArtifactChronology({
 
       <div className="min-w-0">
         {/* Century rail — mobile: sticky chip bar under the site header */}
-        <div className="sticky top-14 z-20 -mx-4 mb-4 border-b border-gray-100 bg-white/90 px-4 py-2 backdrop-blur lg:hidden">
+        <div className="sticky top-14 z-20 -mx-4 mb-4 flex items-center gap-1.5 border-b border-gray-100 bg-white/90 px-4 py-2 backdrop-blur lg:hidden">
           <div
             ref={chipBar}
-            className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]"
+            className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none]"
           >
             {railItems.map(({ century }) => {
               const isActive = century === active;
@@ -363,7 +370,7 @@ export default function ArtifactChronology({
                 }
               >
                 {/* Pins under the site header (+ mobile chip bar) while its century scrolls by */}
-                <header className="sticky top-[97px] z-10 -ml-8 mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 bg-gray-50/95 py-2.5 pl-8 backdrop-blur lg:top-14">
+                <header className="sticky top-[97px] z-10 -ml-8 mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 bg-gray-50/95 py-2.5 pl-8 backdrop-blur lg:top-[108px]">
                   <span
                     aria-hidden
                     className="absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border-[3px] border-white bg-amber-500 shadow ring-1 ring-amber-300"

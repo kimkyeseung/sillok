@@ -34,7 +34,7 @@ export default function Sheet({ open, onClose, title, children }: SheetProps) {
       // Keep Tab inside the sheet
       if (e.key !== 'Tab' || !dialogRef.current) return;
       const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
       if (focusables.length === 0) return;
       const first = focusables[0];

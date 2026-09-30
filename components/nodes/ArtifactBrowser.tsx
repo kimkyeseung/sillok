@@ -11,6 +11,7 @@ import PeriodHistogram from '@/components/nodes/PeriodHistogram';
 import CollectionFilter from '@/components/nodes/CollectionFilter';
 import type { ArtifactPoints } from '@/components/nodes/ArtifactMap';
 import ArtifactChronology from '@/components/nodes/ArtifactChronology';
+import Sheet from '@/components/age-flow/Sheet';
 
 // MapLibre is ~800KB — only loaded when the map view is opened
 const ArtifactMap = dynamic(() => import('@/components/nodes/ArtifactMap'), {
@@ -22,6 +23,7 @@ const ArtifactMap = dynamic(() => import('@/components/nodes/ArtifactMap'), {
 import {
   ARTIFACT_CATEGORIES,
   ARTIFACT_PAGE_SIZE,
+  ARTIFACT_PERIODS,
   ARTIFACT_REGIONS,
   ARTIFACT_SORTS,
   type ArtifactPeriod,
@@ -94,6 +96,133 @@ function Chip({
     >
       {children}
     </button>
+  );
+}
+
+function FilterIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M4 6h16M7 12h10M10 18h4" />
+    </svg>
+  );
+}
+
+type SelectFilterKey = 'kind' | 'category' | 'period' | 'collection' | 'region';
+
+/** Timeline filters as dropdowns — one row in the sticky bar, stacked in the mobile sheet */
+function FilterSelects({
+  values,
+  collections,
+  onChange,
+  stacked = false,
+}: {
+  values: Record<SelectFilterKey, string>;
+  collections: Facets['collections'] | undefined;
+  onChange: (key: SelectFilterKey, value: string) => void;
+  stacked?: boolean;
+}) {
+  const collectionOptions = (collections ?? []).map((c) => ({
+    key: c.collection,
+    label: `${c.collection} (${c.count})`,
+  }));
+  // Keep a selected collection listed even when the other filters leave it empty
+  if (
+    values.collection &&
+    !collectionOptions.some((o) => o.key === values.collection)
+  )
+    collectionOptions.unshift({
+      key: values.collection,
+      label: values.collection,
+    });
+
+  const fields: Array<{
+    key: SelectFilterKey;
+    label: string;
+    all: string;
+    options: Array<{ key: string; label: string }>;
+  }> = [
+    {
+      key: 'kind',
+      label: 'Designation',
+      all: 'All designations',
+      options: [...HERITAGE_KINDS],
+    },
+    {
+      key: 'category',
+      label: 'Type',
+      all: 'All types',
+      options: [...ARTIFACT_CATEGORIES],
+    },
+    {
+      key: 'period',
+      label: 'Period',
+      all: 'All periods',
+      options: ARTIFACT_PERIODS.map((p) => ({ key: p, label: p })),
+    },
+    {
+      key: 'collection',
+      label: 'Collection',
+      all: 'All collections',
+      options: collectionOptions,
+    },
+    {
+      key: 'region',
+      label: 'Location',
+      all: 'All regions',
+      options: [...ARTIFACT_REGIONS],
+    },
+  ];
+
+  return (
+    <div
+      className={
+        stacked ? 'space-y-3' : 'flex min-w-0 flex-1 items-center gap-2'
+      }
+    >
+      {fields.map((f) => {
+        const active = !!values[f.key];
+        const select = (
+          <select
+            value={values[f.key]}
+            onChange={(e) => onChange(f.key, e.target.value)}
+            aria-label={`Filter by ${f.label.toLowerCase()}`}
+            className={`w-full min-w-0 truncate rounded-full border py-1.5 pl-3 pr-8 text-sm focus:border-brand-300 focus:outline-none ${
+              active
+                ? 'border-amber-300 bg-amber-50 font-medium text-amber-800'
+                : 'border-gray-200 bg-white text-gray-700'
+            } ${stacked ? 'py-2' : ''}`}
+          >
+            <option value="">{f.all}</option>
+            {f.options.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        );
+        return stacked ? (
+          <label key={f.key} className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-500">
+              {f.label}
+            </span>
+            {select}
+          </label>
+        ) : (
+          <div key={f.key} className="min-w-0 flex-1">
+            {select}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -230,14 +359,66 @@ export default function ArtifactBrowser() {
     window.scrollTo({ top: 0 });
   }
 
-  const hasFilters = !!(
-    category ||
-    kind ||
-    period ||
-    region ||
-    collection ||
-    q
-  );
+  // Timeline: a filter change reloads from the century in view (or the next one that has matches)
+  const activeCentury = useRef<number | null>(null);
+  const resultsTop = useRef<HTMLDivElement>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Floating filter button once the filter controls have scrolled up out of view
+  const filtersEnd = useRef<HTMLDivElement>(null);
+  const [filtersHidden, setFiltersHidden] = useState(false);
+  useEffect(() => {
+    // One rect read per scroll event — updates in step with the scroll itself
+    const update = () => {
+      const el = filtersEnd.current;
+      // Below the sticky site header (h-14)
+      setFiltersHidden(!!el && el.getBoundingClientRect().top < 56);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => window.removeEventListener('scroll', update);
+  }, [view]);
+
+  function setTimelineFilter(key: SelectFilterKey, value: string) {
+    const params = new URLSearchParams(latestParams.current);
+    if (value) params.set(key, value);
+    else params.delete(key);
+    const start =
+      activeCentury.current == null
+        ? null
+        : centuryStartYear(activeCentury.current);
+    if (start == null) params.delete('from');
+    else params.set('from', String(start));
+    replaceParams(params);
+    scrollToResults();
+  }
+
+  /** Back to the top of the results so the reloaded list starts in view */
+  function scrollToResults() {
+    const el = resultsTop.current;
+    if (el && el.getBoundingClientRect().top < 0)
+      window.scrollTo({
+        top: el.getBoundingClientRect().top + window.scrollY - 120,
+      });
+  }
+
+  /** Filter sheet: the timeline keeps its century; the list starts over from the top */
+  function applySheetFilter(key: SelectFilterKey | 'sort', value: string) {
+    if (isTimeline && key !== 'sort') return setTimelineFilter(key, value);
+    setFilter(key, value);
+    scrollToResults();
+  }
+
+  const filterValues = { kind, category, period, collection, region };
+  const activeFilterCount = [
+    kind,
+    category,
+    period,
+    collection,
+    region,
+    q,
+  ].filter(Boolean).length;
+  const hasFilters = activeFilterCount > 0;
 
   // Infinite scroll
   const sentinel = useRef<HTMLDivElement>(null);
@@ -318,19 +499,21 @@ export default function ArtifactBrowser() {
             className="w-full rounded-full border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-300"
           />
         </div>
-        <select
-          value={region}
-          onChange={(e) => setFilter('region', e.target.value)}
-          aria-label="Filter by region"
-          className="rounded-full border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none"
-        >
-          <option value="">All regions</option>
-          {ARTIFACT_REGIONS.map((r) => (
-            <option key={r.key} value={r.key}>
-              {r.label}
-            </option>
-          ))}
-        </select>
+        {!isTimeline && (
+          <select
+            value={region}
+            onChange={(e) => setFilter('region', e.target.value)}
+            aria-label="Filter by region"
+            className="rounded-full border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none"
+          >
+            <option value="">All regions</option>
+            {ARTIFACT_REGIONS.map((r) => (
+              <option key={r.key} value={r.key}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        )}
         {view === 'list' && (
           <select
             value={sort}
@@ -344,6 +527,19 @@ export default function ArtifactBrowser() {
               </option>
             ))}
           </select>
+        )}
+        {isTimeline && (
+          <button
+            onClick={() => setFiltersOpen(true)}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium lg:hidden ${
+              hasFilters
+                ? 'border-amber-300 bg-amber-50 text-amber-800'
+                : 'border-gray-200 bg-white text-gray-700'
+            }`}
+          >
+            <FilterIcon />
+            Filters{hasFilters ? ` ${activeFilterCount}` : ''}
+          </button>
         )}
         <div
           className="flex rounded-full border border-gray-200 bg-white p-0.5"
@@ -370,8 +566,82 @@ export default function ArtifactBrowser() {
         </div>
       </div>
 
+      {/* Timeline: one compact row of dropdowns, pinned under the site header on desktop.
+          Mobile opens the same dropdowns in the filter sheet. */}
+      {isTimeline && (
+        <div className="z-30 -mx-4 mb-4 hidden h-[52px] items-center gap-2 border-b border-gray-200 bg-gray-50/95 px-4 backdrop-blur lg:sticky lg:top-14 lg:flex">
+          <FilterSelects
+            values={filterValues}
+            collections={facets?.collections}
+            onChange={setTimelineFilter}
+          />
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="shrink-0 whitespace-nowrap text-xs font-medium text-brand-600 hover:text-brand-700"
+            >
+              Clear ({activeFilterCount})
+            </button>
+          )}
+        </div>
+      )}
+      {/* Filter sheet — mobile timeline button, and the floating button in list/timeline */}
+      {!isMap && (
+        <Sheet
+          open={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          title="Filters"
+        >
+          <div className="space-y-5 p-4">
+            <FilterSelects
+              stacked
+              values={filterValues}
+              collections={facets?.collections}
+              onChange={applySheetFilter}
+            />
+            {view === 'list' && (
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-gray-500">
+                  Sort
+                </span>
+                <select
+                  value={sort}
+                  onChange={(e) => applySheetFilter('sort', e.target.value)}
+                  aria-label="Sort artifacts"
+                  className="w-full rounded-full border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-brand-300 focus:outline-none"
+                >
+                  {ARTIFACT_SORTS.map((o) => (
+                    <option key={o.key} value={o.key}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="flex gap-2">
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-600"
+                >
+                  Clear all
+                </button>
+              )}
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="flex-1 rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white"
+              >
+                {total != null
+                  ? `Show ${total.toLocaleString()} artifacts`
+                  : 'Show results'}
+              </button>
+            </div>
+          </div>
+        </Sheet>
+      )}
+
       {/* Filters */}
-      <div className="mb-6 space-y-2">
+      <div className={`mb-6 space-y-2 ${isTimeline ? 'hidden' : ''}`}>
         <div className="flex flex-wrap gap-1.5">
           <Chip active={!kind} onClick={() => setFilter('kind', '')}>
             All designations
@@ -413,7 +683,13 @@ export default function ArtifactBrowser() {
         />
       </div>
 
-      <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
+      {/* End of the filter controls — the floating button shows once this scrolls past */}
+      <div ref={filtersEnd} aria-hidden />
+
+      <div
+        ref={resultsTop}
+        className="mb-3 flex items-center justify-between text-xs text-gray-500"
+      >
         <span aria-live="polite">
           {isMap
             ? points
@@ -447,6 +723,9 @@ export default function ArtifactBrowser() {
           centuries={facets?.centuries}
           fromCentury={fromYear != null ? centuryOf(fromYear) : null}
           onJump={jumpToCentury}
+          onActiveChange={(c) => {
+            activeCentury.current = c;
+          }}
         >
           {!data && !error && (
             <div className="space-y-3 pl-8">
@@ -477,6 +756,25 @@ export default function ArtifactBrowser() {
           </div>
           {listStates}
         </>
+      )}
+
+      {/* Floating filter button (list / timeline) — desktop timeline keeps its sticky bar instead */}
+      {!isMap && filtersHidden && !filtersOpen && (
+        <button
+          onClick={() => setFiltersOpen(true)}
+          aria-label={`Filters${hasFilters ? ` (${activeFilterCount} active)` : ''}`}
+          className={`animate-toast-in fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-105 active:scale-95 ${
+            isTimeline ? 'lg:hidden' : ''
+          }`}
+        >
+          <FilterIcon size={14} />
+          Filters
+          {hasFilters && (
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-gray-900">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
       )}
     </div>
   );
