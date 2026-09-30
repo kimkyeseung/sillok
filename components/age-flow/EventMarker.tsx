@@ -185,7 +185,21 @@ export default function EventMarker({ events, currentYear }: EventMarkerProps) {
     <>
       {/* ── Desktop: always-visible toasts ── */}
       {/* bottom-[244px] = ArtifactTimeline (h-44 cards 176px + h-8 dial 32px + 36px buffer) */}
-      <div className="fixed bottom-[244px] left-6 z-50 hidden max-w-[320px] flex-col gap-2 md:flex">
+      <div className="group/stack fixed bottom-[244px] left-6 z-50 hidden max-w-[320px] flex-col gap-2 md:flex">
+        {/* macOS-style "Clear all": revealed on hover above the stack (absolute → no layout shift) */}
+        {toastList.length > 1 && (
+          <div className="absolute -top-9 left-0 right-0 flex justify-end pb-2 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/stack:opacity-100">
+            <button
+              onClick={dismissAll}
+              className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white/85 px-3 py-1 text-xs font-medium text-gray-600 shadow-md backdrop-blur-md transition-colors hover:bg-white hover:text-gray-900"
+            >
+              <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" />
+              </svg>
+              Clear all
+            </button>
+          </div>
+        )}
         {toastList.map((event) => (
           <EventToastCard key={event.id} event={event} onDismiss={dismiss} />
         ))}
@@ -206,7 +220,7 @@ export default function EventMarker({ events, currentYear }: EventMarkerProps) {
                   onClick={dismissAll}
                   className="text-[10px] font-medium text-gray-400 transition-colors hover:text-gray-600"
                 >
-                  Dismiss all
+                  Clear all
                 </button>
                 <button
                   onClick={() => setMobileOpen(false)}
