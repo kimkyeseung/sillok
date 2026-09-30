@@ -227,7 +227,22 @@ export default async function NodeDetailPage({ params }: Props) {
 
       {/* Node Info Card */}
       <div className="card-flat overflow-hidden">
-        {node.thumbnail && (
+        {node.thumbnail && node.node_type === 'MEDIA' ? (
+          // Posters are small and portrait: show uncropped over a blurred copy instead of stretching
+          <div className="relative flex h-80 w-full items-center justify-center overflow-hidden bg-gray-900 py-4">
+            <img
+              src={node.thumbnail}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+            />
+            <img
+              src={node.thumbnail}
+              alt={node.title}
+              className="relative max-h-full max-w-[90%] rounded-md object-contain shadow-xl"
+            />
+          </div>
+        ) : node.thumbnail && (
           <div className="relative h-64 w-full">
             <img
               src={node.thumbnail}
