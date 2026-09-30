@@ -2,7 +2,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { countFacets, type FacetRow } from '@/lib/artifacts';
 import { ArtifactFilterSchema, artifactQuery } from '@/lib/artifacts-query';
 
-// ─── GET /api/artifacts/facets — Period and collection counts for the current filters (public) ───
+// ─── GET /api/artifacts/facets — Period, collection and century counts for the current filters (public) ───
 // Each facet ignores its own selection so every option stays clickable (see countFacets).
 
 const PAGE = 1000; // PostgREST max rows per request
@@ -15,11 +15,11 @@ export async function GET(request: Request) {
   if (!parsed.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  // Two short columns per row (~3k rows) — no GROUP BY in the query builder
+  // Three short columns per row (~3k rows) — no GROUP BY in the query builder
   const rows: FacetRow[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await artifactQuery(
-      'period:metadata->>created_period, collection:metadata->>collection',
+      'period:metadata->>created_period, collection:metadata->>collection, year:metadata->created_year',
       parsed.data,
       { ignoreFacets: true }
     )

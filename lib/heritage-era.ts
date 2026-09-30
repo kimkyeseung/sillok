@@ -130,7 +130,7 @@ export function formatYear(y: number): string {
   return y < 0 ? `${-y} BCE` : String(y);
 }
 
-function ordinal(n: number): string {
+export function ordinal(n: number): string {
   const s =
     n % 100 >= 11 && n % 100 <= 13
       ? 'th'

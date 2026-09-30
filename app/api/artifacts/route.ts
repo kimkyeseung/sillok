@@ -22,11 +22,14 @@ const QuerySchema = ArtifactFilterSchema.extend({
   limit: z.coerce.number().min(1).max(60).default(ARTIFACT_PAGE_SIZE),
   cursor: z.string().max(200).optional(),
   sort: z.enum(filterKeys(ARTIFACT_SORTS)).default('featured'),
+  // Timeline view: start the oldest-first list at a century (jump rail)
+  from_year: z.coerce.number().int().min(-10000).max(2100).optional(),
 });
 
 // Only the fields a card needs — metadata also holds the full Korean source text
 const SELECT = `id, slug, node_type, title, description, thumbnail, view_count, follow_count,
   category:metadata->>category, period:metadata->>created_period, year:metadata->created_year,
+  year_start:metadata->year_start, year_end:metadata->year_end, year_precision:metadata->>year_precision,
   designation:metadata->>designation, rank:metadata->featured_rank, group_size:metadata->designation_group_size, kind:metadata->>heritage_kind, location:metadata->>location,
   person_node_links ( persons:person_id ( id, slug, name_ko, name_en, thumbnail ) )`;
 
@@ -42,6 +45,9 @@ interface Row {
   category: string | null;
   period: string | null;
   year: number | null;
+  year_start: number | null;
+  year_end: number | null;
+  year_precision: string | null;
   rank: number | null;
   group_size: number | null;
   designation: string | null;
@@ -56,7 +62,7 @@ export async function GET(request: Request) {
   if (!parsed.success)
     return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
 
-  const { limit, cursor: rawCursor, sort, ...filters } = parsed.data;
+  const { limit, cursor: rawCursor, sort, from_year, ...filters } = parsed.data;
   const cursor = rawCursor ? decodeArtifactCursor(rawCursor) : null;
   if (rawCursor && !cursor)
     return apiError('VALIDATION_ERROR', 'Invalid cursor.', 422);
@@ -68,6 +74,8 @@ export async function GET(request: Request) {
     cursor ? undefined : { count: 'exact' }
   );
   if (cursor) query = query.or(cursorFilter(sort, cursor));
+  if (from_year != null && sort === 'oldest')
+    query = query.gte('metadata->created_year', from_year);
 
   const { data, count, error } = await query
     .order(sortColumn(sort), {
@@ -91,6 +99,9 @@ export async function GET(request: Request) {
         category,
         period,
         year,
+        year_start,
+        year_end,
+        year_precision,
         rank: _,
         group_size,
         designation,
@@ -105,6 +116,9 @@ export async function GET(request: Request) {
           category,
           created_period: period,
           created_year: year,
+          year_start,
+          year_end,
+          year_precision,
           designation,
           heritage_kind: kind,
           location,

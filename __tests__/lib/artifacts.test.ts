@@ -1,11 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
   ARTIFACT_PERIODS,
+  centuryLabel,
+  centuryOf,
+  centuryRange,
+  centuryStartYear,
   countByPeriod,
   countFacets,
   cursorFilter,
   decodeArtifactCursor,
+  EARLIEST_CENTURY,
+  eraOf,
   encodeArtifactCursor,
+  groupByCentury,
   isDescending,
   sortColumn,
   sortValue,
@@ -140,4 +147,88 @@ describe('countFacets', () => {
       { collection: 'National Museum of Korea', count: 1 },
     ]);
   });
+});
+
+describe('centuries (Timeline view)', () => {
+  it('maps years to century keys', () => {
+    expect(centuryOf(1448)).toBe(15);
+    expect(centuryOf(1401)).toBe(15);
+    expect(centuryOf(1400)).toBe(14);
+    expect(centuryOf(1)).toBe(1);
+    expect(centuryOf(-1)).toBe(-1);
+    expect(centuryOf(-100)).toBe(-1);
+    expect(centuryOf(-101)).toBe(-2);
+    expect(centuryOf(-1000)).toBe(-10);
+    expect(centuryOf(-1001)).toBe(EARLIEST_CENTURY);
+    expect(centuryOf(-8000)).toBe(EARLIEST_CENTURY);
+  });
+
+  it('labels centuries and their ranges', () => {
+    expect(centuryLabel(15)).toBe('15th century');
+    expect(centuryLabel(-2)).toBe('2nd century BCE');
+    expect(centuryLabel(EARLIEST_CENTURY)).toBe('Before 1000 BCE');
+    expect(centuryRange(15)).toBe('1401–1500');
+    expect(centuryRange(-1)).toBe('100 BCE–1 BCE');
+    expect(centuryRange(EARLIEST_CENTURY)).toBeNull();
+  });
+
+  it('gives the jump start year, which falls in the same century', () => {
+    for (const c of [-10, -3, -1, 1, 7, 15, 20]) {
+      const start = centuryStartYear(c)!;
+      expect(centuryOf(start)).toBe(c);
+      expect(centuryOf(start - 1)).not.toBe(c);
+    }
+    expect(centuryStartYear(EARLIEST_CENTURY)).toBeNull();
+  });
+
+  it('groups consecutive items by century, undated last', () => {
+    const items = [
+      { y: -57 },
+      { y: 1392 },
+      { y: 1448 },
+      { y: 1501 },
+      { y: null },
+    ];
+    const sections = groupByCentury(items, (i) => i.y);
+    expect(sections.map((s) => [s.century, s.items.length])).toEqual([
+      [-1, 1],
+      [14, 1],
+      [15, 1],
+      [16, 1],
+      [null, 1],
+    ]);
+  });
+
+  it('counts centuries with both period and collection applied', () => {
+    const rows = [
+      { period: 'Joseon', collection: 'A', year: 1448 },
+      { period: 'Joseon', collection: 'B', year: 1450 },
+      { period: 'Goryeo', collection: 'A', year: 1200 },
+      { period: 'Joseon', collection: 'A', year: null },
+    ];
+    expect(countFacets(rows, {}).centuries).toEqual([
+      { century: 12, count: 1 },
+      { century: 15, count: 2 },
+    ]);
+    expect(
+      countFacets(rows, { period: 'Joseon', collection: 'A' }).centuries
+    ).toEqual([{ century: 15, count: 1 }]);
+  });
+});
+
+describe('eraOf', () => {
+  it.each([
+    [-3000, 'Ancient'],
+    [-58, 'Ancient'],
+    [-57, 'Three Kingdoms'],
+    [667, 'Three Kingdoms'],
+    [668, 'Unified Silla'],
+    [918, 'Goryeo'],
+    [1391, 'Goryeo'],
+    [1392, 'Joseon'],
+    [1896, 'Joseon'],
+    [1897, 'Korean Empire'],
+    [1910, 'Japanese Occupation'],
+    [1950, 'Modern'],
+  ])('%i → %s', (year, label) => expect(eraOf(year).label).toBe(label));
 });

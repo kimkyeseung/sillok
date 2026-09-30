@@ -1,5 +1,7 @@
 // 유물(ARTIFACT) 목록 순수 로직 — 필터 옵션, 정렬, 커서 (GET /api/artifacts · ArtifactBrowser 공유)
 
+import { formatYear, ordinal } from '@/lib/heritage-era';
+
 export const ARTIFACT_CATEGORIES = [
   { key: 'architecture', label: 'Architecture' },
   { key: 'sculpture', label: 'Sculpture' },
@@ -151,15 +153,91 @@ export function countByPeriod(
   }));
 }
 
+/* ── Centuries (Timeline view) ── */
+
+/** Everything before 1000 BCE shares one bucket — a few prehistoric pieces, thousands of years apart */
+export const EARLIEST_CENTURY = -11;
+
+/**
+ * Century key of a year: 1448 → 15, 1 → 1, -57 → -1 (1st century BCE), -3000 → EARLIEST_CENTURY.
+ * There is no year 0 in the data, but 0 → -1 keeps it defined.
+ */
+export function centuryOf(year: number): number {
+  if (year > 0) return Math.ceil(year / 100);
+  return Math.max(EARLIEST_CENTURY, -Math.max(1, Math.ceil(-year / 100)));
+}
+
+/** 15 → "15th century", -2 → "2nd century BCE" */
+export function centuryLabel(c: number): string {
+  if (c <= EARLIEST_CENTURY) return 'Before 1000 BCE';
+  return c > 0 ? `${ordinal(c)} century` : `${ordinal(-c)} century BCE`;
+}
+
+/** 15 → "1401–1500"; the earliest bucket has no range */
+export function centuryRange(c: number): string | null {
+  if (c <= EARLIEST_CENTURY) return null;
+  const start = centuryStartYear(c)!;
+  return `${formatYear(start)}–${formatYear(start + 99)}`;
+}
+
+/** First year of a century (the list's `from_year` when jumping to it); null = from the very start */
+export function centuryStartYear(c: number): number | null {
+  if (c <= EARLIEST_CENTURY) return null;
+  return c > 0 ? (c - 1) * 100 + 1 : c * 100;
+}
+
+/** Korean historical eras by year — the Timeline's "now" badge. Starts are inclusive. */
+export const KOREAN_ERAS = [
+  { key: 'ancient', label: 'Ancient', start: -Infinity },
+  { key: 'three-kingdoms', label: 'Three Kingdoms', start: -57 },
+  { key: 'unified-silla', label: 'Unified Silla', start: 668 },
+  { key: 'goryeo', label: 'Goryeo', start: 918 },
+  { key: 'joseon', label: 'Joseon', start: 1392 },
+  { key: 'korean-empire', label: 'Korean Empire', start: 1897 },
+  { key: 'colonial', label: 'Japanese Occupation', start: 1910 },
+  { key: 'modern', label: 'Modern', start: 1945 },
+] as const;
+
+export type KoreanEra = (typeof KOREAN_ERAS)[number];
+
+/** 1448 → Joseon, 700 → Unified Silla, -100 → Ancient */
+export function eraOf(year: number): KoreanEra {
+  let era: KoreanEra = KOREAN_ERAS[0];
+  for (const e of KOREAN_ERAS) if (year >= e.start) era = e;
+  return era;
+}
+
+/**
+ * Consecutive items of the same century → one section (the list arrives oldest first).
+ * Undated items (sorted last) get century null.
+ */
+export function groupByCentury<T>(
+  items: T[],
+  yearOf: (item: T) => number | null
+): Array<{ century: number | null; items: T[] }> {
+  const sections: Array<{ century: number | null; items: T[] }> = [];
+  for (const item of items) {
+    const y = yearOf(item);
+    const c = y == null ? null : centuryOf(y);
+    const last = sections[sections.length - 1];
+    if (last && last.century === c) last.items.push(item);
+    else sections.push({ century: c, items: [item] });
+  }
+  return sections;
+}
+
 export interface FacetRow {
   period: string | null;
   collection: string | null;
+  year?: number | null;
 }
 
 export interface ArtifactFacets {
   periods: Array<{ period: ArtifactPeriod; count: number }>;
   /** Most-held first; ties alphabetical */
   collections: Array<{ collection: string; count: number }>;
+  /** Oldest first; undated rows are left out */
+  centuries: Array<{ century: number; count: number }>;
 }
 
 /**
@@ -189,5 +267,17 @@ export function countFacets(
     .sort(
       (a, b) => b.count - a.count || a.collection.localeCompare(b.collection)
     );
-  return { periods, collections };
+  // Timeline sections list what is on screen, so both selections apply
+  const byCentury = new Map<number, number>();
+  for (const r of rows) {
+    if (r.year == null) continue;
+    if (selected.period && r.period !== selected.period) continue;
+    if (selected.collection && r.collection !== selected.collection) continue;
+    const c = centuryOf(r.year);
+    byCentury.set(c, (byCentury.get(c) ?? 0) + 1);
+  }
+  const centuries = [...byCentury]
+    .map(([century, count]) => ({ century, count }))
+    .sort((a, b) => a.century - b.century);
+  return { periods, collections, centuries };
 }

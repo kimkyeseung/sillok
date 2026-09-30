@@ -10,6 +10,7 @@ import NodeCard from '@/components/nodes/NodeCard';
 import PeriodHistogram from '@/components/nodes/PeriodHistogram';
 import CollectionFilter from '@/components/nodes/CollectionFilter';
 import type { ArtifactPoints } from '@/components/nodes/ArtifactMap';
+import ArtifactChronology from '@/components/nodes/ArtifactChronology';
 
 // MapLibre is ~800KB — only loaded when the map view is opened
 const ArtifactMap = dynamic(() => import('@/components/nodes/ArtifactMap'), {
@@ -24,8 +25,19 @@ import {
   ARTIFACT_REGIONS,
   ARTIFACT_SORTS,
   type ArtifactPeriod,
+  centuryLabel,
+  centuryOf,
+  centuryStartYear,
   HERITAGE_KINDS,
 } from '@/lib/artifacts';
+
+const VIEWS = [
+  { key: 'list', label: 'List' },
+  { key: 'timeline', label: 'Timeline' },
+  { key: 'map', label: 'Map' },
+] as const;
+// Timeline cards are compact — load more per page
+const TIMELINE_PAGE_SIZE = 48;
 
 interface ArtifactPage {
   items: NodeItem[];
@@ -43,12 +55,14 @@ const FILTER_KEYS = [
   'collection',
   'q',
   'view',
+  'from',
 ] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 
 interface Facets {
   periods: { period: ArtifactPeriod; count: number }[];
   collections: { collection: string; count: number }[];
+  centuries: { century: number; count: number }[];
 }
 
 async function fetchData<T>(url: string): Promise<T> {
@@ -96,7 +110,17 @@ export default function ArtifactBrowser() {
   const region = get('region');
   const collection = get('collection');
   const q = get('q');
-  const isMap = get('view') === 'map';
+  const view =
+    get('view') === 'map'
+      ? 'map'
+      : get('view') === 'timeline'
+        ? 'timeline'
+        : 'list';
+  const isMap = view === 'map';
+  const isTimeline = view === 'timeline';
+  // Timeline jump point: first year of a century (?from=1401)
+  const fromParam = parseInt(get('from'), 10);
+  const fromYear = isTimeline && Number.isFinite(fromParam) ? fromParam : null;
 
   // Search box is local state, pushed to the URL after typing pauses
   const [searchInput, setSearchInput] = useState(q);
@@ -131,6 +155,7 @@ export default function ArtifactBrowser() {
       'region',
       'collection',
       'q',
+      'from',
     ] as const)
       params.delete(k);
     setSearchInput('');
@@ -144,9 +169,10 @@ export default function ArtifactBrowser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
+  // Timeline is always oldest first
   const query = new URLSearchParams({
-    limit: String(ARTIFACT_PAGE_SIZE),
-    sort,
+    limit: String(isTimeline ? TIMELINE_PAGE_SIZE : ARTIFACT_PAGE_SIZE),
+    sort: isTimeline ? 'oldest' : sort,
   });
   if (category) query.set('category', category);
   if (kind) query.set('kind', kind);
@@ -159,6 +185,7 @@ export default function ArtifactBrowser() {
   const facetsQuery = new URLSearchParams(query);
   facetsQuery.delete('limit');
   facetsQuery.delete('sort');
+  if (fromYear != null) query.set('from_year', String(fromYear));
   const { data: facets, isValidating: facetsLoading } = useSWR<Facets>(
     `/api/artifacts/facets?${facetsQuery.toString()}`,
     fetchData,
@@ -189,6 +216,20 @@ export default function ArtifactBrowser() {
   const total = data?.[0]?.total ?? null;
   const hasNext = data?.[data.length - 1]?.has_next ?? false;
   const isLoadingMore = isValidating && (!data || data.length < size);
+  function setView(v: (typeof VIEWS)[number]['key']) {
+    const params = new URLSearchParams(latestParams.current);
+    if (v === 'list') params.delete('view');
+    else params.set('view', v);
+    params.delete('from');
+    replaceParams(params);
+  }
+
+  function jumpToCentury(century: number | null) {
+    const start = century == null ? null : centuryStartYear(century);
+    setFilter('from', start == null ? '' : String(start));
+    window.scrollTo({ top: 0 });
+  }
+
   const hasFilters = !!(
     category ||
     kind ||
@@ -212,6 +253,43 @@ export default function ArtifactBrowser() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [hasNext, isLoadingMore, setSize]);
+
+  // Error / empty / load-more — shared by the list and the timeline
+  const listStates = (
+    <>
+      {error && (
+        <div className="py-10 text-center text-sm text-gray-500">
+          Couldn&apos;t load artifacts.{' '}
+          <button
+            onClick={() => setSize(size)}
+            className="text-brand-600 hover:text-brand-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {data && items.length === 0 && (
+        <div className="flex flex-col items-center py-20 text-gray-400">
+          <span className="text-4xl">🏺</span>
+          <p className="mt-3 text-sm font-medium">No artifacts found</p>
+          <p className="text-xs">Try a different filter or search term</p>
+        </div>
+      )}
+
+      {hasNext && (
+        <div ref={sentinel} className="mt-6 flex justify-center">
+          <button
+            onClick={() => setSize(size + 1)}
+            disabled={isLoadingMore}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-50"
+          >
+            {isLoadingMore ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div>
@@ -253,7 +331,7 @@ export default function ArtifactBrowser() {
             </option>
           ))}
         </select>
-        {!isMap && (
+        {view === 'list' && (
           <select
             value={sort}
             onChange={(e) => setFilter('sort', e.target.value)}
@@ -272,12 +350,12 @@ export default function ArtifactBrowser() {
           role="group"
           aria-label="View"
         >
-          {(['list', 'map'] as const).map((v) => {
-            const active = (v === 'map') === isMap;
+          {VIEWS.map(({ key: v, label }) => {
+            const active = v === view;
             return (
               <button
                 key={v}
-                onClick={() => setFilter('view', v === 'map' ? 'map' : '')}
+                onClick={() => setView(v)}
                 aria-pressed={active}
                 className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                   active
@@ -285,7 +363,7 @@ export default function ArtifactBrowser() {
                     : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
-                {v === 'map' ? 'Map' : 'List'}
+                {label}
               </button>
             );
           })}
@@ -342,7 +420,11 @@ export default function ArtifactBrowser() {
               ? `${points.features.length.toLocaleString()} artifacts on the map · museum pieces without a site aren't shown`
               : 'Loading…'
             : total != null
-              ? `${total.toLocaleString()} artifacts`
+              ? isTimeline
+                ? fromYear != null
+                  ? `${total.toLocaleString()} artifacts from the ${centuryLabel(centuryOf(fromYear))} on · oldest first`
+                  : `${total.toLocaleString()} artifacts · oldest first`
+                : `${total.toLocaleString()} artifacts`
               : data
                 ? ''
                 : 'Loading…'}
@@ -359,6 +441,25 @@ export default function ArtifactBrowser() {
 
       {isMap ? (
         <ArtifactMap points={points} />
+      ) : isTimeline ? (
+        <ArtifactChronology
+          items={items}
+          centuries={facets?.centuries}
+          fromCentury={fromYear != null ? centuryOf(fromYear) : null}
+          onJump={jumpToCentury}
+        >
+          {!data && !error && (
+            <div className="space-y-3 pl-8">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-28 animate-pulse rounded-xl border border-gray-100 bg-gray-50"
+                />
+              ))}
+            </div>
+          )}
+          {listStates}
+        </ArtifactChronology>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -374,38 +475,7 @@ export default function ArtifactBrowser() {
                 />
               ))}
           </div>
-
-          {error && (
-            <div className="py-10 text-center text-sm text-gray-500">
-              Couldn&apos;t load artifacts.{' '}
-              <button
-                onClick={() => setSize(size)}
-                className="text-brand-600 hover:text-brand-700"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {data && items.length === 0 && (
-            <div className="flex flex-col items-center py-20 text-gray-400">
-              <span className="text-4xl">🏺</span>
-              <p className="mt-3 text-sm font-medium">No artifacts found</p>
-              <p className="text-xs">Try a different filter or search term</p>
-            </div>
-          )}
-
-          {hasNext && (
-            <div ref={sentinel} className="mt-6 flex justify-center">
-              <button
-                onClick={() => setSize(size + 1)}
-                disabled={isLoadingMore}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-50"
-              >
-                {isLoadingMore ? 'Loading…' : 'Load more'}
-              </button>
-            </div>
-          )}
+          {listStates}
         </>
       )}
     </div>

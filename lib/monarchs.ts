@@ -17,7 +17,11 @@ export interface Dynasty {
   monarchs: Monarch[];
 }
 
-const m = (en: string, ko: string, slug?: string): Monarch => ({ en, ko, slug });
+const m = (en: string, ko: string, slug?: string): Monarch => ({
+  en,
+  ko,
+  slug,
+});
 
 export const DYNASTIES: Dynasty[] = [
   {
@@ -257,6 +261,12 @@ export const DYNASTIES: Dynasty[] = [
   },
 ];
 
+/** Short name in a dynasty's list: ("sejong-daewang", "joseon") → "Sejong" */
+export function monarchName(slug: string, dynastyId: string): string | null {
+  const d = DYNASTIES.find((x) => x.id === dynastyId);
+  return d?.monarchs.find((x) => x.slug === slug)?.en ?? null;
+}
+
 /** Dynasties this person ruled (Gojong → Joseon + Korean Empire) */
 export function dynastiesOf(slug: string): Dynasty[] {
   return DYNASTIES.filter((d) => d.monarchs.some((x) => x.slug === slug));
@@ -267,4 +277,37 @@ export function ordinal(n: number): string {
   const tens = n % 100;
   if (tens >= 11 && tens <= 13) return `${n}th`;
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+}
+
+export interface ReignInfo {
+  reign_start: number;
+  reign_end: number;
+  slug: string;
+  name_en: string;
+  name_ko: string;
+  thumbnail: string | null;
+  /** Dynasty id (DYNASTIES) — one ruler per dynasty is shown */
+  dynasty: string;
+  /** Name within the dynasty list ("Sejong") — the header has no room for "Sejong the Great" */
+  short_en: string;
+}
+
+/**
+ * Rulers on the throne in `year`, one per dynasty (the Three Kingdoms can have several).
+ * In a handover year the successor wins. Ordered by DYNASTIES.
+ */
+export function reigningAt(reigns: ReignInfo[], year: number): ReignInfo[] {
+  const byDynasty = new Map<string, ReignInfo>();
+  for (const r of reigns) {
+    if (year < r.reign_start || year > r.reign_end) continue;
+    const prev = byDynasty.get(r.dynasty);
+    if (!prev || r.reign_start > prev.reign_start) byDynasty.set(r.dynasty, r);
+  }
+  const order = (id: string) => {
+    const i = DYNASTIES.findIndex((d) => d.id === id);
+    return i < 0 ? DYNASTIES.length : i;
+  };
+  return [...byDynasty.values()].sort(
+    (a, b) => order(a.dynasty) - order(b.dynasty)
+  );
 }
