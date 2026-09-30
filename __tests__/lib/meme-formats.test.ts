@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { MEME_FORMATS, TEMPLATE_FORMATS, describeFields, formatGuide, jsonObject } from '@/lib/meme-formats';
+import { MEME_FORMATS, TEMPLATE_FORMATS, describeFields, formatGuide, jsonObject, type FieldSpec } from '@/lib/meme-formats';
+import { FORMAT_KO } from '@/lib/meme-formats-ko';
 import { countLines, fitFontSize, memeTranscript, parseMemeContent, type TemplateFormat } from '@/lib/meme';
 
 // One valid sample per format — also documents the expected content shape
@@ -68,5 +69,16 @@ describe('countLines / fitFontSize', () => {
   it('fitFontSize uses countLines', () => {
     expect(fitFontSize('', 100, 100, 40)).toBe(40);
     expect(fitFontSize('lol', 800, 200, 72)).toBe(72);
+  });
+});
+
+describe('Korean admin labels', () => {
+  const keys = (fields: Record<string, FieldSpec>): string[] =>
+    Object.entries(fields).flatMap(([k, f]) => [k, ...(f.kind === 'rows' ? keys(f.fields) : [])]);
+
+  it.each(TEMPLATE_FORMATS)('%s: has a Korean label, description, structure and every field label', (f) => {
+    const ko = FORMAT_KO[f];
+    expect(ko.label && ko.description && ko.structure).toBeTruthy();
+    for (const k of keys(MEME_FORMATS[f].fields)) expect(ko.fields[k], `${f}.${k}`).toBeTruthy();
   });
 });

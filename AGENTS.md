@@ -38,7 +38,7 @@ app/
 │   ├── age-flow/[year]/     연도 페이지 ("Korea in 1592") — 공유 카드 /api/og/age-flow/[year]
 │   └── nodes/               노드 탐색 · 유물 탭 (목록/지도, 필터, 컬렉션) · /nodes/[slug] 상세
 ├── (auth)/              로그인/회원가입
-├── admin/               어드민 (로그인 필수) — memes/ = "AI Drafts"
+├── admin/               어드민 (로그인 필수) — memes/ = "AI Drafts", promo/ = 홍보 Share kit
 └── api/                 API Routes (feed, persons, threads, replies, nodes, artifacts, admin/*, og/*)
 components/
 ├── feed/  age-flow/  nodes/(유물 브라우저·지도·갤러리)  meme/(워작 SVG·밈 레이아웃)
@@ -53,9 +53,10 @@ lib/                     순수 로직(테스트 대상)과 서버 로더를 파
 ├── artifacts.ts · artifacts-query.ts · heritage.ts · heritage-era.ts   유물 목록·필터 / 국가유산 데이터·연대 파서
 ├── meme-formats.ts      밈 형식 도감 (구조·웃음 포인트·필드) — 검증·AI 프롬프트·편집 폼·이미지 alt가 모두 여기서 파생
 ├── meme.ts              AI 초안 로직 — meme-ai(Claude) · meme-data · meme-render · meme-publish(스레드 발행)
+├── promo.ts             Share kit 로직 (UTM, 플랫폼 글자 수, 서브레딧 안내) — promo-ai · promo-data · claude.ts(공용 Claude 호출)
 ├── person-page.ts       인물 페이지 로더 (React cache로 layout/page/metadata 공유)
 └── jsonld.ts · seo.ts   구조화 데이터 · 메타 유틸
-db/schema.sql            전체 스키마 (43 테이블) — db/migrations/와 항상 동기화
+db/schema.sql            전체 스키마 (44 테이블) — db/migrations/와 항상 동기화
 scripts/                 데이터 적재 (heritage: fetch → translate → import → images → enrich → ranks) · meme-draft.ts (밈 초안 CLI: formats / preview / create --post)
 ```
 
@@ -69,7 +70,7 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 - API Route 인증: `requireUser()` / `requireActiveUser()`(작성·댓글) / `requireAdmin()`
 - 입력 `zod` 검증 · 응답 `apiError()` / `apiSuccess()` · 목록은 cursor 페이지네이션 (`limit+1` → `has_next`)
 - 읽기 쿼리 `is_deleted = FALSE` · slug는 영문 소문자+하이픈 (`sejong-daewang`)
-- **UI 텍스트는 전부 영어** (한글은 meta/구조화 데이터·인용 원문에만)
+- **UI 텍스트는 전부 영어** (한글은 meta/구조화 데이터·인용 원문에만). **예외: 관리자 화면(`/admin`, `components/admin`, `/api/admin` 오류 메시지)은 한국어** — 운영자 1인 전용. 공개 페이지에서도 쓰는 컴포넌트(`ImageCropModal`)는 영어 유지. 밈 형식의 한국어 라벨은 `lib/meme-formats-ko.ts` (도감 영어는 AI 프롬프트용)
 - 소셜 로그인: Google, Discord만
 
 **금지**
@@ -108,6 +109,7 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 | 인물 편집 콘텐츠 AI 초안 | 즉시 공개 + `is_ai_generated` 라벨, 어드민 사후 검수 |
 | AI Drafts (`ai_drafts`) | 워작 밈·번역 짤·짧은 소설을 Claude로 초안 → 어드민 검토 후 게시하면 관리자 명의 **일반 스레드**(`thread_id`)가 됨. 사용자는 테이블을 모름. 밈 PNG는 threads 버킷, 이미지 속 텍스트는 `thread_images.alt` |
 | 밈 형식 = 도감 | 형식 추가는 `lib/meme-formats.ts` 항목 + MemeCanvas 레이아웃 + 테스트 샘플. 남의 밈은 구조만 빌리고 이미지·문구·캐릭터는 가져오지 않음 |
+| 홍보는 수동 게시 (Share kit) | `/admin/promo`: 스레드별 인스타 캐러셀(1080×1350)·플랫폼 문구·UTM 링크 생성 → 사람이 게시 후 URL 기록(`promo_posts`). 레딧 자동 게시 금지(자기홍보 차단·계정 정지 위험). 문구는 운영자임을 숨기지 않음 — 제3자 행세 금지 |
 | AI Drafts 대상·원칙 | 근대 이전 인물만 (1850년 이후 출생·생존·modern 제외 — 명예훼손 방지). 사실 기반, 본문에 근거(`fact`)와 AI 표기. 번역 짤은 출처·크레딧 필수 |
 | age-flow 카드 뷰포트 캡 | sticky 뷰포트 → 중요도(포커스·왕·전쟁·조회수) 순으로 화면에 맞는 만큼, 나머지 "+N more" |
 | age-flow 왕·전쟁은 DB | 재위 `reigns`, 전쟁 = EVENT 노드(war/revolt) + `metadata.end_year` + 참여자 링크. 하드코딩 금지 |

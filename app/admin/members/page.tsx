@@ -35,9 +35,9 @@ export default function AdminMembersPage() {
 
   const handleBan = useCallback(
     async (id: string) => {
-      const reason = prompt('Enter ban reason:');
+      const reason = prompt('정지 사유를 입력하세요:');
       if (!reason) return;
-      const hours = prompt('Ban duration in hours (blank for permanent):');
+      const hours = prompt('정지 기간(시간). 비워 두면 영구 정지:');
 
       await apiFetch(`/api/admin/members/${id}/ban`, {
         method: 'PUT',
@@ -62,8 +62,8 @@ export default function AdminMembersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Member Management</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Review and manage members</p>
+        <h1 className="text-2xl font-bold text-gray-900">회원 관리</h1>
+        <p className="mt-0.5 text-sm text-gray-500">회원을 조회하고 관리합니다</p>
       </div>
 
       {/* Filters */}
@@ -80,7 +80,7 @@ export default function AdminMembersPage() {
           </svg>
           <input
             type="text"
-            placeholder="Search by nickname..."
+            placeholder="닉네임으로 검색..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="input pl-9"
@@ -91,8 +91,8 @@ export default function AdminMembersPage() {
           onChange={(e) => setFilter(e.target.value)}
           className="input w-auto"
         >
-          <option value="">All</option>
-          <option value="banned">Banned Members</option>
+          <option value="">전체</option>
+          <option value="banned">정지된 회원</option>
         </select>
       </div>
 
@@ -100,18 +100,18 @@ export default function AdminMembersPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-8 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">Member</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Joined</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">회원</th>
+                <th className="px-4 py-3">권한</th>
+                <th className="px-4 py-3">상태</th>
+                <th className="px-4 py-3">가입일</th>
+                <th className="px-4 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -142,17 +142,17 @@ export default function AdminMembersPage() {
                     {m.is_banned ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600">
                         <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                        Banned
+                        정지
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600">
                         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                        Active
+                        정상
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-400">
-                    {new Date(m.created_at).toLocaleDateString('en-US')}
+                    {new Date(m.created_at).toLocaleDateString('ko-KR')}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {m.is_banned ? (
@@ -160,14 +160,14 @@ export default function AdminMembersPage() {
                         onClick={() => handleUnban(m.id)}
                         className="btn-ghost text-xs text-blue-600"
                       >
-                        Unban
+                        정지 해제
                       </button>
                     ) : (
                       <button
                         onClick={() => handleBan(m.id)}
                         className="btn-ghost text-xs text-red-600"
                       >
-                        Ban
+                        정지
                       </button>
                     )}
                   </td>
@@ -177,7 +177,7 @@ export default function AdminMembersPage() {
           </table>
           {(data?.items ?? []).length === 0 && (
             <div className="py-12 text-center text-sm text-gray-400">
-              No matching members
+              일치하는 회원이 없습니다
             </div>
           )}
         </div>

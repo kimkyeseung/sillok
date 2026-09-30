@@ -22,16 +22,16 @@ export default function AdminContentReviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Content Review</h1>
+        <h1 className="text-xl font-bold text-gray-900">콘텐츠 검수</h1>
         <p className="text-sm text-gray-500">
-          AI-drafted facts, highlights and sources are public with an &quot;AI draft&quot; label until reviewed.
+          AI가 쓴 사실·하이라이트·출처는 검수 전까지 &quot;AI draft&quot; 라벨을 달고 공개됩니다.
         </p>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-gray-400">Loading...</p>
+        <p className="text-sm text-gray-400">불러오는 중...</p>
       ) : !data?.persons.length ? (
-        <div className="card-flat py-10 text-center text-sm text-gray-400">Nothing to review.</div>
+        <div className="card-flat py-10 text-center text-sm text-gray-400">검수할 항목이 없습니다.</div>
       ) : (
         <div className="card-flat divide-y divide-gray-100">
           {data.persons.map((p) => (

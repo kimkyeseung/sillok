@@ -10,9 +10,9 @@ export default function AdminNewPersonPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Create Figure</h1>
+        <h1 className="text-2xl font-bold text-gray-900">인물 등록</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          Add a new figure
+          새 인물을 추가합니다
         </p>
       </div>
 
@@ -26,7 +26,7 @@ export default function AdminNewPersonPage() {
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          Single Entry
+          개별 등록
         </button>
         <button
           type="button"
@@ -37,7 +37,7 @@ export default function AdminNewPersonPage() {
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          Bulk Upload (JSON)
+          일괄 업로드 (JSON)
         </button>
       </div>
 

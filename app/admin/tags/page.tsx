@@ -13,9 +13,9 @@ interface Tag {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  ERA: 'Era',
-  FIELD: 'Field',
-  CUSTOM: 'Custom',
+  ERA: '시대',
+  FIELD: '분야',
+  CUSTOM: '사용자 정의',
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -69,20 +69,20 @@ export default function AdminTagsPage() {
           method: 'PUT',
           body: JSON.stringify(body),
         });
-        toast('Tag updated');
+        toast('태그를 수정했습니다');
       } else {
         await apiFetch('/api/admin/tags', {
           method: 'POST',
           body: JSON.stringify(body),
         });
-        toast('Tag added');
+        toast('태그를 추가했습니다');
       }
 
       resetForm();
       mutate();
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : 'An error occurred';
+        err instanceof Error ? err.message : '오류가 발생했습니다';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -90,15 +90,15 @@ export default function AdminTagsPage() {
   };
 
   const handleDelete = async (tag: Tag) => {
-    if (!confirm(`Delete tag "${tag.name_ko}"? Linked figure tags will also be removed.`))
+    if (!confirm(`태그 "${tag.name_ko}"을(를) 삭제할까요? 인물에 연결된 태그도 함께 삭제됩니다.`))
       return;
 
     try {
       await apiFetch(`/api/admin/tags/${tag.id}`, { method: 'DELETE' });
-      toast('Tag deleted');
+      toast('태그를 삭제했습니다');
       mutate();
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제하지 못했습니다', 'error');
     }
   };
 
@@ -113,9 +113,9 @@ export default function AdminTagsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tag Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">태그 관리</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Manage era and field tags assigned to figures
+            인물에 붙는 시대·분야 태그를 관리합니다
           </p>
         </div>
         <button
@@ -138,7 +138,7 @@ export default function AdminTagsPage() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          Add Tag
+          태그 추가
         </button>
       </div>
 
@@ -146,12 +146,12 @@ export default function AdminTagsPage() {
       {showForm && (
         <form onSubmit={handleSubmit} className="card-flat p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-900">
-            {editingTag ? 'Edit Tag' : 'Add New Tag'}
+            {editingTag ? '태그 수정' : '새 태그 추가'}
           </h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                Korean Name *
+                한글 이름 *
               </label>
               <input
                 type="text"
@@ -159,14 +159,14 @@ export default function AdminTagsPage() {
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, name_ko: e.target.value }))
                 }
-                placeholder="General"
+                placeholder="장군"
                 required
                 className="input"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
-                English Name
+                영문 이름
               </label>
               <input
                 type="text"
@@ -189,9 +189,9 @@ export default function AdminTagsPage() {
                 }
                 className="input"
               >
-                <option value="ERA">Era</option>
-                <option value="FIELD">Field</option>
-                <option value="CUSTOM">Custom</option>
+                <option value="ERA">시대</option>
+                <option value="FIELD">분야</option>
+                <option value="CUSTOM">사용자 정의</option>
               </select>
             </div>
           </div>
@@ -201,14 +201,14 @@ export default function AdminTagsPage() {
               disabled={saving || !form.name_ko.trim()}
               className="btn-primary text-sm disabled:opacity-50"
             >
-              {saving ? 'Saving...' : editingTag ? 'Update' : 'Add'}
+              {saving ? '저장 중...' : editingTag ? '수정' : '추가'}
             </button>
             <button
               type="button"
               onClick={resetForm}
               className="btn-ghost text-sm"
             >
-              Cancel
+              취소
             </button>
           </div>
         </form>
@@ -218,7 +218,7 @@ export default function AdminTagsPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="space-y-6">
@@ -258,7 +258,7 @@ export default function AdminTagsPage() {
                       <button
                         onClick={() => startEdit(tag)}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                        title="Edit"
+                        title="수정"
                       >
                         <svg
                           className="h-4 w-4"
@@ -277,7 +277,7 @@ export default function AdminTagsPage() {
                       <button
                         onClick={() => handleDelete(tag)}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                        title="Delete"
+                        title="삭제"
                       >
                         <svg
                           className="h-4 w-4"
@@ -301,7 +301,7 @@ export default function AdminTagsPage() {
           })}
           {(tags ?? []).length === 0 && (
             <div className="card-flat py-12 text-center text-gray-400">
-              <p className="text-sm">No tags</p>
+              <p className="text-sm">태그가 없습니다</p>
             </div>
           )}
         </div>

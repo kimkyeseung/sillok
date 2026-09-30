@@ -12,12 +12,12 @@ const ListQuerySchema = z.object({
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const { searchParams } = new URL(request.url);
   const parsed = ListQuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', 'person_id is required.', 422);
+    return apiError('VALIDATION_ERROR', 'person_id가 필요합니다.', 422);
 
   const { data, error } = await supabaseAdmin
     .from('person_timeline')
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     .order('year', { ascending: true });
 
   if (error)
-    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
   return apiSuccess(data ?? []);
 }
@@ -46,18 +46,18 @@ const CreateTimelineSchema = z.object({
 export async function POST(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
+    return apiError('VALIDATION_ERROR', 'JSON 형식이 올바르지 않습니다.', 422);
   }
 
   const result = CreateTimelineSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, result.error.issues);
+    return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422, result.error.issues);
 
   const { data, error } = await supabaseAdmin
     .from('person_timeline')
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error)
-    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
   return apiSuccess(data);
 }

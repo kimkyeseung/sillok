@@ -13,10 +13,10 @@ const QuerySchema = z.object({
 
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const parsed = QuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
-  if (!parsed.success) return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
+  if (!parsed.success) return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422);
   const { status, limit, cursor } = parsed.data;
 
   let query = supabaseAdmin
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   if (cursor) query = query.lt('created_at', cursor);
 
   const { data, error } = await query;
-  if (error) return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  if (error) return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
   const rows = (data ?? []).slice(0, limit);
   // user_id references auth.users (no FK to profiles) — look nicknames up separately

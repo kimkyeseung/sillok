@@ -55,13 +55,13 @@ export default function MemeBoxEditor({ imageUrl, boxes, selected, onSelect, onC
       onPointerCancel={endDrag}
       onPointerDown={() => onSelect(null)}
     >
-      <img src={imageUrl} alt="Original meme" className="block w-full" draggable={false} />
+      <img src={imageUrl} alt="원본 짤" className="block w-full" draggable={false} />
       {boxes.map((b, i) => (
         <div
           key={i}
           role="button"
           tabIndex={0}
-          aria-label={`Text box ${i + 1}`}
+          aria-label={`텍스트 박스 ${i + 1}`}
           onPointerDown={(e) => startDrag(e, i, 'move')}
           onKeyDown={(e) => e.key === 'Enter' && onSelect(i)}
           className={`absolute flex cursor-move items-center justify-center overflow-hidden border-2 text-center text-[10px] leading-tight ${

@@ -17,18 +17,18 @@ export async function PUT(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
+    return apiError('VALIDATION_ERROR', 'JSON 형식이 올바르지 않습니다.', 422);
   }
 
   const result = UpdateCuratorSchema.safeParse(body);
   if (!result.success)
-    return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
+    return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422);
 
   const { data, error } = await supabaseAdmin
     .from('curator_roles')
@@ -38,7 +38,7 @@ export async function PUT(
     .single();
 
   if (error || !data)
-    return apiError('NODE_NOT_FOUND', 'Curator role not found.', 404);
+    return apiError('NODE_NOT_FOUND', '큐레이터 권한을 찾을 수 없습니다.', 404);
 
   return apiSuccess(data);
 }
@@ -51,7 +51,7 @@ export async function DELETE(
 ) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const { error } = await supabaseAdmin
     .from('curator_roles')
@@ -59,7 +59,7 @@ export async function DELETE(
     .eq('id', params.id);
 
   if (error)
-    return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+    return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
   return apiSuccess({ deleted: true });
 }

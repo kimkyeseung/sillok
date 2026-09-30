@@ -58,7 +58,7 @@ export default function AdminPersonsPage() {
     <Suspense fallback={
       <div className="flex items-center gap-2 py-12 text-gray-400">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-        <span className="text-sm">Loading...</span>
+        <span className="text-sm">불러오는 중...</span>
       </div>
     }>
       <AdminPersonsContent />
@@ -108,7 +108,7 @@ function AdminPersonsContent() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      toast('File must be 10MB or less', 'error');
+      toast('파일은 10MB 이하여야 합니다', 'error');
       return;
     }
     setCropSrc(URL.createObjectURL(file));
@@ -119,29 +119,29 @@ function AdminPersonsContent() {
     setCropSrc(null);
     if (!avatarTarget) return;
     try {
-      toast('Uploading...');
+      toast('업로드 중...');
       const url = await uploadPersonImage(croppedFile, avatarTarget.id);
       await apiFetch(`/api/persons/${avatarTarget.slug}`, {
         method: 'PUT',
         body: JSON.stringify({ thumbnail: url }),
       });
-      toast('Thumbnail updated');
+      toast('썸네일을 변경했습니다');
       mutate();
     } catch {
-      toast('Upload failed', 'error');
+      toast('업로드하지 못했습니다', 'error');
     } finally {
       setAvatarTarget(null);
     }
   };
 
   const handleDelete = async (slug: string, nameKo: string) => {
-    if (!confirm(`"${nameKo}" will be deleted. Continue?`)) return;
+    if (!confirm(`"${nameKo}"을(를) 삭제합니다. 계속할까요?`)) return;
     try {
       await apiFetch(`/api/persons/${slug}`, { method: 'DELETE' });
-      toast('Deleted successfully');
+      toast('삭제했습니다');
       mutate();
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제하지 못했습니다', 'error');
     }
   };
 
@@ -191,11 +191,11 @@ function AdminPersonsContent() {
         method: 'PUT',
         body: JSON.stringify(body),
       });
-      toast('Saved');
+      toast('저장했습니다');
       cancelEdit();
       mutate();
     } catch {
-      toast('Failed to save', 'error');
+      toast('저장하지 못했습니다', 'error');
     } finally {
       setSaving(false);
     }
@@ -213,9 +213,9 @@ function AdminPersonsContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Persons</h1>
+          <h1 className="text-2xl font-bold text-gray-900">인물</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Manage person data — click a row to quick-edit
+            인물 데이터를 관리합니다 — 행을 클릭하면 바로 수정할 수 있습니다
           </p>
         </div>
         <Link href="/admin/persons/new" className="btn-primary text-sm">
@@ -232,7 +232,7 @@ function AdminPersonsContent() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          Add Person
+          인물 추가
         </Link>
       </div>
 
@@ -253,7 +253,7 @@ function AdminPersonsContent() {
         </svg>
         <input
           type="text"
-          placeholder="Search by name..."
+          placeholder="이름으로 검색..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -281,20 +281,20 @@ function AdminPersonsContent() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">Person</th>
-                <th className="px-4 py-3">Name (EN)</th>
-                <th className="px-4 py-3">Birth</th>
-                <th className="px-4 py-3">Death</th>
-                <th className="px-4 py-3">Groups</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">인물</th>
+                <th className="px-4 py-3">영문 이름</th>
+                <th className="px-4 py-3">출생</th>
+                <th className="px-4 py-3">사망</th>
+                <th className="px-4 py-3">그룹</th>
+                <th className="px-4 py-3 text-center">상태</th>
+                <th className="px-4 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -314,7 +314,7 @@ function AdminPersonsContent() {
                           type="button"
                           onClick={(e) => handleAvatarClick(e, person)}
                           className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-gray-200 transition-all hover:ring-brand-400"
-                          title="Click to change thumbnail"
+                          title="클릭해서 썸네일 변경"
                         >
                           {person.thumbnail ? (
                             <img
@@ -353,7 +353,7 @@ function AdminPersonsContent() {
                           value={editForm.name_en}
                           onChange={(e) => setEditForm({ ...editForm, name_en: e.target.value })}
                           onKeyDown={handleEditKeyDown}
-                          placeholder="English name"
+                          placeholder="영문 이름"
                           className="w-full rounded border border-gray-200 px-2 py-1 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400"
                         />
                       ) : (
@@ -371,13 +371,13 @@ function AdminPersonsContent() {
                           value={editForm.birth_year}
                           onChange={(e) => setEditForm({ ...editForm, birth_year: e.target.value })}
                           onKeyDown={handleEditKeyDown}
-                          placeholder="Year"
+                          placeholder="연도"
                           className="w-20 rounded border border-gray-200 px-2 py-1 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400"
                           autoFocus
                         />
                       ) : (
                         <span className={person.birth_year == null ? 'font-medium text-amber-600' : 'text-gray-500'}>
-                          {person.birth_year ?? 'Missing'}
+                          {person.birth_year ?? '누락'}
                         </span>
                       )}
                     </td>
@@ -391,7 +391,7 @@ function AdminPersonsContent() {
                             value={editForm.death_year}
                             onChange={(e) => setEditForm({ ...editForm, death_year: e.target.value })}
                             onKeyDown={handleEditKeyDown}
-                            placeholder="Year"
+                            placeholder="연도"
                             disabled={editForm.is_alive}
                             className="w-20 rounded border border-gray-200 px-2 py-1 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400 disabled:bg-gray-50 disabled:text-gray-300"
                           />
@@ -406,12 +406,12 @@ function AdminPersonsContent() {
                               })}
                               className="h-3.5 w-3.5 rounded border-gray-300 text-brand-600"
                             />
-                            Alive
+                            생존
                           </label>
                         </div>
                       ) : (
                         <span className={!person.is_alive && person.death_year == null ? 'font-medium text-amber-600' : 'text-gray-500'}>
-                          {person.is_alive ? 'Alive' : (person.death_year ?? 'Missing')}
+                          {person.is_alive ? '생존' : (person.death_year ?? '누락')}
                         </span>
                       )}
                     </td>
@@ -443,7 +443,7 @@ function AdminPersonsContent() {
                               onChange={(e) => setEditForm({ ...editForm, is_published: e.target.checked })}
                               className="h-3.5 w-3.5 rounded border-gray-300 text-brand-600"
                             />
-                            <span className="text-gray-600">Public</span>
+                            <span className="text-gray-600">공개</span>
                           </label>
                           <label className="flex items-center gap-1 text-xs">
                             <input
@@ -452,7 +452,7 @@ function AdminPersonsContent() {
                               onChange={(e) => setEditForm({ ...editForm, is_controversial: e.target.checked })}
                               className="h-3.5 w-3.5 rounded border-gray-300 text-amber-600"
                             />
-                            <span className="text-gray-600">Controversial</span>
+                            <span className="text-gray-600">논란</span>
                           </label>
                         </div>
                       ) : (
@@ -464,16 +464,16 @@ function AdminPersonsContent() {
                                 : 'bg-gray-100 text-gray-500'
                             }`}
                           >
-                            {person.is_published ? 'Public' : 'Draft'}
+                            {person.is_published ? '공개' : '비공개'}
                           </span>
                           {person.is_controversial && (
                             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                              Controversial
+                              논란
                             </span>
                           )}
                           {person.is_alive && (
                             <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
-                              Alive
+                              생존
                             </span>
                           )}
                         </div>
@@ -489,13 +489,13 @@ function AdminPersonsContent() {
                             disabled={saving}
                             className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
                           >
-                            {saving ? '...' : 'Save'}
+                            {saving ? '...' : '저장'}
                           </button>
                           <button
                             onClick={cancelEdit}
                             className="rounded-lg px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100"
                           >
-                            Cancel
+                            취소
                           </button>
                         </div>
                       ) : (
@@ -503,7 +503,7 @@ function AdminPersonsContent() {
                           <Link
                             href={`/admin/persons/${person.slug}/edit`}
                             className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                            title="Full edit"
+                            title="전체 수정"
                           >
                             <svg
                               className="h-4 w-4"
@@ -524,7 +524,7 @@ function AdminPersonsContent() {
                               handleDelete(person.slug, person.name_ko)
                             }
                             className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                            title="Delete"
+                            title="삭제"
                           >
                             <svg
                               className="h-4 w-4"
@@ -552,7 +552,7 @@ function AdminPersonsContent() {
                     colSpan={7}
                     className="px-4 py-12 text-center text-gray-400"
                   >
-                    No persons found
+                    인물이 없습니다
                   </td>
                 </tr>
               )}
@@ -582,7 +582,7 @@ function AdminPersonsContent() {
               disabled={page === 1}
               className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              Prev
+              이전
             </button>
             {Array.from({ length: pagination.total_pages }, (_, i) => i + 1)
               .filter((p) => p === 1 || p === pagination.total_pages || Math.abs(p - page) <= 2)
@@ -613,7 +613,7 @@ function AdminPersonsContent() {
               disabled={page === pagination.total_pages}
               className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
             >
-              Next
+              다음
             </button>
             <button
               onClick={() => setPage(pagination.total_pages)}

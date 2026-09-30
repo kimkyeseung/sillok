@@ -208,19 +208,19 @@ export default function AdminNodesPage() {
           method: 'PUT',
           body: JSON.stringify({ ...body, metadata: merged, person_ids: personIds }),
         });
-        toast('Node updated');
+        toast('노드를 수정했습니다');
       } else {
         await apiFetch('/api/nodes', {
           method: 'POST',
           body: JSON.stringify({ ...body, node_type: form.node_type, person_ids: personIds.length > 0 ? personIds : undefined }),
         });
-        toast('Node created');
+        toast('노드를 추가했습니다');
       }
 
       resetForm();
       mutate();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'An error occurred';
+      const msg = err instanceof Error ? err.message : '오류가 발생했습니다';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -228,13 +228,13 @@ export default function AdminNodesPage() {
   };
 
   const handleDelete = async (node: Node) => {
-    if (!confirm(`Delete "${node.title}"?`)) return;
+    if (!confirm(`"${node.title}"을(를) 삭제할까요?`)) return;
     try {
       await apiFetch(`/api/nodes/${node.slug}`, { method: 'DELETE' });
-      toast('Node deleted');
+      toast('노드를 삭제했습니다');
       mutate();
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제하지 못했습니다', 'error');
     }
   };
 
@@ -244,10 +244,10 @@ export default function AdminNodesPage() {
         method: 'PUT',
         body: JSON.stringify({ is_published: !node.is_published }),
       });
-      toast(node.is_published ? 'Unpublished' : 'Published');
+      toast(node.is_published ? '비공개로 전환했습니다' : '게시됨');
       mutate();
     } catch {
-      toast('Failed to update', 'error');
+      toast('수정하지 못했습니다', 'error');
     }
   };
 
@@ -256,16 +256,16 @@ export default function AdminNodesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Node Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">노드 관리</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Manage artifacts, media, and events
+            유물·미디어·사건 노드를 관리합니다
           </p>
         </div>
         <button onClick={startCreate} className="btn-primary text-sm">
           <svg className="mr-1.5 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          Add Node
+          노드 추가
         </button>
       </div>
 
@@ -279,7 +279,7 @@ export default function AdminNodesPage() {
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search by title..."
+            placeholder="제목으로 검색..."
             className="input w-full pl-10"
           />
         </div>
@@ -294,7 +294,7 @@ export default function AdminNodesPage() {
                   : 'text-gray-500 hover:bg-gray-100'
               }`}
             >
-              {t || 'All'}
+              {t || '전체'}
             </button>
           ))}
         </div>
@@ -304,21 +304,21 @@ export default function AdminNodesPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-5 py-3">Title</th>
-                <th className="px-5 py-3">Type</th>
-                <th className="px-5 py-3">Year</th>
-                <th className="px-5 py-3">Slug</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Views</th>
-                <th className="px-5 py-3">Created</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3">제목</th>
+                <th className="px-5 py-3">유형</th>
+                <th className="px-5 py-3">연도</th>
+                <th className="px-5 py-3">slug</th>
+                <th className="px-5 py-3">상태</th>
+                <th className="px-5 py-3 text-right">조회수</th>
+                <th className="px-5 py-3">등록일</th>
+                <th className="px-5 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -364,19 +364,19 @@ export default function AdminNodesPage() {
                         node.is_published ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {node.is_published ? 'Published' : 'Draft'}
+                      {node.is_published ? '게시됨' : '비공개'}
                     </button>
                   </td>
                   <td className="px-5 py-3 text-right text-gray-500">{node.view_count.toLocaleString()}</td>
-                  <td className="px-5 py-3 text-xs text-gray-400">{new Date(node.created_at).toLocaleDateString('en-US')}</td>
+                  <td className="px-5 py-3 text-xs text-gray-400">{new Date(node.created_at).toLocaleDateString('ko-KR')}</td>
                   <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => startEdit(node)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600" title="Edit">
+                      <button onClick={() => startEdit(node)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600" title="수정">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
-                      <button onClick={() => handleDelete(node)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Delete">
+                      <button onClick={() => handleDelete(node)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600" title="삭제">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -389,7 +389,7 @@ export default function AdminNodesPage() {
           </table>
           {(data?.items ?? []).length === 0 && (
             <div className="py-12 text-center text-gray-400">
-              <p className="text-sm">No nodes found</p>
+              <p className="text-sm">노드가 없습니다</p>
             </div>
           )}
         </div>
@@ -416,7 +416,7 @@ export default function AdminNodesPage() {
               disabled={page === 1}
               className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30"
             >
-              Prev
+              이전
             </button>
             {Array.from({ length: pagination.total_pages }, (_, i) => i + 1)
               .filter((p) => p === 1 || p === pagination.total_pages || Math.abs(p - page) <= 2)
@@ -447,7 +447,7 @@ export default function AdminNodesPage() {
               disabled={page === pagination.total_pages}
               className="rounded-lg px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30"
             >
-              Next
+              다음
             </button>
             <button
               onClick={() => setPage(pagination.total_pages)}
@@ -466,12 +466,12 @@ export default function AdminNodesPage() {
       <NodeModal
         open={showModal}
         onClose={resetForm}
-        title={editingNode ? `Edit: ${editingNode.title}` : 'New Node'}
+        title={editingNode ? `수정: ${editingNode.title}` : '새 노드'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Slug *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">slug *</label>
               <input
                 type="text"
                 value={form.slug}
@@ -484,22 +484,22 @@ export default function AdminNodesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Type *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">유형 *</label>
               <select
                 value={form.node_type}
                 onChange={(e) => setForm((p) => ({ ...p, node_type: e.target.value as 'ARTIFACT' | 'MEDIA' | 'EVENT' }))}
                 disabled={!!editingNode}
                 className="input disabled:opacity-50"
               >
-                <option value="ARTIFACT">Artifact</option>
-                <option value="MEDIA">Media</option>
-                <option value="EVENT">Event</option>
+                <option value="ARTIFACT">유물</option>
+                <option value="MEDIA">미디어</option>
+                <option value="EVENT">사건</option>
               </select>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Title (EN) *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">영문 제목 *</label>
               <input
                 type="text"
                 value={form.title}
@@ -510,18 +510,18 @@ export default function AdminNodesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Title (KO)</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">한글 제목</label>
               <input
                 type="text"
                 value={form.title_ko}
                 onChange={(e) => setForm((p) => ({ ...p, title_ko: e.target.value }))}
-                placeholder="Imjin War"
+                placeholder="임진왜란"
                 className="input"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Description</label>
+            <label className="mb-1 block text-xs font-medium text-gray-600">설명</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
@@ -533,7 +533,7 @@ export default function AdminNodesPage() {
           {form.node_type === 'EVENT' && (
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Year</label>
+                <label className="mb-1 block text-xs font-medium text-gray-600">연도</label>
                 <input
                   type="number"
                   value={form.start_year}
@@ -544,7 +544,7 @@ export default function AdminNodesPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">
-                  End year <span className="font-normal text-gray-400">(wars: Age Flow &quot;At War&quot;)</span>
+                  종료 연도 <span className="font-normal text-gray-400">(전쟁: Age Flow &quot;At War&quot; 표시용)</span>
                 </label>
                 <input
                   type="number"
@@ -555,13 +555,13 @@ export default function AdminNodesPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Event Type</label>
+                <label className="mb-1 block text-xs font-medium text-gray-600">사건 유형</label>
                 <select
                   value={form.event_type}
                   onChange={(e) => setForm((p) => ({ ...p, event_type: e.target.value }))}
                   className="input"
                 >
-                  <option value="">-- Select --</option>
+                  <option value="">-- 선택 --</option>
                   {EVENT_TYPES.map((t) => (
                     <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                   ))}
@@ -570,7 +570,7 @@ export default function AdminNodesPage() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Thumbnail URL</label>
+            <label className="mb-1 block text-xs font-medium text-gray-600">썸네일 URL</label>
             <input
               type="url"
               value={form.thumbnail}
@@ -581,7 +581,7 @@ export default function AdminNodesPage() {
           </div>
           {/* Linked persons */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Linked Persons</label>
+            <label className="mb-1 block text-xs font-medium text-gray-600">연결된 인물</label>
             {selectedPersons.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {selectedPersons.map((p) => (
@@ -609,13 +609,13 @@ export default function AdminNodesPage() {
                 type="text"
                 value={personQuery}
                 onChange={(e) => setPersonQuery(e.target.value)}
-                placeholder="Search person by name..."
+                placeholder="인물 이름으로 검색..."
                 className="input w-full"
               />
               {personQuery.length >= 1 && personResults?.items && (
                 <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
                   {personResults.items.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-gray-400">No results</p>
+                    <p className="px-3 py-2 text-xs text-gray-400">결과가 없습니다</p>
                   ) : (
                     personResults.items
                       .filter((p) => !selectedPersons.some((s) => s.id === p.id))
@@ -646,13 +646,13 @@ export default function AdminNodesPage() {
               onChange={(e) => setForm((p) => ({ ...p, is_published: e.target.checked }))}
               className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
             />
-            Published
+            게시됨
           </label>
           <div className="flex gap-2 border-t border-gray-100 pt-4">
             <button type="submit" disabled={saving || !form.slug.trim() || !form.title.trim()} className="btn-primary text-sm disabled:opacity-50">
-              {saving ? 'Saving...' : editingNode ? 'Update' : 'Create'}
+              {saving ? '저장 중...' : editingNode ? '수정' : '추가'}
             </button>
-            <button type="button" onClick={resetForm} className="btn-ghost text-sm">Cancel</button>
+            <button type="button" onClick={resetForm} className="btn-ghost text-sm">취소</button>
           </div>
         </form>
       </NodeModal>

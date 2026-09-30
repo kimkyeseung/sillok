@@ -33,7 +33,7 @@ export default function AdminEditPersonPage() {
     return (
       <div className="flex items-center gap-2 py-12 text-gray-400">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-        <span className="text-sm">Loading...</span>
+        <span className="text-sm">불러오는 중...</span>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export default function AdminEditPersonPage() {
   if (!data) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-        Figure not found
+        인물을 찾을 수 없습니다
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function AdminEditPersonPage() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Figure</h1>
+          <h1 className="text-2xl font-bold text-gray-900">인물 수정</h1>
           <p className="mt-0.5 text-sm text-gray-500">
             Update information for {data.name_ko}
           </p>

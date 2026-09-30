@@ -22,10 +22,10 @@ interface Response {
 
 // Keys match reports.target_type values
 const typeLabel: Record<string, string> = {
-  THREAD: 'Thread',
-  THREAD_REPLY: 'Reply',
-  NODE_COMMENT: 'Node comment',
-  PERSON_ITEM_COMMENT: 'Person page comment',
+  THREAD: '스레드',
+  THREAD_REPLY: '댓글',
+  NODE_COMMENT: '노드 댓글',
+  PERSON_ITEM_COMMENT: '인물 페이지 댓글',
 };
 
 const typeColor: Record<string, string> = {
@@ -36,12 +36,12 @@ const typeColor: Record<string, string> = {
 };
 
 const reasonLabel: Record<string, string> = {
-  SPAM: 'Spam',
-  ABUSE: 'Abuse',
-  HATE_SPEECH: 'Hate speech',
-  MISINFORMATION: 'Misinformation',
-  OFF_TOPIC: 'Off topic',
-  OTHER: 'Other',
+  SPAM: '스팸',
+  ABUSE: '욕설·괴롭힘',
+  HATE_SPEECH: '혐오 발언',
+  MISINFORMATION: '허위 정보',
+  OFF_TOPIC: '주제 무관',
+  OTHER: '기타',
 };
 
 export default function AdminReportsPage() {
@@ -52,7 +52,7 @@ export default function AdminReportsPage() {
 
   const handleResolve = useCallback(
     async (id: string) => {
-      const action = prompt('Resolution action (warn / delete / ban):');
+      const action = prompt('처리 조치 (warn / delete / ban):');
       if (!action || !['warn', 'delete', 'ban'].includes(action)) return;
       await apiFetch(`/api/reports/${id}/resolve`, {
         method: 'PUT',
@@ -74,22 +74,22 @@ export default function AdminReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Report Management</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Review and moderate reported content</p>
+        <h1 className="text-2xl font-bold text-gray-900">신고 관리</h1>
+        <p className="mt-0.5 text-sm text-gray-500">신고된 콘텐츠를 검토하고 조치합니다</p>
       </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-8 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (data?.items ?? []).length === 0 ? (
         <div className="card-flat flex flex-col items-center py-16">
           <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="mt-3 text-sm font-medium text-gray-500">No pending reports</p>
-          <p className="text-xs text-gray-400">All reports have been processed</p>
+          <p className="mt-3 text-sm font-medium text-gray-500">대기 중인 신고가 없습니다</p>
+          <p className="text-xs text-gray-400">모든 신고를 처리했습니다</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -112,7 +112,7 @@ export default function AdminReportsPage() {
                   )}
                   <p className="mt-2 text-xs text-gray-400">
                     Target ID: {report.target_id.slice(0, 8)}... &middot;{' '}
-                    {new Date(report.created_at).toLocaleDateString('en-US')}
+                    {new Date(report.created_at).toLocaleDateString('ko-KR')}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
@@ -120,13 +120,13 @@ export default function AdminReportsPage() {
                     onClick={() => handleResolve(report.id)}
                     className="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
                   >
-                    Resolve
+                    처리
                   </button>
                   <button
                     onClick={() => handleDismiss(report.id)}
                     className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
                   >
-                    Dismiss
+                    기각
                   </button>
                 </div>
               </div>

@@ -39,9 +39,9 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 const AUTH_LABELS: Record<string, { label: string; className: string }> = {
-  public: { label: 'Public', className: 'text-gray-400' },
-  user: { label: 'User', className: 'text-blue-500' },
-  admin: { label: 'Admin', className: 'text-red-500' },
+  public: { label: '공개', className: 'text-gray-400' },
+  user: { label: '회원', className: 'text-blue-500' },
+  admin: { label: '관리자', className: 'text-red-500' },
 };
 
 // ─── Filters ───
@@ -78,7 +78,7 @@ function Filters({
           type="text"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search path or description..."
+          placeholder="경로나 설명으로 검색..."
           className="w-full min-w-[200px] rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
       </div>
@@ -89,7 +89,7 @@ function Filters({
         onChange={(e) => onMethodChange(e.target.value)}
         className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
       >
-        <option value="">All Methods</option>
+        <option value="">모든 메서드</option>
         {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => (
           <option key={m} value={m}>{m}</option>
         ))}
@@ -101,10 +101,10 @@ function Filters({
         onChange={(e) => onAuthChange(e.target.value)}
         className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
       >
-        <option value="">All Auth</option>
-        <option value="public">Public</option>
-        <option value="user">User</option>
-        <option value="admin">Admin</option>
+        <option value="">모든 인증</option>
+        <option value="public">공개</option>
+        <option value="user">회원</option>
+        <option value="admin">관리자</option>
       </select>
     </div>
   );
@@ -309,7 +309,7 @@ export default function ApiDocsPage() {
     return (
       <div className="flex items-center gap-2 py-12 text-gray-400">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-        <span className="text-sm">Loading...</span>
+        <span className="text-sm">불러오는 중...</span>
       </div>
     );
   }
@@ -317,7 +317,7 @@ export default function ApiDocsPage() {
   if (!data) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-        Failed to load API documentation.
+        API 문서를 불러오지 못했습니다.
       </div>
     );
   }
@@ -327,9 +327,9 @@ export default function ApiDocsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">API Documentation</h1>
+          <h1 className="text-2xl font-bold text-gray-900">API 문서</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            {data.total} endpoints detected
+            엔드포인트 {data.total}개 발견
             {(search || methodFilter || authFilter) && (
               <span className="ml-1 text-brand-600">
                 ({filteredEndpoints.length} shown)
@@ -344,7 +344,7 @@ export default function ApiDocsPage() {
               view === 'tree' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Tree
+            트리
           </button>
           <button
             onClick={() => setView('list')}
@@ -352,7 +352,7 @@ export default function ApiDocsPage() {
               view === 'list' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            List
+            목록
           </button>
         </div>
       </div>
@@ -382,10 +382,10 @@ export default function ApiDocsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="w-20 px-4 py-3">Method</th>
-                <th className="px-4 py-3">Path</th>
-                <th className="px-4 py-3">Description</th>
-                <th className="w-16 px-4 py-3">Auth</th>
+                <th className="w-20 px-4 py-3">메서드</th>
+                <th className="px-4 py-3">경로</th>
+                <th className="px-4 py-3">설명</th>
+                <th className="w-16 px-4 py-3">인증</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -398,7 +398,7 @@ export default function ApiDocsPage() {
                   </td>
                   <td className="px-4 py-2.5 font-mono text-xs text-gray-900">{ep.path}</td>
                   <td className="px-4 py-2.5 text-xs text-gray-500">
-                    {ep.description || <span className="italic text-gray-300">No description</span>}
+                    {ep.description || <span className="italic text-gray-300">설명 없음</span>}
                   </td>
                   <td className={`px-4 py-2.5 text-xs font-medium ${AUTH_LABELS[ep.auth]?.className ?? ''}`}>
                     {AUTH_LABELS[ep.auth]?.label ?? ep.auth}
@@ -408,7 +408,7 @@ export default function ApiDocsPage() {
               {filteredEndpoints.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-400">
-                    No endpoints match your filters.
+                    필터에 맞는 엔드포인트가 없습니다.
                   </td>
                 </tr>
               )}

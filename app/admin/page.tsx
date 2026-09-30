@@ -24,7 +24,7 @@ export default function AdminDashboard() {
     return (
       <div className="flex items-center gap-2 py-12 text-gray-400">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-        <span className="text-sm">Loading...</span>
+        <span className="text-sm">불러오는 중...</span>
       </div>
     );
   }
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   if (!data) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-        Failed to load data.
+        데이터를 불러오지 못했습니다.
       </div>
     );
   }
@@ -40,23 +40,23 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Monitor Sillok operations at a glance</p>
+        <h1 className="text-2xl font-bold text-gray-900">대시보드</h1>
+        <p className="mt-0.5 text-sm text-gray-500">실록 운영 현황을 한눈에 확인합니다</p>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatCard label="Views Today" value={data.today_views} icon="eye" />
-        <StatCard label="New Users (7d)" value={data.new_users_7d} icon="user" />
-        <StatCard label="New Threads (7d)" value={data.new_threads_7d} icon="chat" />
+        <StatCard label="오늘 조회수" value={data.today_views} icon="eye" />
+        <StatCard label="신규 가입 (7일)" value={data.new_users_7d} icon="user" />
+        <StatCard label="새 스레드 (7일)" value={data.new_threads_7d} icon="chat" />
         <StatCard
-          label="Pending Figure Requests"
+          label="대기 중인 인물 요청"
           value={data.pending_requests}
           highlight={data.pending_requests > 0}
           icon="plus"
         />
         <StatCard
-          label="Pending Reports"
+          label="대기 중인 신고"
           value={data.pending_reports}
           highlight={data.pending_reports > 0}
           icon="flag"
@@ -66,15 +66,15 @@ export default function AdminDashboard() {
       {/* Popular Figures */}
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-          Top Figures
+          인기 인물
         </h2>
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                 <th className="px-4 py-3">#</th>
-                <th className="px-4 py-3">Figure</th>
-                <th className="px-4 py-3 text-right">Views</th>
+                <th className="px-4 py-3">인물</th>
+                <th className="px-4 py-3 text-right">조회수</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">

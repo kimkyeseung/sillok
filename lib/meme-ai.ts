@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import {
   MEME_TITLE_MAX,
@@ -12,69 +11,11 @@ import {
 } from './meme';
 import type { MemeEventInfo, MemeFigureInfo } from './meme-data';
 import { formatEntry, formatGuide, jsonObject } from './meme-formats';
+import { AiError as MemeAiError, claudeJson as callJson } from './claude';
 
-// ─── Claude calls for the meme generator (server only) ───
-// Structured outputs guarantee the JSON shape; zod re-checks lengths/limits
-// (JSON schema constraints like maxLength aren't enforced by the API).
+// ─── Claude calls for AI Drafts (server only) — shared call in lib/claude.ts ───
 
-const MODEL = 'claude-opus-5-5';
-
-export class MemeAiError extends Error {
-  constructor(
-    public code: 'NOT_CONFIGURED' | 'REFUSED' | 'INVALID_OUTPUT' | 'SKIPPED' | 'API_ERROR',
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-let client: Anthropic | null = null;
-function getClient(): Anthropic {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new MemeAiError('NOT_CONFIGURED', 'ANTHROPIC_API_KEY is not set.');
-  }
-  client ??= new Anthropic();
-  return client;
-}
-
-async function callJson(params: {
-  system: string;
-  content: Anthropic.Beta.BetaContentBlockParam[];
-  schema: Record<string, unknown>;
-  effort: 'low' | 'medium' | 'high';
-}): Promise<unknown> {
-  let response: Anthropic.Beta.BetaMessage;
-  try {
-    response = await getClient().beta.messages.create({
-      model: MODEL,
-      max_tokens: 16000,
-      // On a safety decline the API retries on a fallback model inside the same call
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      system: params.system,
-      messages: [{ role: 'user', content: params.content }],
-      output_config: { effort: params.effort, format: { type: 'json_schema', schema: params.schema } },
-    });
-  } catch (err) {
-    if (err instanceof Anthropic.APIError) {
-      throw new MemeAiError('API_ERROR', `Claude API error ${err.status ?? ''}: ${err.message}`);
-    }
-    throw err;
-  }
-
-  if (response.stop_reason === 'refusal') {
-    throw new MemeAiError('REFUSED', 'The model declined this request.');
-  }
-  const text = response.content.find((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')?.text;
-  if (!text || response.stop_reason === 'max_tokens') {
-    throw new MemeAiError('INVALID_OUTPUT', 'The model returned no usable output.');
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new MemeAiError('INVALID_OUTPUT', 'The model returned invalid JSON.');
-  }
-}
+export { AiError as MemeAiError } from './claude';
 
 // ─── 1. Captions for wojak templates ───
 
@@ -137,9 +78,9 @@ export async function generateCaptions(input: {
     effort: 'medium',
   })) as { skip?: boolean; title?: string; fact?: string; captions?: unknown };
 
-  if (raw.skip) throw new MemeAiError('SKIPPED', 'No fact-based joke found for these figures.');
+  if (raw.skip) throw new MemeAiError('SKIPPED', '이 인물들로는 사실에 근거한 농담을 찾지 못했습니다.');
   const parsed = TEMPLATE_CONTENT_SCHEMAS[input.format].safeParse(raw.captions);
-  if (!parsed.success) throw new MemeAiError('INVALID_OUTPUT', 'Captions failed validation (too long or empty).');
+  if (!parsed.success) throw new MemeAiError('INVALID_OUTPUT', '캡션이 검증을 통과하지 못했습니다 (너무 길거나 비어 있음).');
   return {
     content: parsed.data,
     fact: (raw.fact ?? '').trim().slice(0, 500),
@@ -217,7 +158,7 @@ export async function translateMemeImage(imageUrl: string): Promise<{
     effort: 'high',
   });
   const parsed = RawBoxes.safeParse(raw);
-  if (!parsed.success) throw new MemeAiError('INVALID_OUTPUT', 'Translation output failed validation.');
+  if (!parsed.success) throw new MemeAiError('INVALID_OUTPUT', '번역 결과가 검증을 통과하지 못했습니다.');
 
   const boxes: TextBox[] = parsed.data.boxes
     .filter((b) => b.en.trim())
@@ -287,9 +228,9 @@ export async function generateStory(input: {
     effort: 'high',
   })) as { skip?: boolean; title?: string; story?: string; fact?: string };
 
-  if (raw.skip) throw new MemeAiError('SKIPPED', 'No fact-based twist found for these figures.');
+  if (raw.skip) throw new MemeAiError('SKIPPED', '이 인물들로는 사실에 근거한 반전을 찾지 못했습니다.');
   const parsed = StoryContentSchema.safeParse({ body: raw.story });
-  if (!parsed.success || !raw.title?.trim()) throw new MemeAiError('INVALID_OUTPUT', 'Story failed validation.');
+  if (!parsed.success || !raw.title?.trim()) throw new MemeAiError('INVALID_OUTPUT', '소설이 검증을 통과하지 못했습니다.');
   return {
     content: parsed.data,
     fact: (raw.fact ?? '').trim().slice(0, 500),

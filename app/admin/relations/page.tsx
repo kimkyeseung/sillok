@@ -25,15 +25,15 @@ interface RelationsResponse {
 }
 
 const RELATION_LABELS: Record<string, string> = {
-  FAMILY: 'Family',
-  TEACHER: 'Teacher/Student',
-  ALLY: 'Ally',
-  RIVAL: 'Rival',
-  LORD_VASSAL: 'Lord/Vassal',
-  INFLUENCE: 'Influence',
-  MEMBER_OF: 'Member Of',
-  FOUNDED: 'Founded',
-  AFFILIATED: 'Affiliated',
+  FAMILY: '가족',
+  TEACHER: '스승/제자',
+  ALLY: '동지',
+  RIVAL: '라이벌',
+  LORD_VASSAL: '군신',
+  INFLUENCE: '영향',
+  MEMBER_OF: '소속',
+  FOUNDED: '설립',
+  AFFILIATED: '관련',
 };
 
 const RELATION_COLORS: Record<string, string> = {
@@ -62,30 +62,30 @@ export default function AdminRelationsPage() {
   const handleApprove = async (id: string) => {
     try {
       await apiFetch(`/api/relations/${id}/approve`, { method: 'PUT' });
-      toast('Approved');
+      toast('승인됨');
       mutate();
     } catch {
-      toast('An error occurred', 'error');
+      toast('오류가 발생했습니다', 'error');
     }
   };
 
   const handleReject = async (id: string) => {
-    if (!confirm('Reject and delete this relation suggestion?')) return;
+    if (!confirm('이 관계 제안을 반려하고 삭제할까요?')) return;
     try {
       await apiFetch(`/api/relations/${id}/reject`, { method: 'DELETE' });
-      toast('Rejected');
+      toast('반려됨');
       mutate();
     } catch {
-      toast('An error occurred', 'error');
+      toast('오류가 발생했습니다', 'error');
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Relation Suggestions</h1>
+        <h1 className="text-2xl font-bold text-gray-900">관계 제안</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          Approve or reject figure relations suggested by users
+          회원이 제안한 인물 관계를 승인하거나 반려합니다
         </p>
       </div>
 
@@ -102,10 +102,10 @@ export default function AdminRelationsPage() {
             }`}
           >
             {s === 'pending'
-              ? 'Pending'
+              ? '대기'
               : s === 'approved'
-                ? 'Approved'
-                : 'All'}
+                ? '승인됨'
+                : '전체'}
           </button>
         ))}
       </div>
@@ -113,7 +113,7 @@ export default function AdminRelationsPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="space-y-3">
@@ -125,7 +125,7 @@ export default function AdminRelationsPage() {
                   href={`/persons/${rel.person_a?.slug ?? ''}`}
                   className="text-sm font-medium text-brand-700 hover:underline"
                 >
-                  {rel.person_a?.name_ko ?? 'Unknown'}
+                  {rel.person_a?.name_ko ?? '알 수 없음'}
                 </Link>
 
                 {/* Relation badge */}
@@ -158,7 +158,7 @@ export default function AdminRelationsPage() {
                   href={`/persons/${rel.person_b?.slug ?? ''}`}
                   className="text-sm font-medium text-brand-700 hover:underline"
                 >
-                  {rel.person_b?.name_ko ?? 'Unknown'}
+                  {rel.person_b?.name_ko ?? '알 수 없음'}
                 </Link>
 
                 <div className="flex-1" />
@@ -170,19 +170,19 @@ export default function AdminRelationsPage() {
                       onClick={() => handleApprove(rel.id)}
                       className="rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition-colors hover:bg-green-100"
                     >
-                      Approve
+                      승인
                     </button>
                     <button
                       onClick={() => handleReject(rel.id)}
                       className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
                     >
-                      Reject
+                      반려
                     </button>
                   </div>
                 )}
                 {rel.is_approved && (
                   <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
-                    Approved
+                    승인됨
                   </span>
                 )}
               </div>
@@ -195,8 +195,8 @@ export default function AdminRelationsPage() {
             <div className="card-flat py-12 text-center text-gray-400">
               <p className="text-sm">
                 {status === 'pending'
-                  ? 'No pending relation suggestions'
-                  : 'No relations'}
+                  ? '대기 중인 관계 제안이 없습니다'
+                  : '관계가 없습니다'}
               </p>
             </div>
           )}

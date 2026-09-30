@@ -19,16 +19,16 @@ const THREADS_PUBLIC = () => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1
 /** Create or update the meme's thread. Returns the thread id. */
 export async function syncMemeThread(meme: MemeRow, adminId: string): Promise<string> {
   const title = meme.title?.trim();
-  if (!title) throw new MemePublishError('Add a thread title before publishing.');
+  if (!title) throw new MemePublishError('게시하기 전에 스레드 제목을 입력하세요.');
   const figureIds = Array.from(new Set(meme.person_ids ?? []));
-  if (figureIds.length === 0) throw new MemePublishError('Add at least one figure before publishing — threads belong to a figure.');
+  if (figureIds.length === 0) throw new MemePublishError('게시하기 전에 인물을 한 명 이상 지정하세요 — 스레드는 인물에 속합니다.');
 
   // Stories are text-only threads; memes carry one rendered image
   let png: Buffer | null = null;
   let alt: string | null = null;
   if (meme.kind !== 'story') {
     const rendered = await buildMemeElement(meme);
-    if (!rendered.ok) throw new MemePublishError(`Could not render the meme: ${rendered.error}`);
+    if (!rendered.ok) throw new MemePublishError(`밈 이미지를 만들지 못했습니다: ${rendered.error}`);
     png = Buffer.from(
       await new ImageResponse(rendered.element, { width: rendered.width, height: rendered.height }).arrayBuffer(),
     );

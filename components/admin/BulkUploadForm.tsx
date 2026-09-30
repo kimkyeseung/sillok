@@ -54,20 +54,20 @@ export default function BulkUploadForm() {
     try {
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) {
-        setParseError('JSON must be an array.');
+        setParseError('JSON은 배열이어야 합니다.');
         return null;
       }
       if (parsed.length === 0) {
-        setParseError('At least one figure is required.');
+        setParseError('인물이 최소 1명 필요합니다.');
         return null;
       }
       if (parsed.length > 100) {
-        setParseError('You can upload up to 100 records at once.');
+        setParseError('한 번에 최대 100건까지 올릴 수 있습니다.');
         return null;
       }
       return parsed;
     } catch {
-      setParseError('Invalid JSON format.');
+      setParseError('JSON 형식이 올바르지 않습니다.');
       return null;
     }
   };
@@ -111,12 +111,12 @@ export default function BulkUploadForm() {
       });
       setResult(data);
       if (data.fail_count === 0) {
-        toast(`${data.success_count} records created`, 'success');
+        toast(`${data.success_count}건을 등록했습니다`, 'success');
       } else {
-        toast(`${data.success_count} succeeded, ${data.fail_count} failed`, 'error');
+        toast(`${data.success_count}건 성공, ${data.fail_count}건 실패`, 'error');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'An error occurred';
+      const msg = err instanceof Error ? err.message : '오류가 발생했습니다';
       toast(msg, 'error');
     } finally {
       setUploading(false);
@@ -136,7 +136,7 @@ export default function BulkUploadForm() {
     <div className="space-y-4">
       <div className="card-flat p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">JSON Data</h2>
+          <h2 className="text-sm font-semibold text-gray-900">JSON 데이터</h2>
           <div className="flex gap-2">
             <button
               type="button"
@@ -147,10 +147,10 @@ export default function BulkUploadForm() {
               }}
               className="text-xs text-brand-600 hover:text-brand-700 font-medium"
             >
-              Show Example
+              예시 보기
             </button>
             <label className="cursor-pointer text-xs text-brand-600 hover:text-brand-700 font-medium">
-              Choose File
+              파일 선택
               <input
                 ref={fileInputRef}
                 type="file"
@@ -165,7 +165,7 @@ export default function BulkUploadForm() {
         <textarea
           value={jsonText}
           onChange={(e) => handleTextChange(e.target.value)}
-          placeholder="Paste a JSON array..."
+          placeholder="JSON 배열을 붙여 넣으세요..."
           rows={16}
           className="input resize-none font-mono text-xs"
           spellCheck={false}
@@ -177,7 +177,7 @@ export default function BulkUploadForm() {
 
         {jsonText.trim() && !parseError && (
           <p className="text-xs text-gray-500">
-            {parsedCount} figure records detected.
+            인물 {parsedCount}건을 인식했습니다.
           </p>
         )}
       </div>
@@ -189,7 +189,7 @@ export default function BulkUploadForm() {
           disabled={uploading || !jsonText.trim() || !!parseError}
           className="btn-primary disabled:opacity-50"
         >
-          {uploading ? 'Uploading...' : `Bulk Upload (${parsedCount})`}
+          {uploading ? '업로드 중...' : `일괄 업로드 (${parsedCount})`}
         </button>
         {jsonText.trim() && (
           <button
@@ -201,14 +201,14 @@ export default function BulkUploadForm() {
             }}
             className="btn-ghost"
           >
-            Reset
+            초기화
           </button>
         )}
       </div>
 
       {result && (
         <div className="card-flat p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-900">Upload Result</h2>
+          <h2 className="text-sm font-semibold text-gray-900">업로드 결과</h2>
 
           <div className="flex gap-4 text-sm">
             <span className="text-gray-600">
@@ -228,10 +228,10 @@ export default function BulkUploadForm() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="py-2 pr-3 font-medium">Status</th>
-                  <th className="py-2 pr-3 font-medium">Slug</th>
-                  <th className="py-2 pr-3 font-medium">Name</th>
-                  <th className="py-2 font-medium">Note</th>
+                  <th className="py-2 pr-3 font-medium">상태</th>
+                  <th className="py-2 pr-3 font-medium">slug</th>
+                  <th className="py-2 pr-3 font-medium">이름</th>
+                  <th className="py-2 font-medium">비고</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -240,11 +240,11 @@ export default function BulkUploadForm() {
                     <td className="py-2 pr-3">
                       {r.success ? (
                         <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-green-700">
-                          Success
+                          성공
                         </span>
                       ) : (
                         <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-red-700">
-                          Failed
+                          실패
                         </span>
                       )}
                     </td>

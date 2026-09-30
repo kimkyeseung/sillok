@@ -69,7 +69,7 @@ function scanApiRoutes(dir: string, basePath: string = '/api'): ApiEndpoint[] {
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const apiDir = path.join(process.cwd(), 'app', 'api');
   const endpoints = scanApiRoutes(apiDir).sort((a, b) =>

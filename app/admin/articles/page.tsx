@@ -41,12 +41,12 @@ const TAG_COLORS: Record<string, string> = {
 };
 
 const TAG_LABELS: Record<string, string> = {
-  기획: 'Feature',
-  특집: 'Special',
-  인물탐구: 'Profile',
-  현대: 'Modern',
-  공지: 'Notice',
-  안내: 'Guide',
+  기획: '기획',
+  특집: '특집',
+  인물탐구: '인물탐구',
+  현대: '현대',
+  공지: '공지',
+  안내: '안내',
 };
 
 function PreviewDialog({
@@ -95,7 +95,7 @@ function PreviewDialog({
       <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-3">
           <span className="text-xs font-medium text-gray-400">
-            Preview
+            미리보기
           </span>
           <button
             onClick={onClose}
@@ -123,7 +123,7 @@ function PreviewDialog({
           </div>
         ) : !article ? (
           <div className="py-20 text-center text-gray-400">
-            Failed to load article
+            아티클을 불러오지 못했습니다
           </div>
         ) : (
           <div>
@@ -138,7 +138,7 @@ function PreviewDialog({
               <div className="flex items-center gap-1.5">
                 {article.is_notice && (
                   <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                    Notice
+                    공지
                   </span>
                 )}
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
@@ -146,7 +146,7 @@ function PreviewDialog({
                 </span>
                 {!article.is_published && (
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
-                    Private
+                    비공개
                   </span>
                 )}
               </div>
@@ -154,7 +154,7 @@ function PreviewDialog({
                 {article.title}
               </h1>
               <p className="mt-2 text-sm text-gray-400">
-                {new Date(article.created_at).toLocaleDateString('en-US', {
+                {new Date(article.created_at).toLocaleDateString('ko-KR', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',
@@ -179,13 +179,13 @@ export default function AdminArticlesPage() {
   const { data, isLoading, mutate } = useSWR<ArticlesResponse>(url, fetcher);
 
   const handleDelete = async (slug: string, title: string) => {
-    if (!confirm(`Delete article "${title}"?`)) return;
+    if (!confirm(`아티클 "${title}"을(를) 삭제할까요?`)) return;
     try {
       await apiFetch(`/api/articles/${slug}`, { method: 'DELETE' });
-      toast('Deleted');
+      toast('삭제했습니다');
       mutate();
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제하지 못했습니다', 'error');
     }
   };
 
@@ -193,9 +193,9 @@ export default function AdminArticlesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Article Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">아티클 관리</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Manage articles and notices
+            아티클과 공지를 관리합니다
           </p>
         </div>
         <Link href="/admin/articles/new" className="btn-primary text-sm">
@@ -212,25 +212,25 @@ export default function AdminArticlesPage() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          Create Article
+          아티클 작성
         </Link>
       </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">Title</th>
-                <th className="px-4 py-3">Tag</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-right">Views</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">제목</th>
+                <th className="px-4 py-3">태그</th>
+                <th className="px-4 py-3 text-center">상태</th>
+                <th className="px-4 py-3 text-right">조회수</th>
+                <th className="px-4 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -243,7 +243,7 @@ export default function AdminArticlesPage() {
                     <div className="flex items-center gap-2">
                       {article.is_notice && (
                         <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
-                          Notice
+                          공지
                         </span>
                       )}
                       <span className="font-medium text-gray-900">
@@ -268,7 +268,7 @@ export default function AdminArticlesPage() {
                           : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {article.is_published ? 'Published' : 'Private'}
+                      {article.is_published ? '게시됨' : '비공개'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-500">
@@ -278,7 +278,7 @@ export default function AdminArticlesPage() {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => setPreviewSlug(article.slug)}
-                        title="Preview"
+                        title="미리보기"
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
                       >
                         <svg
@@ -348,7 +348,7 @@ export default function AdminArticlesPage() {
                     colSpan={5}
                     className="px-4 py-12 text-center text-gray-400"
                   >
-                    No articles
+                    아티클이 없습니다
                   </td>
                 </tr>
               )}
@@ -370,7 +370,7 @@ export default function AdminArticlesPage() {
             onClick={() => setCursor(data.next_cursor)}
             className="btn-ghost text-sm"
           >
-            Load more
+            더 보기
           </button>
         </div>
       )}

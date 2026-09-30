@@ -104,19 +104,19 @@ export default function AdminGroupsPage() {
           method: 'PUT',
           body: JSON.stringify(body),
         });
-        toast('Group updated');
+        toast('그룹을 수정했습니다');
       } else {
         await apiFetch('/api/nodes', {
           method: 'POST',
           body: JSON.stringify({ ...body, node_type: 'GROUP' }),
         });
-        toast('Group created');
+        toast('그룹을 추가했습니다');
       }
 
       resetForm();
       mutate();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'An error occurred';
+      const msg = err instanceof Error ? err.message : '오류가 발생했습니다';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -124,14 +124,14 @@ export default function AdminGroupsPage() {
   };
 
   const handleDelete = async (group: Group) => {
-    if (!confirm(`Delete "${group.title}"?`)) return;
+    if (!confirm(`"${group.title}"을(를) 삭제할까요?`)) return;
     try {
       await apiFetch(`/api/nodes/${group.slug}`, { method: 'DELETE' });
-      toast('Group deleted');
+      toast('그룹을 삭제했습니다');
       mutate();
       if (detailGroup?.id === group.id) setDetailGroup(null);
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제하지 못했습니다', 'error');
     }
   };
 
@@ -141,10 +141,10 @@ export default function AdminGroupsPage() {
         method: 'PUT',
         body: JSON.stringify({ is_published: !group.is_published }),
       });
-      toast(group.is_published ? 'Unpublished' : 'Published');
+      toast(group.is_published ? '비공개로 전환했습니다' : '게시됨');
       mutate();
     } catch {
-      toast('Failed to update', 'error');
+      toast('수정하지 못했습니다', 'error');
     }
   };
 
@@ -158,27 +158,27 @@ export default function AdminGroupsPage() {
           link_type: addLinkType.trim() || undefined,
         }),
       });
-      toast('Member added');
+      toast('멤버를 추가했습니다');
       setAddPersonId('');
       setAddLinkType('');
       mutateMembers();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to add';
+      const msg = err instanceof Error ? err.message : '추가하지 못했습니다';
       toast(msg, 'error');
     }
   };
 
   const handleRemoveMember = async (personId: string, name: string) => {
-    if (!detailGroup || !confirm(`Remove "${name}" from this group?`)) return;
+    if (!detailGroup || !confirm(`"${name}"을(를) 이 그룹에서 제외할까요?`)) return;
     try {
       await apiFetch(`/api/admin/groups/${detailGroup.id}/members`, {
         method: 'DELETE',
         body: JSON.stringify({ person_id: personId }),
       });
-      toast('Member removed');
+      toast('멤버를 제외했습니다');
       mutateMembers();
     } catch {
-      toast('Failed to remove', 'error');
+      toast('제외하지 못했습니다', 'error');
     }
   };
 
@@ -187,16 +187,16 @@ export default function AdminGroupsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Group Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">그룹 관리</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Manage GROUP-type nodes (dynasties, organizations, K-pop groups, etc.)
+            GROUP 유형 노드(왕조, 단체, K-pop 그룹 등)를 관리합니다
           </p>
         </div>
         <button onClick={startCreate} className="btn-primary text-sm">
           <svg className="mr-1.5 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          Add Group
+          그룹 추가
         </button>
       </div>
 
@@ -209,7 +209,7 @@ export default function AdminGroupsPage() {
           type="text"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setCursor(null); }}
-          placeholder="Search by title..."
+          placeholder="제목으로 검색..."
           className="input w-full pl-10"
         />
       </div>
@@ -218,11 +218,11 @@ export default function AdminGroupsPage() {
       {showForm && (
         <form onSubmit={handleSubmit} className="card-flat space-y-4 p-5">
           <h2 className="text-sm font-semibold text-gray-900">
-            {editingGroup ? 'Edit Group' : 'New Group'}
+            {editingGroup ? '그룹 수정' : '새 그룹'}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Slug *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">slug *</label>
               <input
                 type="text"
                 value={form.slug}
@@ -232,10 +232,10 @@ export default function AdminGroupsPage() {
                 pattern="^[a-z0-9-]+$"
                 className="input"
               />
-              <p className="mt-1 text-[11px] text-gray-400">Lowercase, hyphens only</p>
+              <p className="mt-1 text-[11px] text-gray-400">영문 소문자와 하이픈만</p>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Title *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">제목 *</label>
               <input
                 type="text"
                 value={form.title}
@@ -247,18 +247,18 @@ export default function AdminGroupsPage() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Description</label>
+            <label className="mb-1 block text-xs font-medium text-gray-600">설명</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              placeholder="Brief description of the group..."
+              placeholder="그룹 설명을 짧게 입력하세요..."
               rows={3}
               className="input"
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Thumbnail URL</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">썸네일 URL</label>
               <input
                 type="url"
                 value={form.thumbnail}
@@ -275,7 +275,7 @@ export default function AdminGroupsPage() {
                   onChange={(e) => setForm((p) => ({ ...p, is_published: e.target.checked }))}
                   className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                 />
-                Published
+                게시됨
               </label>
             </div>
           </div>
@@ -285,10 +285,10 @@ export default function AdminGroupsPage() {
               disabled={saving || !form.slug.trim() || !form.title.trim()}
               className="btn-primary text-sm disabled:opacity-50"
             >
-              {saving ? 'Saving...' : editingGroup ? 'Update' : 'Create'}
+              {saving ? '저장 중...' : editingGroup ? '수정' : '추가'}
             </button>
             <button type="button" onClick={resetForm} className="btn-ghost text-sm">
-              Cancel
+              취소
             </button>
           </div>
         </form>
@@ -298,20 +298,20 @@ export default function AdminGroupsPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-5 py-3">Title</th>
-                <th className="px-5 py-3">Slug</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Views</th>
-                <th className="px-5 py-3 text-right">Follows</th>
-                <th className="px-5 py-3">Created</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3">제목</th>
+                <th className="px-5 py-3">slug</th>
+                <th className="px-5 py-3">상태</th>
+                <th className="px-5 py-3 text-right">조회수</th>
+                <th className="px-5 py-3 text-right">팔로우</th>
+                <th className="px-5 py-3">등록일</th>
+                <th className="px-5 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -350,7 +350,7 @@ export default function AdminGroupsPage() {
                           : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {group.is_published ? 'Published' : 'Draft'}
+                      {group.is_published ? '게시됨' : '비공개'}
                     </button>
                   </td>
                   <td className="px-5 py-3 text-right text-gray-500">
@@ -360,14 +360,14 @@ export default function AdminGroupsPage() {
                     {group.follow_count.toLocaleString()}
                   </td>
                   <td className="px-5 py-3 text-xs text-gray-400">
-                    {new Date(group.created_at).toLocaleDateString('en-US')}
+                    {new Date(group.created_at).toLocaleDateString('ko-KR')}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => startEdit(group)}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                        title="Edit"
+                        title="수정"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -376,7 +376,7 @@ export default function AdminGroupsPage() {
                       <button
                         onClick={() => handleDelete(group)}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                        title="Delete"
+                        title="삭제"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -391,7 +391,7 @@ export default function AdminGroupsPage() {
 
           {(data?.items ?? []).length === 0 && (
             <div className="py-12 text-center text-gray-400">
-              <p className="text-sm">No groups found</p>
+              <p className="text-sm">그룹이 없습니다</p>
             </div>
           )}
         </div>
@@ -404,7 +404,7 @@ export default function AdminGroupsPage() {
             onClick={() => setCursor(data.next_cursor)}
             className="btn-secondary text-sm"
           >
-            Load More
+            더 보기
           </button>
         </div>
       )}
@@ -429,7 +429,7 @@ export default function AdminGroupsPage() {
           {/* Add Member */}
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-gray-600">Person ID (UUID)</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">인물 ID (UUID)</label>
               <input
                 type="text"
                 value={addPersonId}
@@ -439,7 +439,7 @@ export default function AdminGroupsPage() {
               />
             </div>
             <div className="w-40">
-              <label className="mb-1 block text-xs font-medium text-gray-600">Link Type</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">연결 유형</label>
               <input
                 type="text"
                 value={addLinkType}
@@ -453,14 +453,14 @@ export default function AdminGroupsPage() {
               disabled={!addPersonId.trim()}
               className="btn-primary text-sm disabled:opacity-50"
             >
-              Add
+              추가
             </button>
           </div>
 
           {/* Member List */}
           <div className="divide-y divide-gray-50 rounded-lg border border-gray-100">
             {(members ?? []).length === 0 ? (
-              <div className="py-6 text-center text-xs text-gray-400">No members linked</div>
+              <div className="py-6 text-center text-xs text-gray-400">연결된 멤버가 없습니다</div>
             ) : (
               (members ?? []).map((link) => (
                 <div key={link.id} className="flex items-center gap-3 px-4 py-2.5">
@@ -489,7 +489,7 @@ export default function AdminGroupsPage() {
                   <button
                     onClick={() => handleRemoveMember(link.persons.id, link.persons.name_en)}
                     className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                    title="Remove"
+                    title="제외"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

@@ -30,24 +30,24 @@ export default function AdminSuggestionsPage() {
   const { toast } = useToast();
 
   const review = async (id: string, next: 'APPROVED' | 'REJECTED') => {
-    const admin_note = next === 'REJECTED' ? prompt('Reason (optional)') ?? undefined : undefined;
+    const admin_note = next === 'REJECTED' ? prompt('사유 (선택)') ?? undefined : undefined;
     try {
       await apiFetch(`/api/admin/suggestions/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: next, ...(admin_note ? { admin_note } : {}) }),
       });
       await mutate();
-      toast(next === 'APPROVED' ? 'Approved — add it in the page content editor' : 'Rejected');
+      toast(next === 'APPROVED' ? '승인됨 — 인물 페이지 콘텐츠 편집기에서 추가하세요' : '반려됨');
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Something went wrong', 'error');
+      toast(err instanceof Error ? err.message : '오류가 발생했습니다', 'error');
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Suggestions</h1>
-        <p className="text-sm text-gray-500">Facts, sources and corrections suggested by members.</p>
+        <h1 className="text-xl font-bold text-gray-900">제안</h1>
+        <p className="text-sm text-gray-500">회원이 제안한 사실·출처·정정 내용입니다.</p>
       </div>
 
       <div className="flex gap-1.5">
@@ -65,9 +65,9 @@ export default function AdminSuggestionsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-gray-400">Loading...</p>
+        <p className="text-sm text-gray-400">불러오는 중...</p>
       ) : !data?.items.length ? (
-        <div className="card-flat py-10 text-center text-sm text-gray-400">Nothing here.</div>
+        <div className="card-flat py-10 text-center text-sm text-gray-400">항목이 없습니다.</div>
       ) : (
         <div className="card-flat divide-y divide-gray-100">
           {data.items.map((s) => (
@@ -79,7 +79,7 @@ export default function AdminSuggestionsPage() {
                     {s.persons.name_en} ↗
                   </Link>
                 )}
-                <span>by {s.author ?? 'Unknown'}</span>
+                <span>by {s.author ?? '알 수 없음'}</span>
                 <span>{new Date(s.created_at).toLocaleDateString()}</span>
               </div>
               <p className="whitespace-pre-wrap text-sm text-gray-800">{s.content}</p>
@@ -92,10 +92,10 @@ export default function AdminSuggestionsPage() {
               {status === 'PENDING' && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   <button className="btn-primary text-xs" onClick={() => review(s.id, 'APPROVED')}>
-                    Approve
+                    승인
                   </button>
                   <button className="btn-ghost text-xs text-red-600" onClick={() => review(s.id, 'REJECTED')}>
-                    Reject
+                    반려
                   </button>
                   {s.persons && (
                     <Link href={`/admin/persons/${s.persons.slug}/content`} className="btn-ghost text-xs">

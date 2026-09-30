@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const tables = ['person_facts', 'person_highlights', 'person_sources'] as const;
   const results = await Promise.all(
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     )
   );
   const error = results.find((r) => r.error)?.error;
-  if (error) return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  if (error) return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
   const counts = new Map<string, number>();
   results.forEach((r) =>

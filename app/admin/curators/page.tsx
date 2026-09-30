@@ -58,11 +58,11 @@ export default function AdminCuratorsPage() {
           role_value: form.role_value.trim(),
         }),
       });
-      toast('Curator role granted');
+      toast('큐레이터 권한을 부여했습니다');
       resetForm();
       mutate();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'An error occurred';
+      const msg = err instanceof Error ? err.message : '오류가 발생했습니다';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -75,22 +75,22 @@ export default function AdminCuratorsPage() {
         method: 'PUT',
         body: JSON.stringify({ is_active: !curator.is_active }),
       });
-      toast(curator.is_active ? 'Curator deactivated' : 'Curator activated');
+      toast(curator.is_active ? '큐레이터를 비활성화했습니다' : '큐레이터를 활성화했습니다');
       mutate();
     } catch {
-      toast('Failed to update', 'error');
+      toast('수정하지 못했습니다', 'error');
     }
   };
 
   const handleDelete = async (curator: CuratorRole) => {
     const name = curator.profiles?.nickname ?? curator.user_id;
-    if (!confirm(`Remove curator role for "${name}" (${curator.role_value})?`)) return;
+    if (!confirm(`"${name}"의 큐레이터 권한(${curator.role_value})을 해제할까요?`)) return;
     try {
       await apiFetch(`/api/admin/curators/${curator.id}`, { method: 'DELETE' });
-      toast('Curator role removed');
+      toast('큐레이터 권한을 해제했습니다');
       mutate();
     } catch {
-      toast('Failed to remove', 'error');
+      toast('해제하지 못했습니다', 'error');
     }
   };
 
@@ -99,9 +99,9 @@ export default function AdminCuratorsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Curator Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">큐레이터 관리</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Manage volunteer curators and their assigned roles
+            자원봉사 큐레이터와 담당 권한을 관리합니다
           </p>
         </div>
         <button
@@ -111,7 +111,7 @@ export default function AdminCuratorsPage() {
           <svg className="mr-1.5 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          Grant Role
+          권한 부여
         </button>
       </div>
 
@@ -123,7 +123,7 @@ export default function AdminCuratorsPage() {
             !activeOnly ? 'bg-brand-50 text-brand-700' : 'text-gray-500 hover:bg-gray-100'
           }`}
         >
-          All
+          전체
         </button>
         <button
           onClick={() => setActiveOnly(true)}
@@ -131,17 +131,17 @@ export default function AdminCuratorsPage() {
             activeOnly ? 'bg-brand-50 text-brand-700' : 'text-gray-500 hover:bg-gray-100'
           }`}
         >
-          Active Only
+          활성만
         </button>
       </div>
 
       {/* Grant Form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="card-flat space-y-4 p-5">
-          <h2 className="text-sm font-semibold text-gray-900">Grant Curator Role</h2>
+          <h2 className="text-sm font-semibold text-gray-900">큐레이터 권한 부여</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">User ID (UUID) *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">사용자 ID (UUID) *</label>
               <input
                 type="text"
                 value={form.user_id}
@@ -152,24 +152,24 @@ export default function AdminCuratorsPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Role Type *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">권한 유형 *</label>
               <select
                 value={form.role_type}
                 onChange={(e) => setForm((p) => ({ ...p, role_type: e.target.value as 'era' | 'field' | 'global' }))}
                 className="input"
               >
-                <option value="era">Era (period-specific)</option>
-                <option value="field">Field (topic-specific)</option>
-                <option value="global">Global (all content)</option>
+                <option value="era">시대 (특정 시대)</option>
+                <option value="field">분야 (특정 주제)</option>
+                <option value="global">전체 (모든 콘텐츠)</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Role Value *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">권한 값 *</label>
               <input
                 type="text"
                 value={form.role_value}
                 onChange={(e) => setForm((p) => ({ ...p, role_value: e.target.value }))}
-                placeholder="e.g. Joseon Dynasty, K-pop"
+                placeholder="예: Joseon Dynasty, K-pop"
                 required
                 className="input"
               />
@@ -177,9 +177,9 @@ export default function AdminCuratorsPage() {
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={saving || !form.user_id.trim() || !form.role_value.trim()} className="btn-primary text-sm disabled:opacity-50">
-              {saving ? 'Saving...' : 'Grant'}
+              {saving ? '저장 중...' : '부여'}
             </button>
-            <button type="button" onClick={resetForm} className="btn-ghost text-sm">Cancel</button>
+            <button type="button" onClick={resetForm} className="btn-ghost text-sm">취소</button>
           </div>
         </form>
       )}
@@ -188,19 +188,19 @@ export default function AdminCuratorsPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-5 py-3">User</th>
-                <th className="px-5 py-3">Role Type</th>
-                <th className="px-5 py-3">Role Value</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Granted</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3">사용자</th>
+                <th className="px-5 py-3">권한 유형</th>
+                <th className="px-5 py-3">권한 값</th>
+                <th className="px-5 py-3">상태</th>
+                <th className="px-5 py-3">부여일</th>
+                <th className="px-5 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -216,7 +216,7 @@ export default function AdminCuratorsPage() {
                         </div>
                       )}
                       <span className="font-medium text-gray-900">
-                        {c.profiles?.nickname ?? 'Unknown'}
+                        {c.profiles?.nickname ?? '알 수 없음'}
                       </span>
                     </div>
                   </td>
@@ -233,15 +233,15 @@ export default function AdminCuratorsPage() {
                         c.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {c.is_active ? 'Active' : 'Inactive'}
+                      {c.is_active ? '활성' : '비활성'}
                     </button>
                   </td>
                   <td className="px-5 py-3 text-xs text-gray-400">
-                    {new Date(c.granted_at).toLocaleDateString('en-US')}
+                    {new Date(c.granted_at).toLocaleDateString('ko-KR')}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => handleDelete(c)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Remove">
+                      <button onClick={() => handleDelete(c)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600" title="해제">
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -254,7 +254,7 @@ export default function AdminCuratorsPage() {
           </table>
           {(curators ?? []).length === 0 && (
             <div className="py-12 text-center text-gray-400">
-              <p className="text-sm">No curators found</p>
+              <p className="text-sm">큐레이터가 없습니다</p>
             </div>
           )}
         </div>

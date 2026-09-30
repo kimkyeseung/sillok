@@ -7,7 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 export async function GET(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const now = new Date();
   const today = now.toISOString().split('T')[0];

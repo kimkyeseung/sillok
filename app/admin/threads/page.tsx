@@ -29,13 +29,13 @@ interface ThreadsResponse {
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return 'Just now';
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return '방금 전';
+  if (m < 60) return `${m}분 전`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
+  if (h < 24) return `${h}시간 전`;
   const d = Math.floor(h / 24);
-  if (d < 30) return `${d}d ago`;
-  return new Date(dateStr).toLocaleDateString('en-US');
+  if (d < 30) return `${d}일 전`;
+  return new Date(dateStr).toLocaleDateString('ko-KR');
 }
 
 export default function AdminThreadsPage() {
@@ -47,32 +47,32 @@ export default function AdminThreadsPage() {
   const { data, isLoading, mutate } = useSWR<ThreadsResponse>(url, fetcher);
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete thread "${title}"?`)) return;
+    if (!confirm(`스레드 "${title}"을(를) 삭제할까요?`)) return;
     try {
       await apiFetch(`/api/admin/threads/${id}`, { method: 'DELETE' });
-      toast('Deleted');
+      toast('삭제됨');
       mutate();
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제하지 못했습니다', 'error');
     }
   };
 
   const handleRestore = async (id: string) => {
     try {
       await apiFetch(`/api/admin/threads/${id}`, { method: 'PATCH' });
-      toast('Restored');
+      toast('복구했습니다');
       mutate();
     } catch {
-      toast('Failed to restore', 'error');
+      toast('복구하지 못했습니다', 'error');
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Thread Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">스레드 관리</h1>
         <p className="mt-0.5 text-sm text-gray-500">
-          Manage community threads
+          커뮤니티 스레드를 관리합니다
         </p>
       </div>
 
@@ -93,7 +93,7 @@ export default function AdminThreadsPage() {
         </svg>
         <input
           type="text"
-          placeholder="Search by title..."
+          placeholder="제목으로 검색..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -107,21 +107,21 @@ export default function AdminThreadsPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (
         <div className="card-flat overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">Thread</th>
-                <th className="px-4 py-3">Figure</th>
-                <th className="px-4 py-3">Author</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-right">Replies</th>
-                <th className="px-4 py-3 text-right">Likes</th>
-                <th className="px-4 py-3 text-right">Created</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">스레드</th>
+                <th className="px-4 py-3">인물</th>
+                <th className="px-4 py-3">작성자</th>
+                <th className="px-4 py-3 text-center">상태</th>
+                <th className="px-4 py-3 text-right">댓글</th>
+                <th className="px-4 py-3 text-right">좋아요</th>
+                <th className="px-4 py-3 text-right">작성일</th>
+                <th className="px-4 py-3 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -151,7 +151,7 @@ export default function AdminThreadsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
-                    {thread.profiles?.nickname ?? 'Anonymous'}
+                    {thread.profiles?.nickname ?? '익명'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span
@@ -161,7 +161,7 @@ export default function AdminThreadsPage() {
                           : 'bg-green-50 text-green-700'
                       }`}
                     >
-                      {thread.is_deleted ? 'Deleted' : 'Published'}
+                      {thread.is_deleted ? '삭제됨' : '게시됨'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-500">
@@ -175,11 +175,23 @@ export default function AdminThreadsPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {!thread.is_deleted && (
+                        <Link
+                          href={`/admin/promo/${thread.id}`}
+                          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-brand-50 hover:text-brand-600"
+                          title="공유 키트"
+                          aria-label="공유 키트"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                          </svg>
+                        </Link>
+                      )}
                       {thread.is_deleted ? (
                         <button
                           onClick={() => handleRestore(thread.id)}
                           className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-green-50 hover:text-green-600"
-                          title="Restore"
+                          title="복구"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -189,7 +201,7 @@ export default function AdminThreadsPage() {
                         <button
                           onClick={() => handleDelete(thread.id, thread.title)}
                           className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                          title="Delete"
+                          title="삭제"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -206,7 +218,7 @@ export default function AdminThreadsPage() {
                     colSpan={8}
                     className="px-4 py-12 text-center text-gray-400"
                   >
-                    No threads
+                    스레드가 없습니다
                   </td>
                 </tr>
               )}
@@ -222,7 +234,7 @@ export default function AdminThreadsPage() {
             onClick={() => setCursor(data.next_cursor)}
             className="btn-ghost text-sm"
           >
-            Load more
+            더 보기
           </button>
         </div>
       )}

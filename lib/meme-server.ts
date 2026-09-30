@@ -54,15 +54,15 @@ export function memeAiErrorResponse(err: unknown) {
   if (err instanceof MemeAiError) {
     switch (err.code) {
       case 'NOT_CONFIGURED':
-        return apiError('AI_NOT_CONFIGURED', 'ANTHROPIC_API_KEY is not configured on the server.', 503);
+        return apiError('AI_NOT_CONFIGURED', '서버에 ANTHROPIC_API_KEY가 설정되지 않았습니다.', 503);
       case 'SKIPPED':
-        return apiError('MEME_SKIPPED', 'The AI found no fact-based joke for this input. Try other figures or an event.', 422);
+        return apiError('MEME_SKIPPED', 'AI가 사실에 근거한 농담을 찾지 못했습니다. 다른 인물이나 사건으로 시도해 보세요.', 422);
       case 'REFUSED':
-        return apiError('MEME_REFUSED', 'The AI declined this request.', 422);
+        return apiError('MEME_REFUSED', 'AI가 요청을 거절했습니다.', 422);
       default:
         return apiError('AI_ERROR', err.message, 502);
     }
   }
   console.error('[meme] unexpected error:', err);
-  return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 }

@@ -425,6 +425,7 @@ export function apiSuccess<T>(data: T) {
 
 #### 기본 방향 — 영문 단일 사이트
 - **사이트 기본 언어**: 영어 (locale 라우팅 없음, 단일 URL 구조)
+- **관리자 화면**: 한국어 (`/admin`, 관리자 API 오류 메시지) — 운영자 전용
 - **정적 콘텐츠**: `persons` 테이블에 직접 영문 저장 (`name_en`, `summary`, `birth_place`)
 - **커뮤니티(스레드/댓글)**: 다국어 혼용 허용, 별도 번역 없음
 - **검색**: `name_en` + `name_ko` + `name_hanja` 동시 검색 지원
@@ -1673,6 +1674,12 @@ const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com'];
 
 ### 스레드 관리
 - 스레드 pin/unpin, 삭제 관리
+
+### 홍보 Share kit (`/admin/promo`)
+- 참여도(좋아요+댓글) 순 스레드 목록, 게시 이력 배지, "이미 게시한 스레드 숨기기"
+- 스레드별 Share kit: 인스타 캐러셀 3장(1080×1350, 표지·역사·CTA, `/api/og/promo/{id}`) 다운로드, Instagram·Reddit(서브레딧별)·X·Threads 문구(Claude 초안 또는 직접 작성), 플랫폼별 UTM 링크, 글자 수 표시, 복사 버튼
+- 게시는 사람이 직접 → 게시 URL 입력 시 `promo_posts.status = posted`. 레딧 자동 게시는 하지 않음. 운영자임을 숨기는 문구 금지
+- 2단계(예정): Instagram Graph API 자동 게시 + 예약 (Meta 비즈니스 계정·앱 검수 필요)
 
 ### 재위 관리 (`/admin/reigns`)
 - age-flow용 왕 재위 기간 CRUD (인물 slug + 시작·종료 연도)

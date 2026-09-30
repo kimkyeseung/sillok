@@ -15,23 +15,23 @@ const ParamsSchema = z.object({
 
 export async function PATCH(request: Request, { params }: { params: { kind: string; id: string } }) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const p = ParamsSchema.safeParse(params);
-  if (!p.success) return apiError('VALIDATION_ERROR', 'Invalid content reference.', 422);
+  if (!p.success) return apiError('VALIDATION_ERROR', '콘텐츠 참조가 올바르지 않습니다.', 422);
   const kind = p.data.kind as ContentKind;
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
+    return apiError('VALIDATION_ERROR', 'JSON 형식이 올바르지 않습니다.', 422);
   }
   const parsed = CONTENT_SCHEMAS[kind].partial().safeParse(body);
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, parsed.error.issues);
+    return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422, parsed.error.issues);
   if (!Object.keys(parsed.data).length)
-    return apiError('VALIDATION_ERROR', 'Nothing to update.', 422);
+    return apiError('VALIDATION_ERROR', '변경할 내용이 없습니다.', 422);
 
   const row = await toContentRow(kind, parsed.data);
   if ('error' in row) return row.error;
@@ -43,18 +43,18 @@ export async function PATCH(request: Request, { params }: { params: { kind: stri
     .eq('is_deleted', false)
     .select()
     .maybeSingle();
-  if (error) return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
-  if (!data) return apiError('NOT_FOUND', 'Content not found.', 404);
+  if (error) return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+  if (!data) return apiError('NOT_FOUND', '콘텐츠를 찾을 수 없습니다.', 404);
 
   return apiSuccess(data);
 }
 
 export async function DELETE(request: Request, { params }: { params: { kind: string; id: string } }) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const p = ParamsSchema.safeParse(params);
-  if (!p.success) return apiError('VALIDATION_ERROR', 'Invalid content reference.', 422);
+  if (!p.success) return apiError('VALIDATION_ERROR', '콘텐츠 참조가 올바르지 않습니다.', 422);
 
   const { data, error } = await supabaseAdmin
     .from(CONTENT_TABLES[p.data.kind as ContentKind])
@@ -62,8 +62,8 @@ export async function DELETE(request: Request, { params }: { params: { kind: str
     .eq('id', p.data.id)
     .select('id')
     .maybeSingle();
-  if (error) return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
-  if (!data) return apiError('NOT_FOUND', 'Content not found.', 404);
+  if (error) return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
+  if (!data) return apiError('NOT_FOUND', '콘텐츠를 찾을 수 없습니다.', 404);
 
   return apiSuccess({ deleted: true });
 }

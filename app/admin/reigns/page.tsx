@@ -59,7 +59,7 @@ export default function AdminReignsPage() {
     const end = parseInt(form.reign_end, 10);
     if (!form.person_slug.trim() || isNaN(start) || isNaN(end)) return;
     if (end < start) {
-      toast('End year must be on or after start year', 'error');
+      toast('종료 연도는 시작 연도와 같거나 이후여야 합니다', 'error');
       return;
     }
 
@@ -72,15 +72,15 @@ export default function AdminReignsPage() {
       });
       if (editing) {
         await apiFetch(`/api/admin/reigns/${editing.id}`, { method: 'PUT', body });
-        toast('Reign updated');
+        toast('재위를 수정했습니다');
       } else {
         await apiFetch('/api/admin/reigns', { method: 'POST', body });
-        toast('Reign added');
+        toast('재위를 추가했습니다');
       }
       resetForm();
       mutate();
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'An error occurred', 'error');
+      toast(err instanceof Error ? err.message : '오류가 발생했습니다', 'error');
     } finally {
       setSaving(false);
     }
@@ -88,13 +88,13 @@ export default function AdminReignsPage() {
 
   const handleDelete = async (reign: Reign) => {
     const name = reign.persons?.name_en || reign.persons?.name_ko || 'this reign';
-    if (!confirm(`Delete the ${reign.reign_start}–${reign.reign_end} reign of ${name}?`)) return;
+    if (!confirm(`${name}의 ${reign.reign_start}–${reign.reign_end} 재위를 삭제할까요?`)) return;
     try {
       await apiFetch(`/api/admin/reigns/${reign.id}`, { method: 'DELETE' });
-      toast('Reign deleted');
+      toast('재위를 삭제했습니다');
       mutate();
     } catch {
-      toast('Failed to delete', 'error');
+      toast('삭제하지 못했습니다', 'error');
     }
   };
 
@@ -102,9 +102,9 @@ export default function AdminReignsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reigns</h1>
+          <h1 className="text-2xl font-bold text-gray-900">재위</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Reign periods shown as the current king in Age Flow. A ruler who returned to the throne has one row per reign.
+            Age Flow에 현재 왕으로 표시되는 재위 기간입니다. 복위한 왕은 재위마다 한 줄씩 등록합니다.
           </p>
         </div>
         <button
@@ -114,7 +114,7 @@ export default function AdminReignsPage() {
           }}
           className="btn-primary text-sm"
         >
-          Add Reign
+          재위 추가
         </button>
       </div>
 
@@ -123,7 +123,7 @@ export default function AdminReignsPage() {
           <h2 className="text-sm font-semibold text-gray-900">{editing ? 'Edit Reign' : 'Add New Reign'}</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Figure slug *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">인물 slug *</label>
               <input
                 type="text"
                 value={form.person_slug}
@@ -134,7 +134,7 @@ export default function AdminReignsPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Start year *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">시작 연도 *</label>
               <input
                 type="number"
                 value={form.reign_start}
@@ -145,7 +145,7 @@ export default function AdminReignsPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">End year *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">종료 연도 *</label>
               <input
                 type="number"
                 value={form.reign_end}
@@ -158,10 +158,10 @@ export default function AdminReignsPage() {
           </div>
           <div className="flex gap-2">
             <button type="submit" disabled={saving} className="btn-primary text-sm disabled:opacity-50">
-              {saving ? 'Saving...' : editing ? 'Update' : 'Add'}
+              {saving ? '저장 중...' : editing ? '수정' : '추가'}
             </button>
             <button type="button" onClick={resetForm} className="btn-ghost text-sm">
-              Cancel
+              취소
             </button>
           </div>
         </form>
@@ -170,11 +170,11 @@ export default function AdminReignsPage() {
       {isLoading ? (
         <div className="flex items-center gap-2 py-12 text-gray-400">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-brand-600" />
-          <span className="text-sm">Loading...</span>
+          <span className="text-sm">불러오는 중...</span>
         </div>
       ) : (reigns ?? []).length === 0 ? (
         <div className="card-flat py-12 text-center text-gray-400">
-          <p className="text-sm">No reigns</p>
+          <p className="text-sm">등록된 재위가 없습니다</p>
         </div>
       ) : (
         <div className="card-flat divide-y divide-gray-50 overflow-hidden">
@@ -185,7 +185,7 @@ export default function AdminReignsPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <span className="text-sm font-medium text-gray-900">
-                  {reign.persons?.name_en || reign.persons?.name_ko || 'Unknown figure'}
+                  {reign.persons?.name_en || reign.persons?.name_ko || '알 수 없는 인물'}
                 </span>
                 {reign.persons && <span className="ml-2 text-xs text-gray-400">{reign.persons.slug}</span>}
               </div>
@@ -193,13 +193,13 @@ export default function AdminReignsPage() {
                 onClick={() => startEdit(reign)}
                 className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700"
               >
-                Edit
+                수정
               </button>
               <button
                 onClick={() => handleDelete(reign)}
                 className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600"
               >
-                Delete
+                삭제
               </button>
             </div>
           ))}
@@ -208,7 +208,7 @@ export default function AdminReignsPage() {
               onClick={() => setSize(size + 1)}
               className="w-full py-3 text-center text-sm text-brand-600 hover:bg-gray-50"
             >
-              Load more
+              더 보기
             </button>
           )}
         </div>

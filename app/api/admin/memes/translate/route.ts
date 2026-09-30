@@ -13,25 +13,25 @@ export const maxDuration = 120;
 
 export async function POST(request: Request) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
+    return apiError('VALIDATION_ERROR', 'JSON 형식이 올바르지 않습니다.', 422);
   }
   const parsed = TranslateMemeSchema.safeParse(body);
-  if (!parsed.success) return apiError('VALIDATION_ERROR', 'Please check your input.', 422, parsed.error.issues);
+  if (!parsed.success) return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422, parsed.error.issues);
   const input = parsed.data;
 
   if (!isMemeBucketUrl(input.image_url, process.env.NEXT_PUBLIC_SUPABASE_URL))
-    return apiError('VALIDATION_ERROR', 'Upload the image to the memes bucket first.', 422);
+    return apiError('VALIDATION_ERROR', '먼저 이미지를 memes 버킷에 올려 주세요.', 422);
 
   // Figures the thread will be posted under (can also be set later in the editor)
   const found = input.person_slugs?.length ? await loadFiguresBySlugs(input.person_slugs) : [];
   const missing = (input.person_slugs ?? []).filter((_, i) => !found[i]);
-  if (missing.length) return apiError('PERSON_NOT_FOUND', `Figure not found: ${missing.join(', ')}`, 404);
+  if (missing.length) return apiError('PERSON_NOT_FOUND', `인물을 찾을 수 없습니다: ${missing.join(', ')}`, 404);
 
   try {
     const { boxes, title, summary, creditHint } = await translateMemeImage(input.image_url);

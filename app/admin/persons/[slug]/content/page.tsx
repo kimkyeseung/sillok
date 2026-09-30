@@ -11,12 +11,12 @@ export default function AdminPersonContentPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Page Content</h1>
-          <p className="text-sm text-gray-500">Facts, highlights and sources shown on the person page.</p>
+          <h1 className="text-xl font-bold text-gray-900">페이지 콘텐츠</h1>
+          <p className="text-sm text-gray-500">인물 페이지에 표시되는 사실·하이라이트·출처입니다.</p>
         </div>
         <div className="flex gap-2">
           <Link href={`/admin/persons/${slug}/edit`} className="btn-ghost text-xs">
-            Edit profile
+            프로필 수정
           </Link>
           <Link href={`/persons/${slug}`} target="_blank" className="btn-ghost text-xs">
             View page ↗

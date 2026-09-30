@@ -53,18 +53,18 @@ interface BulkResult {
 export async function POST(request: Request) {
   const admin = await requireAdmin(request);
   if (!admin)
-    return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+    return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
+    return apiError('VALIDATION_ERROR', 'JSON 형식이 올바르지 않습니다.', 422);
   }
 
   const parsed = BulkUploadSchema.safeParse(body);
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, parsed.error.issues);
+    return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422, parsed.error.issues);
 
   const persons = parsed.data;
   const results: BulkResult[] = [];

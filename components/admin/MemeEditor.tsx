@@ -19,6 +19,7 @@ import {
 } from '@/lib/meme';
 import MemeBoxEditor from './MemeBoxEditor';
 import MemeFieldsForm, { cleanFields } from './MemeFieldsForm';
+import { FORMAT_KO } from '@/lib/meme-formats-ko';
 
 export interface AdminMeme {
   id: string;
@@ -40,12 +41,21 @@ export interface AdminMeme {
 export const memeImageUrl = (m: Pick<AdminMeme, 'id' | 'updated_at'>) =>
   `/api/og/meme/${m.id}?v=${encodeURIComponent(m.updated_at)}`;
 
+const FACE_LABELS: Record<FaceVariant, string> = {
+  feels: '씁쓸 (feels)',
+  crying: '울음',
+  smug: '의기양양',
+  angry: '화남',
+  happy: '행복',
+  npc: 'NPC',
+};
+
 const HAT_LABELS: Record<HatType, string> = {
-  ikseongwan: 'King (ikseongwan)',
-  gat: 'Scholar (gat)',
-  helmet: 'General (helmet)',
-  topknot: 'Topknot',
-  none: 'None (bald)',
+  ikseongwan: '왕 (익선관)',
+  gat: '선비 (갓)',
+  helmet: '장수 (투구)',
+  topknot: '상투',
+  none: '없음 (민머리)',
 };
 
 /** Drop blank list lines / unused optional text before preview and save */
@@ -118,10 +128,10 @@ export default function MemeEditor({
         method: 'PATCH',
         body: JSON.stringify(body),
       });
-      toast(status === 'published' || meme.status === 'published' ? 'Thread posted/updated' : 'Saved');
+      toast(status === 'published' || meme.status === 'published' ? '스레드를 게시/갱신했습니다' : '저장했습니다');
       onSaved(updated);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Save failed', 'error');
+      toast(err instanceof Error ? err.message : '저장하지 못했습니다', 'error');
     } finally {
       setSaving(false);
     }
@@ -137,19 +147,20 @@ export default function MemeEditor({
 
     return (
       <div className="space-y-4">
-        <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">{def.guide.structure}</p>
+        <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">{FORMAT_KO[meme.format].structure}</p>
         <MemeFieldsForm
           fields={def.fields}
           value={content}
           onChange={(next) => setContent((c) => ({ ...c, ...next }))}
           names={meme.figures.map((f) => f.name)}
+          labels={FORMAT_KO[meme.format].fields}
         />
 
         <div className="grid grid-cols-2 gap-3">
           {def.faces.map((_, slot) => (
             <label key={`face-${slot}`} className="block">
               <span className="mb-1 block text-xs font-medium text-gray-600">
-                {meme.format === 'drake' ? (slot === 0 ? 'Reject face' : 'Prefer face') : `Face ${slot + 1}`}
+                {meme.format === 'drake' ? (slot === 0 ? '거부 표정' : '선호 표정') : `표정 ${slot + 1}`}
               </span>
               <select
                 className="input"
@@ -162,7 +173,7 @@ export default function MemeEditor({
               >
                 {FACE_VARIANTS.map((v) => (
                   <option key={v} value={v}>
-                    {v}
+                    {FACE_LABELS[v]}
                   </option>
                 ))}
               </select>
@@ -171,7 +182,7 @@ export default function MemeEditor({
           {Array.from({ length: figureSlots }, (_, slot) => (
             <label key={`hat-${slot}`} className="block">
               <span className="mb-1 block text-xs font-medium text-gray-600">
-                Headwear {figureSlots > 1 ? slot + 1 : ''} ({meme.figures[slot]?.name ?? '—'})
+                모자 {figureSlots > 1 ? slot + 1 : ''} ({meme.figures[slot]?.name ?? '—'})
               </span>
               <select
                 className="input"
@@ -182,7 +193,7 @@ export default function MemeEditor({
                   set('hats', next.every((h) => h === 'auto') ? undefined : next);
                 }}
               >
-                <option value="auto">Auto (from tags)</option>
+                <option value="auto">자동 (태그 기준)</option>
                 {HAT_TYPES.map((h) => (
                   <option key={h} value={h}>
                     {HAT_LABELS[h]}
@@ -212,7 +223,7 @@ export default function MemeEditor({
           onChange={setBoxes}
         />
       )}
-      <p className="text-xs text-gray-500">Drag a box to move it, drag its corner to resize. Boxes cover the Korean text.</p>
+      <p className="text-xs text-gray-500">박스를 드래그해 옮기고, 모서리를 드래그해 크기를 조절하세요. 박스가 한국어 원문을 덮습니다.</p>
       <div className="space-y-3">
         {boxes.map((b, i) => (
           <div
@@ -221,7 +232,7 @@ export default function MemeEditor({
             onFocus={() => setSelectedBox(i)}
           >
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-700">Box {i + 1}</span>
+              <span className="text-xs font-semibold text-gray-700">박스 {i + 1}</span>
               <button
                 type="button"
                 className="text-xs text-red-600 hover:underline"
@@ -230,18 +241,18 @@ export default function MemeEditor({
                   setSelectedBox(null);
                 }}
               >
-                Remove
+                삭제
               </button>
             </div>
             {b.ko && (
               <p className="mb-2 text-xs text-gray-500" lang="ko">
-                Original: {b.ko}
+                원문: {b.ko}
               </p>
             )}
             <textarea className="input min-h-[52px]" value={b.text} onChange={(e) => updateBox(i, { text: e.target.value })} />
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gray-600">
               <label className="flex items-center gap-1.5">
-                Text
+                글자색
                 <input type="color" value={b.color} onChange={(e) => updateBox(i, { color: e.target.value })} />
               </label>
               <label className="flex items-center gap-1.5">
@@ -250,7 +261,7 @@ export default function MemeEditor({
                   checked={b.background !== null}
                   onChange={(e) => updateBox(i, { background: e.target.checked ? '#ffffff' : null })}
                 />
-                Fill
+                배경
               </label>
               {b.background !== null && (
                 <input type="color" value={b.background} onChange={(e) => updateBox(i, { background: e.target.value })} />
@@ -264,24 +275,24 @@ export default function MemeEditor({
         className="btn-secondary text-sm"
         disabled={boxes.length >= 24}
         onClick={() => {
-          setBoxes([...boxes, { x: 0.3, y: 0.4, w: 0.4, h: 0.12, text: 'New text', color: '#ffffff', background: null }]);
+          setBoxes([...boxes, { x: 0.3, y: 0.4, w: 0.4, h: 0.12, text: '새 텍스트', color: '#ffffff', background: null }]);
           setSelectedBox(boxes.length);
         }}
       >
-        + Add box
+        + 박스 추가
       </button>
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-gray-600">Post under figures (slugs, comma-separated — first is primary)</span>
+        <span className="mb-1 block text-xs font-medium text-gray-600">게시할 인물 (slug 쉼표 구분 — 첫 번째가 대표)</span>
         <input className="input" value={figureSlugs} onChange={(e) => setFigureSlugs(e.target.value)} placeholder="sejong-daewang" />
       </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-gray-600">Source URL</span>
+          <span className="mb-1 block text-xs font-medium text-gray-600">출처 URL</span>
           <input className="input" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-gray-600">Credit</span>
-          <input className="input" value={sourceCredit} onChange={(e) => setSourceCredit(e.target.value)} placeholder="Original creator" />
+          <span className="mb-1 block text-xs font-medium text-gray-600">원작자 표기</span>
+          <input className="input" value={sourceCredit} onChange={(e) => setSourceCredit(e.target.value)} placeholder="원작자" />
         </label>
       </div>
     </div>
@@ -289,40 +300,40 @@ export default function MemeEditor({
 
   const heading =
     meme.kind === 'story'
-      ? `Short story · ${meme.figures.map((f) => f.name).join(' & ')}`
+      ? `짧은 소설 · ${meme.figures.map((f) => f.name).join(' & ')}`
       : meme.kind === 'translated'
-      ? 'Translated meme'
-      : `${isTemplateFormat(meme.format) ? FORMAT_DEFS[meme.format].label : meme.format} · ${meme.figures.map((f) => f.name).join(' & ')}`;
+      ? '번역 짤'
+      : `${isTemplateFormat(meme.format) ? FORMAT_KO[meme.format].label : meme.format} · ${meme.figures.map((f) => f.name).join(' & ')}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-6 backdrop-blur-sm">
-      <div role="dialog" aria-modal="true" aria-label="Edit meme" className="w-full max-w-6xl rounded-2xl bg-white shadow-xl">
+      <div role="dialog" aria-modal="true" aria-label="초안 수정" className="w-full max-w-6xl rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-bold text-gray-900">{heading}</h2>
           <button type="button" onClick={onClose} className="btn-ghost text-sm">
-            Close
+            닫기
           </button>
         </div>
 
         <div className="grid gap-6 p-6 lg:grid-cols-2">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Preview</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">미리보기</p>
             {meme.kind === 'story' ? (
               // Text-only thread: preview what the post will read like
               <div className="rounded-lg border border-gray-200 p-5">
-                <h3 className="text-lg font-bold text-gray-900">{title || 'Untitled'}</h3>
+                <h3 className="text-lg font-bold text-gray-900">{title || '제목 없음'}</h3>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
                   {memeThreadBody({ kind: 'story', content: { body: (content.body as string) ?? '' }, fact, source_credit: null, source_url: null })}
                 </p>
               </div>
             ) : previewError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-                Preview failed — a caption may be empty or too long.
+                미리보기를 만들지 못했습니다 — 비어 있거나 너무 긴 캡션이 있을 수 있습니다.
               </div>
             ) : (
               <img
                 src={previewUrl}
-                alt="Meme preview"
+                alt="밈 미리보기"
                 className="w-full rounded-lg border border-gray-200"
                 onError={() => setPreviewError(true)}
               />
@@ -331,12 +342,12 @@ export default function MemeEditor({
 
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-600">Thread title</span>
+              <span className="mb-1 block text-xs font-medium text-gray-600">스레드 제목</span>
               <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
             </label>
             {meme.kind === 'story' ? (
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-600">Story (the twist goes in the last line)</span>
+                <span className="mb-1 block text-xs font-medium text-gray-600">소설 본문 (반전은 마지막 줄에)</span>
                 <textarea
                   className="input min-h-[220px]"
                   value={(content.body as string) ?? ''}
@@ -352,8 +363,8 @@ export default function MemeEditor({
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-gray-600">
                 {meme.kind === 'story'
-                  ? "What's real (shown under the story)"
-                  : `Thread body ${meme.kind === 'translated' ? '(context for foreign readers)' : '(the history behind the joke)'}`}
+                  ? '사실 설명 (소설 아래 "What’s real"로 표시)'
+                  : `스레드 본문 ${meme.kind === 'translated' ? '(외국인 독자를 위한 맥락)' : '(농담의 역사적 배경)'}`}
               </span>
               <textarea className="input min-h-[60px]" value={fact} onChange={(e) => setFact(e.target.value)} maxLength={500} />
             </label>
@@ -362,10 +373,10 @@ export default function MemeEditor({
 
         <div className="flex justify-end gap-2 border-t border-gray-100 px-6 py-4">
           <button type="button" className="btn-secondary text-sm" disabled={saving} onClick={() => save()}>
-            Save draft
+            초안 저장
           </button>
           <button type="button" className="btn-primary text-sm" disabled={saving} onClick={() => save('published')}>
-            {meme.status === 'published' ? 'Save & update thread' : 'Save & post as thread'}
+            {meme.status === 'published' ? '저장 후 스레드 갱신' : '저장 후 스레드로 게시'}
           </button>
         </div>
       </div>

@@ -11,10 +11,10 @@ import { getPersonIdBySlug, toContentRow } from '@/lib/person-content-server';
 
 export async function GET(request: Request, { params }: { params: { slug: string } }) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   const personId = await getPersonIdBySlug(params.slug);
-  if (!personId) return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
+  if (!personId) return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
 
   const [facts, highlights, sources] = await Promise.all([
     supabaseAdmin
@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
   ]);
 
   const error = facts.error ?? highlights.error ?? sources.error;
-  if (error) return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  if (error) return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
   return apiSuccess({
     facts: (facts.data ?? []).map(({ persons, ...f }) => ({
@@ -57,24 +57,24 @@ const CreateSchema = z.object({
 
 export async function POST(request: Request, { params }: { params: { slug: string } }) {
   const admin = await requireAdmin(request);
-  if (!admin) return apiError('ADMIN_REQUIRED', 'Admin access required.', 403);
+  if (!admin) return apiError('ADMIN_REQUIRED', '관리자 권한이 필요합니다.', 403);
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON.', 422);
+    return apiError('VALIDATION_ERROR', 'JSON 형식이 올바르지 않습니다.', 422);
   }
   const envelope = CreateSchema.safeParse(body);
-  if (!envelope.success) return apiError('VALIDATION_ERROR', 'Please check your input.', 422);
+  if (!envelope.success) return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422);
 
   const kind = envelope.data.kind as ContentKind;
   const parsed = CONTENT_SCHEMAS[kind].safeParse(envelope.data.data);
   if (!parsed.success)
-    return apiError('VALIDATION_ERROR', 'Please check your input.', 422, parsed.error.issues);
+    return apiError('VALIDATION_ERROR', '입력값을 확인해 주세요.', 422, parsed.error.issues);
 
   const personId = await getPersonIdBySlug(params.slug);
-  if (!personId) return apiError('PERSON_NOT_FOUND', 'Person not found.', 404);
+  if (!personId) return apiError('PERSON_NOT_FOUND', '인물을 찾을 수 없습니다.', 404);
 
   const row = await toContentRow(kind, parsed.data);
   if ('error' in row) return row.error;
@@ -85,7 +85,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
     .insert({ ...row.value, person_id: personId, is_ai_generated: row.value.is_ai_generated ?? false })
     .select()
     .single();
-  if (error) return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+  if (error) return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
   return apiSuccess(data, 201);
 }

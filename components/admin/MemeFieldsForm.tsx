@@ -42,12 +42,15 @@ export default function MemeFieldsForm({
   value,
   onChange,
   names = [],
+  labels = {},
 }: {
   fields: Record<string, FieldSpec>;
   value: Value;
   onChange: (next: Value) => void;
   /** Figure names, shown for "from" pickers in chat formats */
   names?: string[];
+  /** Field key → display label (admin UI is Korean; spec labels are English) */
+  labels?: Record<string, string>;
 }) {
   const set = (key: string, v: unknown) => onChange({ ...value, [key]: v });
 
@@ -56,9 +59,9 @@ export default function MemeFieldsForm({
       {Object.entries(fields).map(([key, f]) => {
         const label = (
           <span className="mb-1 block text-xs font-medium text-gray-600">
-            {f.label}
-            {f.kind === 'text' && <span className="text-gray-400"> · max {f.max}</span>}
-            {f.kind === 'list' && <span className="text-gray-400"> · one per line, {f.min}–{f.max}</span>}
+            {labels[key] ?? f.label}
+            {f.kind === 'text' && <span className="text-gray-400"> · 최대 {f.max}자{f.optional ? ' · 선택' : ''}</span>}
+            {f.kind === 'list' && <span className="text-gray-400"> · 한 줄에 하나, {f.min}–{f.max}개</span>}
           </span>
         );
 
@@ -96,8 +99,8 @@ export default function MemeFieldsForm({
               <label key={key} className="block">
                 {label}
                 <select className="input" value={Number(value[key] ?? 1)} onChange={(e) => set(key, Number(e.target.value))}>
-                  <option value={1}>{names[0] ?? 'Figure 1'} (right)</option>
-                  <option value={2}>{names[1] ?? 'Figure 2'} (left)</option>
+                  <option value={1}>{names[0] ?? '인물 1'} (오른쪽)</option>
+                  <option value={2}>{names[1] ?? '인물 2'} (왼쪽)</option>
                 </select>
               </label>
             );
@@ -135,10 +138,10 @@ export default function MemeFieldsForm({
                     <span className="font-semibold">#{i + 1}</span>
                     <span className="flex gap-2">
                       <button type="button" disabled={i === 0} onClick={() => move(i, -1)} className="hover:text-gray-900 disabled:opacity-30">
-                        Up
+                        위로
                       </button>
                       <button type="button" disabled={i === rows.length - 1} onClick={() => move(i, 1)} className="hover:text-gray-900 disabled:opacity-30">
-                        Down
+                        아래로
                       </button>
                       <button
                         type="button"
@@ -146,11 +149,11 @@ export default function MemeFieldsForm({
                         onClick={() => set(key, rows.filter((_, j) => j !== i))}
                         className="text-red-600 hover:underline disabled:opacity-30"
                       >
-                        Remove
+                        삭제
                       </button>
                     </span>
                   </div>
-                  <MemeFieldsForm fields={f.fields} value={row} onChange={(r) => setRow(i, r)} names={names} />
+                  <MemeFieldsForm fields={f.fields} value={row} onChange={(r) => setRow(i, r)} names={names} labels={labels} />
                 </div>
               ))}
             </div>
@@ -160,7 +163,7 @@ export default function MemeFieldsForm({
               disabled={rows.length >= f.max}
               onClick={() => set(key, [...rows, emptyRow(f.fields)])}
             >
-              + Add
+              + 추가
             </button>
           </div>
         );

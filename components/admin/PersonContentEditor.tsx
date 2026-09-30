@@ -17,31 +17,31 @@ interface Field {
 
 const FIELDS: Record<Kind, Field[]> = {
   fact: [
-    { name: 'label', label: 'Label', type: 'text', required: true },
-    { name: 'value', label: 'Value', type: 'text' },
-    { name: 'linked_person_slug', label: 'Linked person slug', type: 'text' },
-    { name: 'sort_order', label: 'Order', type: 'number' },
+    { name: 'label', label: '항목명', type: 'text', required: true },
+    { name: 'value', label: '값', type: 'text' },
+    { name: 'linked_person_slug', label: '연결 인물 slug', type: 'text' },
+    { name: 'sort_order', label: '순서', type: 'number' },
   ],
   highlight: [
-    { name: 'kind', label: 'Type', type: 'select', options: ['ACHIEVEMENT', 'QUOTE', 'TRIVIA'], required: true },
-    { name: 'title', label: 'Title', type: 'text', required: true },
-    { name: 'body', label: 'Body', type: 'textarea' },
-    { name: 'year', label: 'Year', type: 'number' },
-    { name: 'sort_order', label: 'Order', type: 'number' },
+    { name: 'kind', label: '유형', type: 'select', options: ['ACHIEVEMENT', 'QUOTE', 'TRIVIA'], required: true },
+    { name: 'title', label: '제목', type: 'text', required: true },
+    { name: 'body', label: '본문', type: 'textarea' },
+    { name: 'year', label: '연도', type: 'number' },
+    { name: 'sort_order', label: '순서', type: 'number' },
   ],
   source: [
-    { name: 'kind', label: 'Type', type: 'select', options: ['PRIMARY', 'ENCYCLOPEDIA', 'BOOK', 'ARTICLE', 'WEB'], required: true },
-    { name: 'title', label: 'Title', type: 'text', required: true },
+    { name: 'kind', label: '유형', type: 'select', options: ['PRIMARY', 'ENCYCLOPEDIA', 'BOOK', 'ARTICLE', 'WEB'], required: true },
+    { name: 'title', label: '제목', type: 'text', required: true },
     { name: 'url', label: 'URL', type: 'text' },
-    { name: 'citation', label: 'Citation', type: 'text' },
-    { name: 'sort_order', label: 'Order', type: 'number' },
+    { name: 'citation', label: '인용 정보', type: 'text' },
+    { name: 'sort_order', label: '순서', type: 'number' },
   ],
 };
 
 const SECTION_TITLES: Record<Kind, string> = {
-  fact: 'At a Glance (facts)',
-  highlight: 'Highlights (achievements · quotes · trivia)',
-  source: 'Sources',
+  fact: '한눈에 보기 (사실)',
+  highlight: '하이라이트 (업적 · 명언 · 트리비아)',
+  source: '출처',
 };
 
 type Item = Record<string, unknown> & { id: string; is_ai_generated: boolean };
@@ -83,11 +83,11 @@ export default function PersonContentEditor({ slug }: { slug: string }) {
       await mutate();
       toast(message);
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Something went wrong', 'error');
+      toast(err instanceof Error ? err.message : '오류가 발생했습니다', 'error');
     }
   };
 
-  if (isLoading || !data) return <p className="py-8 text-sm text-gray-400">Loading...</p>;
+  if (isLoading || !data) return <p className="py-8 text-sm text-gray-400">불러오는 중...</p>;
 
   const sections: { kind: Kind; items: ContentResponse['facts'] | Item[] }[] = [
     { kind: 'fact', items: data.facts },
@@ -101,8 +101,8 @@ export default function PersonContentEditor({ slug }: { slug: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm">
         <span className="text-violet-800">
           {pending.length
-            ? `${pending.length} AI-drafted item(s) awaiting review. Approved items lose the "AI draft" label.`
-            : 'All items are reviewed.'}
+            ? `검수를 기다리는 AI 초안 ${pending.length}건. 승인하면 "AI draft" 라벨이 사라집니다.`
+            : '모든 항목을 검수했습니다.'}
         </span>
         {pending.length > 0 && (
           <button
@@ -118,11 +118,11 @@ export default function PersonContentEditor({ slug }: { slug: string }) {
                       })
                     )
                   ),
-                'All items approved'
+                '모두 승인했습니다'
               )
             }
           >
-            Approve all
+            모두 승인
           </button>
         )}
       </div>
@@ -145,7 +145,7 @@ export default function PersonContentEditor({ slug }: { slug: string }) {
                         method: 'PATCH',
                         body: JSON.stringify(toPayload(kind, values)),
                       }),
-                    'Saved'
+                    '저장했습니다'
                   )
                 }
                 onApprove={() =>
@@ -155,14 +155,14 @@ export default function PersonContentEditor({ slug }: { slug: string }) {
                         method: 'PATCH',
                         body: JSON.stringify({ is_ai_generated: false }),
                       }),
-                    'Approved'
+                    '승인했습니다'
                   )
                 }
                 onDelete={() =>
-                  confirm('Delete this item?') &&
+                  confirm('이 항목을 삭제할까요?') &&
                   run(
                     () => apiFetch(`/api/admin/person-content/${kind}/${item.id}`, { method: 'DELETE' }),
-                    'Deleted'
+                    '삭제했습니다'
                   )
                 }
               />
@@ -172,7 +172,7 @@ export default function PersonContentEditor({ slug }: { slug: string }) {
               onAdd={(values) =>
                 run(
                   () => apiFetch(key, { method: 'POST', body: JSON.stringify({ kind, data: toPayload(kind, values) }) }),
-                  'Added'
+                  '추가했습니다'
                 )
               }
             />
@@ -204,7 +204,7 @@ function ContentRow({
         <ContentForm
           kind={kind}
           initial={toFormValues(kind, item)}
-          submitLabel="Save"
+          submitLabel="저장"
           onCancel={() => setEditing(false)}
           onSubmit={async (values) => {
             await onSave(values);
@@ -227,7 +227,7 @@ function ContentRow({
           {summary}
           {item.is_ai_generated && (
             <span className="ml-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700">
-              AI draft
+              AI 초안
             </span>
           )}
         </p>
@@ -236,14 +236,14 @@ function ContentRow({
       <div className="flex shrink-0 gap-1">
         {item.is_ai_generated && (
           <button className="btn-ghost text-xs text-green-700" onClick={onApprove}>
-            Approve
+            승인
           </button>
         )}
         <button className="btn-ghost text-xs" onClick={() => setEditing(true)}>
-          Edit
+          수정
         </button>
         <button className="btn-ghost text-xs text-red-600" onClick={onDelete}>
-          Delete
+          삭제
         </button>
       </div>
     </div>
@@ -258,7 +258,7 @@ function AddRow({ kind, onAdd }: { kind: Kind; onAdd: (values: Record<string, st
         <ContentForm
           kind={kind}
           initial={toFormValues(kind)}
-          submitLabel="Add"
+          submitLabel="추가"
           onCancel={() => setOpen(false)}
           onSubmit={async (values) => {
             await onAdd(values);
@@ -336,10 +336,10 @@ function ContentForm({
       ))}
       <div className="flex gap-2 sm:col-span-2">
         <button type="submit" className="btn-primary text-xs" disabled={saving}>
-          {saving ? 'Saving...' : submitLabel}
+          {saving ? '저장 중...' : submitLabel}
         </button>
         <button type="button" className="btn-ghost text-xs" onClick={onCancel}>
-          Cancel
+          취소
         </button>
       </div>
     </form>
