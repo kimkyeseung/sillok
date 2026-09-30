@@ -165,6 +165,41 @@ export function eventJsonLd(event: {
   };
 }
 
+/** Film → Movie, drama → TVSeries; persons are the historical figures it depicts */
+export function mediaJsonLd(media: {
+  kind: 'film' | 'drama';
+  name: string;
+  name_ko?: string | null;
+  description?: string | null;
+  thumbnail?: string | null;
+  year?: number | null;
+  director?: string | null;
+  cast?: string[];
+  episodes?: number | null;
+  genre?: string | null;
+  slug: string;
+  persons?: PersonRef[];
+}) {
+  const isFilm = media.kind === 'film';
+  return {
+    '@context': 'https://schema.org',
+    '@type': isFilm ? 'Movie' : 'TVSeries',
+    name: media.name,
+    ...(media.name_ko && { alternateName: media.name_ko }),
+    ...(media.description && { description: media.description.slice(0, 300) }),
+    ...(media.thumbnail && { image: media.thumbnail }),
+    url: `${BASE_URL}/nodes/${media.slug}`,
+    inLanguage: 'ko',
+    countryOfOrigin: { '@type': 'Country', name: 'South Korea' },
+    ...(media.year && (isFilm ? { datePublished: String(media.year) } : { startDate: String(media.year) })),
+    ...(media.genre && { genre: media.genre }),
+    ...(media.director && { director: { '@type': 'Person', name: media.director } }),
+    ...(media.cast?.length && { actor: media.cast.map((name) => ({ '@type': 'Person', name })) }),
+    ...(!isFilm && media.episodes && { numberOfEpisodes: media.episodes }),
+    ...(media.persons?.length && { about: media.persons.map(personRef) }),
+  };
+}
+
 export function articleJsonLd(article: {
   title: string;
   summary?: string | null;

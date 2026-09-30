@@ -5,6 +5,7 @@
  */
 import { cache } from 'react';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { mediaKind } from '@/lib/media';
 import { buildFamilyTree, type FamilyRelation } from '@/lib/family-tree';
 import {
   buildLifeEvents,
@@ -250,13 +251,6 @@ export interface LinkedNode {
 
 const NODE_LINK_FIELDS =
   'link_type, nodes!inner ( id, slug, node_type, title, thumbnail, metadata, is_deleted, is_published )';
-
-function mediaKind(m: Record<string, unknown>): string | null {
-  const raw = String(m.media_type ?? m.category ?? m.genre ?? '').toLowerCase();
-  if (/drama|series|tv/.test(raw)) return 'drama';
-  if (/film|movie/.test(raw)) return 'film';
-  return raw || null;
-}
 
 export const getLinkedNodes = cache(async (personId: string): Promise<LinkedNode[]> => {
   const query = (fields: string) =>

@@ -8,7 +8,8 @@ import {
   CommentActions,
   CommentFormWrapper,
 } from '@/components/thread/NodeInteractions';
-import { eventJsonLd } from '@/lib/jsonld';
+import { breadcrumbJsonLd, eventJsonLd, mediaJsonLd } from '@/lib/jsonld';
+import { getMediaInfo, mediaFacts, mediaLabel, stripKoreanTitle } from '@/lib/media';
 import {
   DEFAULT_OG_IMAGE,
   nameWithKorean,
@@ -77,40 +78,47 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const node = await getNode(params.slug);
   if (!node) return {};
 
-  const titleKo = node.metadata?.title_ko as string | undefined;
+  const media = node.node_type === 'MEDIA' ? getMediaInfo(node.metadata) : null;
+  const screenLabel = media ? mediaLabel(media) : null; // "2021 Korean drama" — films/dramas only
+  const titleKo = (node.metadata?.title_ko as string | undefined) ?? media?.titleKo ?? undefined;
   const startYear = node.metadata?.start_year as number | undefined;
-  const yearPrefix = startYear ? `[${startYear}] ` : '';
+  const yearPrefix = startYear && !screenLabel ? `[${startYear}] ` : '';
   const typeLabel = NODE_TYPE_SEO_LABELS[node.node_type as string] ?? 'topic';
+  const fullTitle = nameWithKorean(stripKoreanTitle(node.title), titleKo);
+  const pageTitle = screenLabel ? `${fullTitle} — ${screenLabel}` : `${yearPrefix}${node.title}`;
   // Korean title goes into the description (search snippet) — not shown in the UI
   const description = truncateDescription(
-    `${nameWithKorean(node.title, titleKo)} — ${
-      node.description ?? `${yearPrefix}Korean ${typeLabel} on Sillok`
-    }`
+    screenLabel
+      ? `${screenLabel}${media?.platform ? ` (${media.platform})` : ''}. ${node.description ?? ''}`
+      : `${fullTitle} — ${node.description ?? `${yearPrefix}Korean ${typeLabel} on Sillok`}`
   );
   const ogImage = node.thumbnail ?? DEFAULT_OG_IMAGE;
 
   return {
-    title: truncateTitle(`${yearPrefix}${node.title}`),
+    title: truncateTitle(pageTitle),
     description,
     alternates: { canonical: `/nodes/${params.slug}` },
     ...(isUnreviewedHeritage(node.metadata) && {
       robots: { index: false, follow: true },
     }),
     openGraph: {
-      title: `${yearPrefix}${node.title} - Sillok`,
+      title: `${pageTitle} - Sillok`,
       description,
       images: [ogImage],
+      ...(media?.kind && { type: media.kind === 'film' ? 'video.movie' : 'video.tv_show' }),
     },
     twitter: {
-      card: node.thumbnail ? 'summary_large_image' : 'summary',
-      title: `${yearPrefix}${node.title}`,
+      // Posters are ~260px wide — below the large card's 300px minimum
+      card: node.thumbnail && !media ? 'summary_large_image' : 'summary',
+      title: pageTitle,
       description,
       images: [ogImage],
     },
     keywords: [
-      node.title,
+      stripKoreanTitle(node.title),
       ...(titleKo ? [titleKo] : []),
-      ...(startYear ? [String(startYear)] : []),
+      ...(startYear || media?.year ? [String(startYear ?? media?.year)] : []),
+      ...(media?.kind ? [media.kind === 'film' ? 'Korean film' : 'Korean drama', 'historical accuracy'] : []),
       'Korean history',
       typeLabel,
     ],
@@ -189,8 +197,17 @@ export default async function NodeDetailPage({ params }: Props) {
     caption: img.caption_en,
     license: img.license,
   }));
-  const artifactFacts =
-    node.node_type === 'ARTIFACT' ? getArtifactFacts(node.metadata) : [];
+  const media = node.node_type === 'MEDIA' ? getMediaInfo(node.metadata) : null;
+  const screenLabel = media ? mediaLabel(media) : null;
+  const facts =
+    node.node_type === 'ARTIFACT'
+      ? getArtifactFacts(node.metadata)
+      : media
+        ? mediaFacts(media)
+        : [];
+  const personRefs = linkedPersons
+    .filter((p) => p.name_en)
+    .map((p) => ({ name: p.name_en!, slug: p.slug }));
 
   const typeLabel: Record<string, string> = {
     ARTIFACT: 'Artifact',
@@ -231,6 +248,36 @@ export default async function NodeDetailPage({ params }: Props) {
           }}
         />
       )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            ...(media?.kind
+              ? [
+                  mediaJsonLd({
+                    kind: media.kind,
+                    name: stripKoreanTitle(node.title),
+                    name_ko: media.titleKo,
+                    description: node.description,
+                    thumbnail: node.thumbnail,
+                    year: media.year,
+                    director: media.director,
+                    cast: media.cast,
+                    episodes: media.episodes,
+                    genre: media.genre,
+                    slug: node.slug,
+                    persons: personRefs,
+                  }),
+                ]
+              : []),
+            breadcrumbJsonLd([
+              { name: 'Home', path: '' },
+              { name: 'Explore', path: '/nodes' },
+              { name: node.title, path: `/nodes/${node.slug}` },
+            ]),
+          ]).replace(/</g, '\\u003c'),
+        }}
+      />
 
       {/* Node Info Card */}
       <div className="card-flat overflow-hidden">
@@ -245,7 +292,7 @@ export default async function NodeDetailPage({ params }: Props) {
             />
             <img
               src={node.thumbnail}
-              alt={node.title}
+              alt={`${node.title} ${screenLabel ?? 'media'} poster`}
               className="relative max-h-full max-w-[90%] rounded-md object-contain shadow-xl"
             />
           </div>
@@ -267,9 +314,9 @@ export default async function NodeDetailPage({ params }: Props) {
             {typeLabel[node.node_type] ?? node.node_type}
           </span>
           <h1 className="mt-2 text-2xl font-bold text-gray-900">
-            {startYear && (
+            {(startYear ?? media?.year) && (
               <span className="mr-2 text-lg font-medium text-gray-400">
-                {startYear}
+                {startYear ?? media?.year}
               </span>
             )}
             {node.title}
@@ -279,9 +326,9 @@ export default async function NodeDetailPage({ params }: Props) {
               {node.description}
             </p>
           )}
-          {artifactFacts.length > 0 && (
+          {facts.length > 0 && (
             <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg bg-gray-50 p-4 text-sm sm:grid-cols-2">
-              {artifactFacts.map((f) => (
+              {facts.map((f) => (
                 <div key={f.label} className="flex gap-2">
                   <dt className="w-24 shrink-0 text-gray-400">{f.label}</dt>
                   <dd className="text-gray-700">{f.value}</dd>
