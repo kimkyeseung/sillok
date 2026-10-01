@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { DYNASTIES, dynastiesOf, ordinal, reigningAt } from '@/lib/monarchs';
+import {
+  DYNASTIES,
+  buildRoster,
+  dynastiesOf,
+  findDynasty,
+  formatEraYear,
+  formatReigns,
+  linkedCount,
+  ordinal,
+  reigningAt,
+  rulerRoles,
+  rulerTitle,
+} from '@/lib/monarchs';
 
 describe('DYNASTIES', () => {
   it('has the full succession of each dynasty', () => {
@@ -95,5 +107,86 @@ describe('reigningAt', () => {
   });
   it('returns nothing without a known reign', () => {
     expect(reigningAt(reigns, 1100)).toEqual([]);
+  });
+});
+
+describe('rulerRoles', () => {
+  it('gives the place in the succession', () => {
+    expect(rulerRoles('sejong-daewang').map((r) => r.label)).toEqual(['4th King of Joseon']);
+  });
+
+  it('lists every dynasty a ruler belongs to', () => {
+    expect(rulerRoles('gojong-yi-myeong-bok').map((r) => r.label)).toEqual([
+      '26th King of Joseon',
+      '1st Emperor of the Korean Empire',
+    ]);
+  });
+
+  it('is empty for non-rulers', () => {
+    expect(rulerRoles('yi-sun-sin')).toEqual([]);
+  });
+
+  it('singularizes every dynasty title', () => {
+    expect(DYNASTIES.map(rulerTitle)).toEqual([
+      'King of Goguryeo',
+      'King of Baekje',
+      'Ruler of Silla',
+      'King of Balhae',
+      'King of Goryeo',
+      'King of Joseon',
+      'Emperor of the Korean Empire',
+    ]);
+  });
+});
+
+describe('dynasty metadata', () => {
+  it('has a valid span and intro', () => {
+    for (const d of DYNASTIES) {
+      expect(d.start).toBeLessThan(d.end);
+      expect(d.intro.length).toBeGreaterThan(50);
+      expect(d.ko).toMatch(/^[가-힣]+$/);
+    }
+  });
+
+  it('formats BCE years', () => {
+    expect(formatEraYear(-57)).toBe('57 BCE');
+    expect(formatEraYear(935)).toBe('935');
+    expect(formatReigns([{ start: -57, end: 4 }])).toBe('57 BCE–4');
+    expect(formatReigns([{ start: 1418, end: 1450 }, { start: 1460, end: 1460 }])).toBe('1418–1450, 1460');
+  });
+});
+
+describe('buildRoster', () => {
+  const joseon = findDynasty('joseon')!;
+  const empire = findDynasty('korean-empire')!;
+  const gojong = {
+    id: 'g',
+    slug: 'gojong-yi-myeong-bok',
+    name_en: 'Gojong',
+    name_hanja: null,
+    thumbnail: null,
+    summary: null,
+    birth_year: 1852,
+    death_year: 1919,
+  };
+  const reigns = [
+    { person_id: 'g', reign_start: 1897, reign_end: 1907 },
+    { person_id: 'g', reign_start: 1863, reign_end: 1897 },
+  ];
+
+  it('keeps the full succession, with pages where published', () => {
+    const roster = buildRoster(joseon, [gojong], reigns);
+    expect(roster).toHaveLength(27);
+    expect(roster[0]).toMatchObject({ order: 1, person: null, reigns: [] });
+    expect(roster[25].person?.slug).toBe('gojong-yi-myeong-bok');
+  });
+
+  it("assigns reigns to the dynasty whose years they start in", () => {
+    expect(buildRoster(joseon, [gojong], reigns)[25].reigns).toEqual([{ start: 1863, end: 1897 }]);
+    expect(buildRoster(empire, [gojong], reigns)[0].reigns).toEqual([{ start: 1897, end: 1907 }]);
+  });
+
+  it('counts published rulers', () => {
+    expect(linkedCount(joseon, new Set(['sejong-daewang', 'gojong-yi-myeong-bok', 'nobody']))).toBe(2);
   });
 });

@@ -7,7 +7,8 @@ import PersonRequestButton from '@/components/person/PersonRequestButton';
 import PersonTabs from '@/components/person/PersonTabs';
 import ViewTracker from '@/components/common/ViewTracker';
 import PersonAvatar from '@/components/common/PersonAvatar';
-import { personJsonLd } from '@/lib/jsonld';
+import { personJsonLd, personSameAs } from '@/lib/jsonld';
+import { dynastyPath, rulerRoles } from '@/lib/monarchs';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
 import {
   getPersonBySlug,
@@ -57,8 +58,10 @@ export default async function PersonLayout({
     relations
       .filter((r) => r.type === 'FAMILY' && r.label === label)
       .map((r) => ({ name: r.other.name_en, slug: r.other.slug }));
+  const roles = rulerRoles(person.slug);
   const jsonLd = personJsonLd(person, {
-    sameAs: sources.filter((s) => s.kind === 'ENCYCLOPEDIA' && s.url).map((s) => s.url!),
+    sameAs: personSameAs(sources),
+    jobTitle: roles.map((r) => r.label),
     parents: familyOf('Parent'),
     children: familyOf('Child'),
     spouses: familyOf('Spouse'),
@@ -85,7 +88,7 @@ export default async function PersonLayout({
             {person.thumbnail ? (
               <Image
                 src={person.thumbnail}
-                alt={person.name_en}
+                alt={`Portrait of ${[person.name_en, ...roles.map((r) => r.label)].join(', ')}`}
                 width={96}
                 height={96}
                 priority
@@ -103,6 +106,18 @@ export default async function PersonLayout({
             <div className="min-w-0 flex-1 pt-12 sm:pt-14">
               <h1 className="text-xl font-bold leading-tight text-gray-900 sm:text-2xl">{person.name_en}</h1>
               {person.name_hanja && <p className="text-sm text-gray-500">{person.name_hanja}</p>}
+              {roles.length > 0 && (
+                <p className="mt-0.5 text-sm text-gray-700">
+                  {roles.map((r, i) => (
+                    <span key={r.dynasty.id}>
+                      {i > 0 && ' · '}
+                      <Link href={dynastyPath(r.dynasty)} className="hover:text-brand-700 hover:underline">
+                        {r.label}
+                      </Link>
+                    </span>
+                  ))}
+                </p>
+              )}
               {!!person.aliases_en?.length && (
                 <p className="mt-0.5 text-xs text-gray-500">Also known as {person.aliases_en.join(' · ')}</p>
               )}

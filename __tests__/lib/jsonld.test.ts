@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eventJsonLd, personBreadcrumbJsonLd, personJsonLd, breadcrumbJsonLd, communityPageJsonLd, discussionJsonLd } from '@/lib/jsonld';
+import { eventJsonLd, personBreadcrumbJsonLd, personJsonLd, breadcrumbJsonLd, communityPageJsonLd, discussionJsonLd, historicalDate, personSameAs, dynastyListJsonLd } from '@/lib/jsonld';
 
 describe('eventJsonLd', () => {
   it('should generate valid Article schema for historical events', () => {
@@ -234,5 +234,96 @@ describe('discussionJsonLd image caption', () => {
       like_count: 0, reply_count: 0, image: 'https://x/p.jpg',
     }) as Record<string, any>;
     expect(ld.image).toBe('https://x/p.jpg');
+  });
+});
+
+describe('personJsonLd — entity details', () => {
+  it('uses full dates, job title, deduped sameAs and the page as main entity', () => {
+    const result = personJsonLd(
+      {
+        name_en: 'Sejong the Great',
+        slug: 'sejong-daewang',
+        birth_year: 1397,
+        birth_date: '05-15',
+        death_year: 1450,
+        updated_at: '2026-09-01T00:00:00Z',
+      },
+      {
+        jobTitle: ['4th King of Joseon'],
+        sameAs: ['https://www.wikidata.org/wiki/Q11124', 'https://www.wikidata.org/wiki/Q11124'],
+      }
+    );
+    expect(result.birthDate).toBe('1397-05-15');
+    expect(result.deathDate).toBe('1450');
+    expect(result.jobTitle).toBe('4th King of Joseon');
+    expect(result.sameAs).toEqual(['https://www.wikidata.org/wiki/Q11124']);
+    expect(result.mainEntityOfPage).toEqual({
+      '@type': 'WebPage',
+      '@id': 'https://sillok.kr/persons/sejong-daewang',
+      dateModified: '2026-09-01T00:00:00Z',
+    });
+  });
+
+  it('lists several titles as an array', () => {
+    const result = personJsonLd({ name_en: 'Gojong', slug: 'g' }, { jobTitle: ['26th King of Joseon', '1st Emperor of the Korean Empire'] });
+    expect(result.jobTitle).toEqual(['26th King of Joseon', '1st Emperor of the Korean Empire']);
+  });
+});
+
+describe('historicalDate', () => {
+  it('pads early years and ignores malformed month-days', () => {
+    expect(historicalDate(397)).toBe('0397');
+    expect(historicalDate(397, '03-01')).toBe('0397-03-01');
+    expect(historicalDate(1397, '5-15')).toBe('1397');
+    expect(historicalDate(-57, '01-01')).toBe('-57');
+  });
+});
+
+describe('personSameAs', () => {
+  it('keeps encyclopedia entries and Wikipedia/Wikidata links of any kind', () => {
+    expect(
+      personSameAs([
+        { kind: 'ENCYCLOPEDIA', url: 'https://encykorea.aks.ac.kr/Article/E0029165' },
+        { kind: 'WEB', url: 'https://www.wikidata.org/wiki/Q11124' },
+        { kind: 'WEB', url: 'https://en.wikipedia.org/wiki/Sejong_the_Great' },
+        { kind: 'WEB', url: 'https://example.com/sejong' },
+        { kind: 'WEB', url: 'not a url' },
+        { kind: 'ENCYCLOPEDIA', url: null },
+      ])
+    ).toEqual([
+      'https://encykorea.aks.ac.kr/Article/E0029165',
+      'https://www.wikidata.org/wiki/Q11124',
+      'https://en.wikipedia.org/wiki/Sejong_the_Great',
+    ]);
+  });
+});
+
+describe('personBreadcrumbJsonLd — rulers', () => {
+  it('uses the dynasty list as the parent', () => {
+    const result = personBreadcrumbJsonLd({ name_en: 'Sejong the Great', slug: 'sejong-daewang' }, undefined, {
+      title: 'Kings of Joseon',
+      path: '/monarchs/joseon',
+    });
+    expect(result.itemListElement[1]).toMatchObject({ name: 'Kings of Joseon', item: 'https://sillok.kr/monarchs/joseon' });
+  });
+});
+
+describe('dynastyListJsonLd', () => {
+  it('lists rulers in order, linking those with pages', () => {
+    const result = dynastyListJsonLd({
+      name: 'Kings of Joseon',
+      description: 'd',
+      path: '/monarchs/joseon',
+      rulers: [
+        { name: 'Taejo', alternateName: '태조', jobTitle: '1st King of Joseon' },
+        { name: 'Sejong the Great', alternateName: '세종', slug: 'sejong-daewang', jobTitle: '4th King of Joseon' },
+      ],
+    });
+    expect(result.mainEntity.numberOfItems).toBe(2);
+    expect(result.mainEntity.itemListElement[0].item).not.toHaveProperty('url');
+    expect(result.mainEntity.itemListElement[1]).toMatchObject({
+      position: 2,
+      item: { url: 'https://sillok.kr/persons/sejong-daewang' },
+    });
   });
 });

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import PersonAvatar from '@/components/common/PersonAvatar';
-import { ordinal, type Dynasty } from '@/lib/monarchs';
+import { dynastyPath, ordinal, type Dynasty } from '@/lib/monarchs';
 
 /**
  * Collapsible succession box ("Kings of Joseon", 1st → last) just below a ruler's profile header.
@@ -79,6 +79,12 @@ export default function MonarchNavbox({
           <li key={`pad-${i}`} aria-hidden className="bg-gray-50" />
         ))}
       </ol>
+      <Link
+        href={dynastyPath(dynasty)}
+        className="block border-t border-gray-200 bg-gray-50 px-4 py-2 text-center text-xs font-medium text-brand-700 hover:bg-gray-100"
+      >
+        Full list with reigns →
+      </Link>
     </details>
   );
 }

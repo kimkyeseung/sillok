@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  overviewTitle,
   truncateText,
   truncateTitle,
   truncateDescription,
@@ -47,5 +48,23 @@ describe('stripMarkdown', () => {
     expect(
       stripMarkdown('## Title\n**Bold** and [link](https://x.com) ![img](a.png)\n- item')
     ).toBe('Title Bold and link item');
+  });
+});
+
+describe('overviewTitle', () => {
+  it('adds the alias and role when they fit', () => {
+    expect(overviewTitle('Sejong the Great', 'King Sejong', '4th King of Joseon')).toBe(
+      'Sejong the Great (King Sejong): 4th King of Joseon'
+    );
+  });
+
+  it('drops the alias before the role when too long', () => {
+    expect(overviewTitle('Gojong of Korea', 'Gwangmu Emperor of Korea', '26th King of Joseon')).toBe(
+      'Gojong of Korea: 26th King of Joseon'
+    );
+  });
+
+  it('keeps the alias without a role', () => {
+    expect(overviewTitle('Yi Sun-sin', 'Admiral Yi')).toBe('Yi Sun-sin (Admiral Yi)');
   });
 });

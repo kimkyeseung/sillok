@@ -8,6 +8,7 @@ import { getPrimaryFieldTag } from '@/lib/person-utils';
 import { sanitizeSearchTerm } from '@/lib/search';
 import { tagLabel } from '@/lib/tags';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { DYNASTIES, dynastyPath } from '@/lib/monarchs';
 
 export const metadata: Metadata = {
   title: 'Figures',
@@ -147,6 +148,16 @@ export default async function PersonsPage({
           <h2 className="text-xl font-bold text-gray-900">All Figures</h2>
           <p className="mt-0.5 text-sm text-gray-500">
             Explore Korean historical figures
+          </p>
+          <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500">
+            <Link href="/monarchs" className="font-medium text-brand-700 hover:underline">
+              Monarchs by dynasty:
+            </Link>
+            {DYNASTIES.map((d) => (
+              <Link key={d.id} href={dynastyPath(d)} className="hover:text-brand-700 hover:underline">
+                {d.name}
+              </Link>
+            ))}
           </p>
         </div>
         <form className="flex gap-2">

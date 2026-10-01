@@ -45,3 +45,17 @@ export function stripMarkdown(md: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+/** Room before the root template's " | Sillok" suffix within ~60 chars */
+const TITLE_MAX = 60 - ' | Sillok'.length;
+
+/**
+ * Overview title — "Sejong the Great (King Sejong): 4th King of Joseon".
+ * The alias matches the common English name, the role says who it is in the result;
+ * tries without the alias, then without the role, when the title would be cut off.
+ */
+export function overviewTitle(name: string, alias?: string, role?: string): string {
+  const named = alias ? `${name} (${alias})` : name;
+  const candidates = role ? [`${named}: ${role}`, `${name}: ${role}`, named] : [named];
+  return candidates.find((t) => t.length <= TITLE_MAX) ?? named;
+}

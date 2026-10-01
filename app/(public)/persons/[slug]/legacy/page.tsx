@@ -6,6 +6,7 @@ import { getPersonBySlug, getPersonHighlights, getTabCounts } from '@/lib/person
 import { personTabMetadata } from '@/lib/person-metadata';
 import { isTabVisible } from '@/lib/person-sections';
 import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
+import { getPageLinker } from '@/lib/autolink-data';
 
 export const revalidate = 300;
 
@@ -34,7 +35,10 @@ export default async function PersonLegacyPage({ params }: Props) {
   const counts = await getTabCounts(person);
   if (!isTabVisible('legacy', counts)) notFound();
 
-  const highlights = await getPersonHighlights(person.id);
+  const [highlights, linker] = await Promise.all([
+    getPersonHighlights(person.id),
+    getPageLinker(`/persons/${params.slug}`),
+  ]);
   const achievements = highlights.filter((h) => h.kind === 'ACHIEVEMENT');
   const quotes = highlights.filter((h) => h.kind === 'QUOTE');
   const trivia = highlights.filter((h) => h.kind === 'TRIVIA');
@@ -45,7 +49,7 @@ export default async function PersonLegacyPage({ params }: Props) {
       {achievements.length > 0 && (
         <section>
           <SectionHeader title={`Achievements (${achievements.length})`} />
-          <AchievementList items={achievements} slug={params.slug} />
+          <AchievementList items={achievements} slug={params.slug} linker={linker} />
         </section>
       )}
       {quotes.length > 0 && (
@@ -57,7 +61,7 @@ export default async function PersonLegacyPage({ params }: Props) {
       {trivia.length > 0 && (
         <section>
           <SectionHeader title="Did You Know?" />
-          <TriviaList items={trivia} slug={params.slug} />
+          <TriviaList items={trivia} slug={params.slug} linker={linker} />
         </section>
       )}
     </>

@@ -40,12 +40,18 @@ export function personJsonLd(
     thumbnail?: string | null;
     birth_year?: number | null;
     death_year?: number | null;
+    /** 'MM-DD' */
+    birth_date?: string | null;
+    death_date?: string | null;
     birth_place?: string | null;
+    updated_at?: string | null;
     slug: string;
   },
   extra: {
-    /** Authoritative pages about the same person (e.g. Wikipedia) */
+    /** Authoritative pages about the same person (e.g. Wikipedia, Wikidata) */
     sameAs?: string[];
+    /** Position held, e.g. "4th King of Joseon" */
+    jobTitle?: string[];
     parents?: PersonRef[];
     children?: PersonRef[];
     spouses?: PersonRef[];
@@ -57,6 +63,7 @@ export function personJsonLd(
     (v): v is string => !!v
   );
   const refs = (list?: PersonRef[]) => (list?.length ? list.map(personRef) : undefined);
+  const url = `${BASE_URL}/persons/${person.slug}`;
   const family = {
     parent: refs(extra.parents),
     children: refs(extra.children),
@@ -70,23 +77,59 @@ export function personJsonLd(
     ...(alternateNames.length > 0 && { alternateName: alternateNames }),
     ...(person.summary && { description: person.summary.slice(0, 300) }),
     ...(person.thumbnail && { image: person.thumbnail }),
-    ...(person.birth_year && { birthDate: String(person.birth_year) }),
-    ...(person.death_year && { deathDate: String(person.death_year) }),
+    ...(person.birth_year && { birthDate: historicalDate(person.birth_year, person.birth_date) }),
+    ...(person.death_year && { deathDate: historicalDate(person.death_year, person.death_date) }),
     ...(person.birth_place && { birthPlace: { '@type': 'Place', name: person.birth_place } }),
-    ...(extra.sameAs?.length && { sameAs: extra.sameAs }),
+    ...(extra.jobTitle?.length && { jobTitle: extra.jobTitle.length === 1 ? extra.jobTitle[0] : extra.jobTitle }),
+    ...(extra.sameAs?.length && { sameAs: Array.from(new Set(extra.sameAs)) }),
     ...Object.fromEntries(Object.entries(family).filter(([, v]) => v)),
-    url: `${BASE_URL}/persons/${person.slug}`,
+    url,
+    // The page is about this person — ties the entity to the URL (and when it last changed)
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': url,
+      ...(person.updated_at && { dateModified: person.updated_at }),
+    },
   };
 }
 
-/** Home › Figures › Person (› Tab) */
+/**
+ * ISO 8601 date: "1397-05-15" with a month-day, else the year alone ("1397").
+ * Years before 1000 are zero-padded ("0397"); BCE years stay year-only.
+ */
+export function historicalDate(year: number, monthDay?: string | null): string {
+  if (year <= 0) return String(year);
+  const y = String(year).padStart(4, '0');
+  return monthDay && /^\d{2}-\d{2}$/.test(monthDay) ? `${y}-${monthDay}` : y;
+}
+
+/** sameAs candidates: encyclopedia entries plus any Wikipedia/Wikidata link among the sources */
+export function personSameAs(sources: { kind: string; url: string | null }[]): string[] {
+  const isWiki = (url: string) => {
+    try {
+      return /(^|\.)(wikipedia|wikidata)\.org$/.test(new URL(url).hostname);
+    } catch {
+      return false;
+    }
+  };
+  const urls = sources
+    .filter((s): s is { kind: string; url: string } => !!s.url && (s.kind === 'ENCYCLOPEDIA' || isWiki(s.url)))
+    .map((s) => s.url);
+  return Array.from(new Set(urls));
+}
+
+/** Home › Figures (or the ruler list) › Person (› Tab) */
 export function personBreadcrumbJsonLd(
   person: { name_en: string; slug: string },
-  tab?: { label: string; segment: string }
+  tab?: { label: string; segment: string },
+  /** Rulers: Home › Kings of Joseon › Person — the list page is the natural parent */
+  dynasty?: { title: string; path: string }
 ) {
   const crumbs = [
     { name: 'Home', url: BASE_URL },
-    { name: 'Figures', url: `${BASE_URL}/persons` },
+    dynasty
+      ? { name: dynasty.title, url: `${BASE_URL}${dynasty.path}` }
+      : { name: 'Figures', url: `${BASE_URL}/persons` },
     { name: person.name_en, url: `${BASE_URL}/persons/${person.slug}` },
     ...(tab ? [{ name: tab.label, url: `${BASE_URL}/persons/${person.slug}/${tab.segment}` }] : []),
   ];
@@ -355,5 +398,38 @@ export function discussionJsonLd(
       },
     ],
     ...(comments.length && { comment: comments }),
+  };
+}
+
+/** Ruler list page: an ItemList of the whole succession, in order */
+export function dynastyListJsonLd(page: {
+  name: string;
+  description: string;
+  path: string;
+  rulers: { name: string; alternateName: string; slug?: string | null; jobTitle: string }[];
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: page.name,
+    description: page.description,
+    url: `${BASE_URL}${page.path}`,
+    isPartOf: { '@type': 'WebSite', name: 'Sillok', url: BASE_URL },
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListOrder: 'https://schema.org/ItemListOrderAscending',
+      numberOfItems: page.rulers.length,
+      itemListElement: page.rulers.map((r, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        item: {
+          '@type': 'Person',
+          name: r.name,
+          alternateName: r.alternateName,
+          jobTitle: r.jobTitle,
+          ...(r.slug && { url: `${BASE_URL}/persons/${r.slug}` }),
+        },
+      })),
+    },
   };
 }

@@ -21,11 +21,14 @@ import {
   getTabCounts,
 } from '@/lib/person-page';
 import { personTabMetadata } from '@/lib/person-metadata';
+import { rulerRoles } from '@/lib/monarchs';
 import { isTabVisible } from '@/lib/person-sections';
 import PortrayalList from '@/components/person/PortrayalList';
 import PersonPoll from '@/components/person/PersonPoll';
 import GalleryStrip from '@/components/person/GalleryStrip';
 import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
+import LinkedText from '@/components/common/LinkedText';
+import { getPageLinker } from '@/lib/autolink-data';
 
 export const revalidate = 300;
 
@@ -35,7 +38,11 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return personTabMetadata(params.slug, {
-    description: (p, fullName) => (p.summary ? `${fullName} — ${p.summary}` : `About ${fullName}`),
+    description: (p, fullName) => {
+      // "Sejong the Great (세종대왕, 世宗大王), 4th King of Joseon — …"
+      const who = [fullName, ...rulerRoles(p.slug).map((r) => r.label)].join(', ');
+      return p.summary ? `${who} — ${p.summary}` : `About ${who}`;
+    },
   });
 }
 
@@ -43,7 +50,7 @@ export default async function PersonOverviewPage({ params }: Props) {
   const person = await getPersonBySlug(params.slug);
   if (!person) notFound();
 
-  const [counts, familyTree, relations, lifeEvents, contemporaries, gallery, nodes, threads, highlights] =
+  const [counts, familyTree, relations, lifeEvents, contemporaries, gallery, nodes, threads, highlights, linker] =
     await Promise.all([
       getTabCounts(person),
       getFamilyTree(person.id),
@@ -54,6 +61,7 @@ export default async function PersonOverviewPage({ params }: Props) {
       getLinkedNodes(person.id),
       getPersonThreads(person.id),
       getPersonHighlights(person.id),
+      getPageLinker(`/persons/${params.slug}`),
     ]);
   const portrayals = await getPortrayals(person.id);
   const achievements = highlights.filter((h) => h.kind === 'ACHIEVEMENT');
@@ -72,14 +80,16 @@ export default async function PersonOverviewPage({ params }: Props) {
       {person.summary && (
         <section className="card-flat p-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">About</h2>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{person.summary}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+            <LinkedText segments={linker.link(person.summary)} />
+          </p>
         </section>
       )}
 
       {achievements.length > 0 && (
         <section>
           <SectionHeader title="Achievements" href={`${base}/legacy`} linkLabel="Legacy" />
-          <AchievementList items={achievements.slice(0, 3)} slug={params.slug} />
+          <AchievementList items={achievements.slice(0, 3)} slug={params.slug} linker={linker} />
         </section>
       )}
 
@@ -138,7 +148,7 @@ export default async function PersonOverviewPage({ params }: Props) {
       {trivia.length > 0 && (
         <section>
           <SectionHeader title="Did You Know?" />
-          <TriviaList items={trivia.slice(0, 2)} slug={params.slug} />
+          <TriviaList items={trivia.slice(0, 2)} slug={params.slug} linker={linker} />
         </section>
       )}
 

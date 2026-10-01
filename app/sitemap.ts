@@ -6,6 +6,7 @@ import { getBoardInfo, getTopicInfo } from '@/lib/feed-data';
 import { getAgeFlowData } from '@/lib/age-flow-data';
 import { getNotableYears } from '@/lib/age-flow';
 import { CURATED_NODES_FILTER } from '@/lib/heritage';
+import { DYNASTIES, DYNASTY_PAGE_MIN_LINKED, dynastyPath, linkedCount } from '@/lib/monarchs';
 
 // Regenerate hourly — otherwise the sitemap is frozen at build time
 export const revalidate = 3600;
@@ -126,6 +127,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ];
   });
 
+  // Ruler lists: the index plus dynasties with enough published rulers (the rest are noindex)
+  const publishedSlugs = new Set((persons ?? []).map((p) => p.slug as string));
+  const monarchPages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}/monarchs`, changeFrequency: 'monthly' as const, priority: 0.7 },
+    ...DYNASTIES.filter((d) => linkedCount(d, publishedSlugs) >= DYNASTY_PAGE_MIN_LINKED).map((d) => ({
+      url: `${baseUrl}${dynastyPath(d)}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
+  ];
+
   const nodePages: MetadataRoute.Sitemap = (nodes ?? []).map((n) => ({
     url: `${baseUrl}/nodes/${n.slug}`,
     lastModified: new Date(n.updated_at),
@@ -183,6 +195,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticPages,
     ...communityPages,
     ...ageFlowYearPages,
+    ...monarchPages,
     ...personPages,
     ...nodePages,
     ...articlePages,

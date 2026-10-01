@@ -14,6 +14,14 @@ export interface Dynasty {
   id: string;
   /** Navbox title, e.g. "Kings of Joseon" */
   title: string;
+  /** "Joseon" — the list page heading ("List of Joseon monarchs") */
+  name: string;
+  ko: string;
+  /** Years the dynasty lasted (negative = BCE) */
+  start: number;
+  end: number;
+  /** One-paragraph intro for the list page */
+  intro: string;
   monarchs: Monarch[];
 }
 
@@ -27,6 +35,12 @@ export const DYNASTIES: Dynasty[] = [
   {
     id: 'goguryeo',
     title: 'Kings of Goguryeo',
+    name: 'Goguryeo',
+    ko: '고구려',
+    start: -37,
+    end: 668,
+    intro:
+      'Goguryeo was one of the Three Kingdoms of Korea, stretching across the northern Korean Peninsula and Manchuria at its height under Gwanggaeto the Great and Jangsu, until it fell to the Silla–Tang alliance in 668.',
     monarchs: [
       m('Dongmyeong', '동명성왕', 'jumong'),
       m('Yuri', '유리왕'),
@@ -61,6 +75,12 @@ export const DYNASTIES: Dynasty[] = [
   {
     id: 'baekje',
     title: 'Kings of Baekje',
+    name: 'Baekje',
+    ko: '백제',
+    start: -18,
+    end: 660,
+    intro:
+      'Baekje was one of the Three Kingdoms of Korea, ruling the southwest of the peninsula and passing Buddhism, writing and craftsmanship on to Japan before it fell to the Silla–Tang alliance in 660.',
     monarchs: [
       m('Onjo', '온조왕', 'onjo-of-baekje'),
       m('Daru', '다루왕'),
@@ -98,6 +118,12 @@ export const DYNASTIES: Dynasty[] = [
   {
     id: 'silla',
     title: 'Rulers of Silla',
+    name: 'Silla',
+    ko: '신라',
+    start: -57,
+    end: 935,
+    intro:
+      'Silla was one of the Three Kingdoms of Korea and, after defeating Baekje and Goguryeo, unified most of the peninsula — ruled by kings and three reigning queens from Gyeongju until it surrendered to Goryeo in 935.',
     monarchs: [
       m('Hyeokgeose', '혁거세 거서간', 'bak-hyeokgeose'),
       m('Namhae', '남해 차차웅'),
@@ -160,6 +186,12 @@ export const DYNASTIES: Dynasty[] = [
   {
     id: 'balhae',
     title: 'Kings of Balhae',
+    name: 'Balhae',
+    ko: '발해',
+    start: 698,
+    end: 926,
+    intro:
+      'Balhae was founded by Dae Jo-yeong, a former Goguryeo general, and ruled Manchuria and the northern peninsula as “the flourishing land in the east” until the Khitan conquered it in 926.',
     monarchs: [
       m('Go', '고왕', 'dae-joyeong'),
       m('Mu', '무왕'),
@@ -181,6 +213,12 @@ export const DYNASTIES: Dynasty[] = [
   {
     id: 'goryeo',
     title: 'Kings of Goryeo',
+    name: 'Goryeo',
+    ko: '고려',
+    start: 918,
+    end: 1392,
+    intro:
+      'Goryeo, founded by Wang Geon, reunified the Later Three Kingdoms and gave Korea its English name; it is known for celadon, the Tripitaka Koreana and the Mongol invasions, and ended when Yi Seong-gye founded Joseon in 1392.',
     monarchs: [
       m('Taejo', '태조', 'taejo-wang-geon'),
       m('Hyejong', '혜종', 'hyejong-wang-mu'),
@@ -221,6 +259,12 @@ export const DYNASTIES: Dynasty[] = [
   {
     id: 'joseon',
     title: 'Kings of Joseon',
+    name: 'Joseon',
+    ko: '조선',
+    start: 1392,
+    end: 1897,
+    intro:
+      'Joseon was Korea’s longest-ruling dynasty, founded by Yi Seong-gye (Taejo) in 1392. Its kings oversaw the creation of Hangul, Confucian statecraft and the Annals of the Joseon Dynasty, until Gojong proclaimed the Korean Empire in 1897.',
     monarchs: [
       m('Taejo', '태조', 'taejo-yi-seong-gye'),
       m('Jeongjong', '정종', 'jeongjong-yi-bang-gwa'),
@@ -254,6 +298,12 @@ export const DYNASTIES: Dynasty[] = [
   {
     id: 'korean-empire',
     title: 'Emperors of the Korean Empire',
+    name: 'Korean Empire',
+    ko: '대한제국',
+    start: 1897,
+    end: 1910,
+    intro:
+      'The Korean Empire was proclaimed by Gojong in 1897 to assert independence and modernize the state; it had two emperors before Japan annexed Korea in 1910.',
     monarchs: [
       m('Gwangmu (Gojong)', '광무제', 'gojong-yi-myeong-bok'),
       m('Yunghui (Sunjong)', '융희제', 'sunjong-yi-cheok'),
@@ -278,6 +328,28 @@ export function ordinal(n: number): string {
   if (tens >= 11 && tens <= 13) return `${n}th`;
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 }
+
+export const findDynasty = (id: string): Dynasty | undefined => DYNASTIES.find((d) => d.id === id);
+
+/** List page for a dynasty's rulers */
+export const dynastyPath = (d: Dynasty) => `/monarchs/${d.id}`;
+
+/** "Kings of Joseon" → "King of Joseon" */
+export const rulerTitle = (d: Dynasty) => d.title.replace(/^(\w+)s\b/, '$1');
+
+/**
+ * A ruler's place in each dynasty: ["4th King of Joseon"].
+ * Gojong → ["26th King of Joseon", "1st Emperor of the Korean Empire"].
+ */
+export function rulerRoles(slug: string): { dynasty: Dynasty; label: string }[] {
+  return DYNASTIES.flatMap((d) => {
+    const i = d.monarchs.findIndex((x) => x.slug === slug);
+    return i < 0 ? [] : [{ dynasty: d, label: `${ordinal(i + 1)} ${rulerTitle(d)}` }];
+  });
+}
+
+/** -37 → "37 BCE" */
+export const formatEraYear = (y: number) => (y < 0 ? `${-y} BCE` : String(y));
 
 export interface ReignInfo {
   reign_start: number;
@@ -311,3 +383,59 @@ export function reigningAt(reigns: ReignInfo[], year: number): ReignInfo[] {
     (a, b) => order(a.dynasty) - order(b.dynasty)
   );
 }
+
+// ─── Dynasty list page ───
+
+export interface RosterPerson {
+  id: string;
+  slug: string;
+  name_en: string;
+  name_hanja: string | null;
+  thumbnail: string | null;
+  summary: string | null;
+  birth_year: number | null;
+  death_year: number | null;
+}
+
+export interface RosterEntry {
+  /** 1-based place in the succession */
+  order: number;
+  monarch: Monarch;
+  /** Published page, if any */
+  person: RosterPerson | null;
+  /** Reigns in this dynasty's span (Gojong's Korean Empire years belong to the other list) */
+  reigns: { start: number; end: number }[];
+}
+
+/** Full succession joined with published pages and their reigns in this dynasty's years */
+export function buildRoster(
+  dynasty: Dynasty,
+  persons: RosterPerson[],
+  reigns: { person_id: string; reign_start: number; reign_end: number }[]
+): RosterEntry[] {
+  const bySlug = new Map(persons.map((p) => [p.slug, p]));
+  return dynasty.monarchs.map((monarch, i) => {
+    const person = (monarch.slug && bySlug.get(monarch.slug)) || null;
+    const all = person
+      ? reigns
+          .filter((r) => r.person_id === person.id)
+          .sort((a, b) => a.reign_start - b.reign_start)
+          .map((r) => ({ start: r.reign_start, end: r.reign_end }))
+      : [];
+    // A reign starting in the dynasty's last year belongs to its successor (Gojong 1897 → Korean Empire);
+    // none inside the span (Sunjong, counted in both lists) → show them all
+    const inSpan = all.filter((r) => r.start >= dynasty.start && r.start < dynasty.end);
+    const own = inSpan.length ? inSpan : all;
+    return { order: i + 1, monarch, person, reigns: own };
+  });
+}
+
+/** "1418–1450", "57 BCE–4"; several reigns joined ("1863–1897") */
+export const formatReigns = (reigns: { start: number; end: number }[]) =>
+  reigns.map((r) => (r.start === r.end ? formatEraYear(r.start) : `${formatEraYear(r.start)}–${formatEraYear(r.end)}`)).join(', ');
+
+/** Fewer published rulers than this → the list page is mostly gaps: noindex, not in the sitemap */
+export const DYNASTY_PAGE_MIN_LINKED = 5;
+
+export const linkedCount = (dynasty: Dynasty, publishedSlugs: Set<string>) =>
+  dynasty.monarchs.filter((x) => x.slug && publishedSlugs.has(x.slug)).length;

@@ -1,9 +1,15 @@
 import AiDraftBadge from '@/components/person/AiDraftBadge';
 import ItemReactions from '@/components/person/ItemReactions';
+import LinkedText from '@/components/common/LinkedText';
 import type { PersonHighlight } from '@/lib/person-page';
+import type { Linker } from '@/lib/autolink';
+
+/** Body text, with mentions of other figures/events linked when a linker is given */
+const Body = ({ text, linker }: { text: string; linker?: Linker }) =>
+  linker ? <LinkedText segments={linker.link(text)} /> : <>{text}</>;
 
 /** Achievement cards (year + title + body) */
-export function AchievementList({ items, slug }: { items: PersonHighlight[]; slug: string }) {
+export function AchievementList({ items, slug, linker }: { items: PersonHighlight[]; slug: string; linker?: Linker }) {
   return (
     <ol className="card-flat divide-y divide-gray-100">
       {items.map((h) => (
@@ -16,7 +22,11 @@ export function AchievementList({ items, slug }: { items: PersonHighlight[]; slu
               {h.title}
               {h.is_ai_generated && <AiDraftBadge />}
             </p>
-            {h.body && <p className="mt-1 text-sm leading-relaxed text-gray-600">{h.body}</p>}
+            {h.body && (
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                <Body text={h.body} linker={linker} />
+              </p>
+            )}
             <div className="mt-2">
               <ItemReactions slug={slug} targetType="HIGHLIGHT" targetKey={h.id} />
             </div>
@@ -28,7 +38,7 @@ export function AchievementList({ items, slug }: { items: PersonHighlight[]; slu
 }
 
 /** "Did you know?" trivia cards */
-export function TriviaList({ items, slug }: { items: PersonHighlight[]; slug: string }) {
+export function TriviaList({ items, slug, linker }: { items: PersonHighlight[]; slug: string; linker?: Linker }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {items.map((h) => (
@@ -37,7 +47,11 @@ export function TriviaList({ items, slug }: { items: PersonHighlight[]; slug: st
             {h.title}
             {h.is_ai_generated && <AiDraftBadge />}
           </p>
-          {h.body && <p className="mt-1 text-sm leading-relaxed text-gray-600">{h.body}</p>}
+          {h.body && (
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                <Body text={h.body} linker={linker} />
+              </p>
+            )}
           <div className="mt-2">
             <ItemReactions slug={slug} targetType="HIGHLIGHT" targetKey={h.id} />
           </div>

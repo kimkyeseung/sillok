@@ -43,7 +43,11 @@ export interface PersonDetail extends PersonSummary {
   /** Other English names people search by ("King Sejong", "Yi Do") */
   aliases_en: string[] | null;
   summary: string | null;
+  /** 'MM-DD' */
+  birth_date?: string | null;
+  death_date?: string | null;
   birth_place: string | null;
+  updated_at?: string | null;
   view_count: number | null;
   follow_count: number | null;
   is_controversial: boolean | null;
