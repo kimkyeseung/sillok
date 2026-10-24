@@ -37,13 +37,16 @@ function timeAgo(dateStr: string) {
 }
 
 export default async function ArticlesPage() {
-  const { data: articles } = await supabaseAdmin
+  const { data: articles, error } = await supabaseAdmin
     .from('articles')
     .select('id, slug, title, summary, thumbnail, tag, is_notice, created_at')
     .eq('is_deleted', false)
     .eq('is_published', true)
     .order('created_at', { ascending: false })
     .limit(30);
+
+  // A failed query must not masquerade as "No articles yet" — let the error boundary handle it
+  if (error) throw new Error(`Failed to load articles: ${error.message}`);
 
   return (
     <div>

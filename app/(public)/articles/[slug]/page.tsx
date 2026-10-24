@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -12,15 +13,19 @@ interface Props {
   params: { slug: string };
 }
 
-async function getArticle(slug: string) {
-  const { data } = await supabaseAdmin
+// Shared by generateMetadata and the page within one request
+const getArticle = cache(async (slug: string) => {
+  const { data, error } = await supabaseAdmin
     .from('articles')
     .select('*')
     .eq('slug', slug)
     .eq('is_deleted', false)
-    .single();
+    .eq('is_published', true)
+    .maybeSingle();
+  // A DB failure must not turn a live article into a 404 (search engines drop 404s)
+  if (error) throw new Error(`Failed to load article "${slug}": ${error.message}`);
   return data;
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticle(params.slug);
