@@ -13,6 +13,7 @@ import {
   getGallery,
   getLifeEvents,
   getLinkedNodes,
+  getPersonArticles,
   getPersonBySlug,
   getPersonHighlights,
   getPersonRelations,
@@ -43,18 +44,29 @@ export default async function PersonOverviewPage({ params }: Props) {
   const person = await getPersonBySlug(params.slug);
   if (!person) notFound();
 
-  const [counts, familyTree, relations, lifeEvents, contemporaries, gallery, nodes, threads, highlights] =
-    await Promise.all([
-      getTabCounts(person),
-      getFamilyTree(person.id),
-      getPersonRelations(person.id),
-      getLifeEvents(person),
-      getContemporaries(person, 8),
-      getGallery(person),
-      getLinkedNodes(person.id),
-      getPersonThreads(person.id),
-      getPersonHighlights(person.id),
-    ]);
+  const [
+    counts,
+    familyTree,
+    relations,
+    lifeEvents,
+    contemporaries,
+    gallery,
+    nodes,
+    threads,
+    highlights,
+    articles,
+  ] = await Promise.all([
+    getTabCounts(person),
+    getFamilyTree(person.id),
+    getPersonRelations(person.id),
+    getLifeEvents(person),
+    getContemporaries(person, 8),
+    getGallery(person),
+    getLinkedNodes(person.id),
+    getPersonThreads(person.id),
+    getPersonHighlights(person.id),
+    getPersonArticles(params.slug),
+  ]);
   const portrayals = await getPortrayals(person.id);
   const achievements = highlights.filter((h) => h.kind === 'ACHIEVEMENT');
   const trivia = highlights.filter((h) => h.kind === 'TRIVIA');
@@ -183,6 +195,27 @@ export default async function PersonOverviewPage({ params }: Props) {
             href={nodes.length > 4 ? `${base}/related` : undefined}
           />
           <LinkedNodeGrid nodes={nodes.slice(0, 4)} />
+        </section>
+      )}
+
+      {articles.length > 0 && (
+        <section>
+          <SectionHeader title="Featured in Articles" />
+          <ul className="space-y-2">
+            {articles.map((a) => (
+              <li key={a.slug}>
+                <Link
+                  href={`/articles/${a.slug}`}
+                  className="card-flat block p-4 transition-colors hover:bg-gray-50"
+                >
+                  <p className="text-sm font-semibold text-gray-900">{a.title}</p>
+                  {a.summary && (
+                    <p className="mt-1 line-clamp-2 text-xs text-gray-500">{a.summary}</p>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

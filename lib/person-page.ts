@@ -11,6 +11,7 @@ import { buildFamilyTree, type FamilyRelation } from '@/lib/family-tree';
 import {
   buildLifeEvents,
   buildRelationGraph,
+  articleMentionPattern,
   findContemporaries,
   type PersonTabCounts,
 } from '@/lib/person-sections';
@@ -350,6 +351,33 @@ export const getPersonThreads = cache(async (personId: string, limit = 50): Prom
     author: t.profiles?.nickname ?? null,
     image: [...(t.thread_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0]?.url ?? null,
   }));
+});
+
+// ─── Articles that link to this person ───
+
+export interface PersonArticle {
+  slug: string;
+  title: string;
+  summary: string | null;
+  tag: string | null;
+  created_at: string;
+}
+
+/** Published articles whose body links to the person (spotlights, announcements) */
+export const getPersonArticles = cache(async (slug: string, limit = 3): Promise<PersonArticle[]> => {
+  const pattern = articleMentionPattern(slug);
+  if (!pattern) return [];
+  const { data, error } = await supabaseAdmin
+    .from('articles')
+    .select('slug, title, summary, tag, created_at')
+    .eq('is_deleted', false)
+    .eq('is_published', true)
+    .ilike('body', pattern)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  // Optional section — a failed query just hides it
+  if (error) return [];
+  return (data ?? []) as PersonArticle[];
 });
 
 // ─── Gallery (portrait + linked nodes + thread images) ───

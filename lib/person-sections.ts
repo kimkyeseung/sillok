@@ -278,3 +278,12 @@ export function buildRelationGraph(
 
   return { nodes, edges, size };
 }
+
+/**
+ * ILIKE pattern for a Markdown link to the person page, e.g. "](/persons/yi-sun-sin)".
+ * Slugs are lowercase letters, digits and hyphens; anything else gets no match.
+ */
+export function articleMentionPattern(slug: string): string | null {
+  if (!/^[a-z0-9-]+$/.test(slug)) return null;
+  return `%](/persons/${slug})%`;
+}

@@ -5,6 +5,7 @@ import {
   findContemporaries,
   buildLifeEvents,
   buildRelationGraph,
+  articleMentionPattern,
 } from '@/lib/person-sections';
 
 describe('personTabs', () => {
@@ -152,5 +153,17 @@ describe('buildRelationGraph', () => {
     const many = Array.from({ length: 30 }, (_, i) => ({ from: 'c', to: `n${i}`, type: 'ALLY' }));
     const g = buildRelationGraph('c', many, { maxRing1: 10 });
     expect(g.nodes.filter((n) => n.ring === 1)).toHaveLength(10);
+  });
+});
+
+describe('articleMentionPattern', () => {
+  it('matches a Markdown link to the person page', () => {
+    expect(articleMentionPattern('yi-sun-sin')).toBe('%](/persons/yi-sun-sin)%');
+  });
+
+  it('rejects slugs that could act as wildcards', () => {
+    expect(articleMentionPattern('a%b')).toBeNull();
+    expect(articleMentionPattern('a_b')).toBeNull();
+    expect(articleMentionPattern('')).toBeNull();
   });
 });
