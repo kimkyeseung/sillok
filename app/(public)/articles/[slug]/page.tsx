@@ -8,6 +8,7 @@ import ArticleBody from '@/components/article/ArticleBody';
 import ArticleViewLogger from '@/components/article/ArticleViewLogger';
 import LikeButton from '@/components/thread/LikeButton';
 import { articleTagLabel } from '@/lib/tags';
+import { DEFAULT_OG_IMAGE, stripMarkdown, truncateDescription } from '@/lib/seo';
 
 interface Props {
   params: { slug: string };
@@ -31,7 +32,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await getArticle(params.slug);
   if (!article) return {};
 
-  const description = article.summary?.slice(0, 160) ?? article.title;
+  const description = truncateDescription(
+    article.summary || (article.body ? stripMarkdown(article.body) : article.title)
+  );
+  // A page-level openGraph/twitter object replaces the root layout's, so
+  // articles without a thumbnail must fall back to the default share image.
+  const ogImages = [article.thumbnail || DEFAULT_OG_IMAGE];
 
   return {
     title: `${article.title}`,
@@ -41,13 +47,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${article.title} - Sillok`,
       description,
       type: 'article',
-      ...(article.thumbnail && { images: [article.thumbnail] }),
+      url: `/articles/${params.slug}`,
+      publishedTime: article.created_at,
+      images: ogImages,
     },
     twitter: {
       card: article.thumbnail ? 'summary_large_image' : 'summary',
       title: article.title,
       description,
-      ...(article.thumbnail && { images: [article.thumbnail] }),
+      images: ogImages,
     },
   };
 }
