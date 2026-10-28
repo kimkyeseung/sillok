@@ -5,6 +5,7 @@ import {
   truncateDescription,
   nameWithKorean,
   stripMarkdown,
+  personTitle,
 } from '@/lib/seo';
 
 describe('truncateText', () => {
@@ -47,5 +48,24 @@ describe('stripMarkdown', () => {
     expect(
       stripMarkdown('## Title\n**Bold** and [link](https://x.com) ![img](a.png)\n- item')
     ).toBe('Title Bold and link item');
+  });
+});
+
+describe('personTitle', () => {
+  it('appends the first alias', () => {
+    expect(personTitle('Sejong the Great', ['King Sejong'])).toBe('Sejong the Great (King Sejong)');
+  });
+
+  it('keeps the name alone without aliases', () => {
+    expect(personTitle('Yi Sun-sin', [])).toBe('Yi Sun-sin');
+    expect(personTitle('Yi Sun-sin', null)).toBe('Yi Sun-sin');
+  });
+
+  it('does not add a second parenthetical', () => {
+    expect(personTitle('Kim Hong-do (Danwon)', ['Danwon', 'Kim Hongdo'])).toBe('Kim Hong-do (Danwon)');
+  });
+
+  it('skips aliases already contained in the name', () => {
+    expect(personTitle('King Jeongjo', ['jeongjo', 'Yi San'])).toBe('King Jeongjo (Yi San)');
   });
 });

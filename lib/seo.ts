@@ -35,6 +35,18 @@ export function nameWithKorean(
   return extra.length ? `${nameEn} (${extra.join(', ')})` : nameEn;
 }
 
+/**
+ * Overview title: "Sejong the Great (King Sejong)" so the common English name
+ * matches too. Skips the alias when the name already has a parenthetical
+ * ("Kim Hong-do (Danwon)") or contains it, so titles never double up.
+ */
+export function personTitle(nameEn: string, aliases?: string[] | null): string {
+  if (nameEn.includes('(')) return nameEn;
+  const lower = nameEn.toLowerCase();
+  const alias = (aliases ?? []).find((a) => a.trim() && !lower.includes(a.trim().toLowerCase()));
+  return alias ? `${nameEn} (${alias.trim()})` : nameEn;
+}
+
 /** Plain text from Markdown for meta descriptions (links, images, emphasis, headings) */
 export function stripMarkdown(md: string): string {
   return md

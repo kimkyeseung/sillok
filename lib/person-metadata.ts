@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getPersonBySlug, type PersonDetail } from '@/lib/person-page';
-import { DEFAULT_OG_IMAGE, nameWithKorean, truncateDescription } from '@/lib/seo';
+import { DEFAULT_OG_IMAGE, nameWithKorean, personTitle, truncateDescription } from '@/lib/seo';
 
 interface TabMetaOptions {
   /** URL segment after /persons/[slug] — omit for the overview */
@@ -24,11 +24,7 @@ export async function personTabMetadata(
   const desc = truncateDescription(description(person, fullName));
   const aliases = person.aliases_en ?? [];
   // Overview: "Sejong the Great (King Sejong)" so the common English name matches too
-  const title = label
-    ? `${person.name_en} — ${label}`
-    : aliases[0]
-      ? `${person.name_en} (${aliases[0]})`
-      : person.name_en;
+  const title = label ? `${person.name_en} — ${label}` : personTitle(person.name_en, aliases);
   const ogImage = person.thumbnail ?? DEFAULT_OG_IMAGE;
   const path = `/persons/${slug}${segment ? `/${segment}` : ''}`;
 
