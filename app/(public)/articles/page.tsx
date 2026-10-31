@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { articleTagLabel } from '@/lib/tags';
 
-export const metadata: Metadata = {
+const BASE_METADATA: Metadata = {
   title: 'Articles',
   description: 'Stories, deep-dives, and announcements from the Sillok team about Korean history and the archive.',
   alternates: { canonical: '/articles' },
@@ -20,6 +20,19 @@ export const metadata: Metadata = {
     description: 'Stories and announcements from the Sillok team.',
   },
 };
+
+// Empty list → noindex (thin content), same rule as empty boards/topics
+export async function generateMetadata(): Promise<Metadata> {
+  const { count } = await supabaseAdmin
+    .from('articles')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_deleted', false)
+    .eq('is_published', true);
+  return {
+    ...BASE_METADATA,
+    ...(count === 0 && { robots: { index: false, follow: true } }),
+  };
+}
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';

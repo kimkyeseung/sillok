@@ -64,12 +64,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.8,
     },
-    {
-      url: `${baseUrl}/articles`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
+    // Articles index only when it has content (empty list is noindex)
+    ...((articles ?? []).length > 0
+      ? [
+          {
+            url: `${baseUrl}/articles`,
+            lastModified: new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.7,
+          },
+        ]
+      : []),
     {
       url: `${baseUrl}/nodes`,
       lastModified: new Date(),
