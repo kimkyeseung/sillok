@@ -3,6 +3,7 @@
  */
 import { cache } from 'react';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sharedCache, orThrow } from '@/lib/shared-cache';
 import { stripMarkdown, truncateText } from '@/lib/seo';
 import {
   TOP_WINDOW_DAYS,
@@ -169,15 +170,23 @@ export async function getFeedPage({
 }
 
 /** Threads created in the last `days` days (drives the Top → Hot default switch) */
-export const getRecentThreadCount = cache(async (days = 7) => {
-  const { data } = await supabaseAdmin
-    .from('threads')
-    .select('id')
-    .eq('is_deleted', false)
-    .gte('created_at', new Date(Date.now() - days * 86_400_000).toISOString())
-    .limit(50);
-  return data?.length ?? 0;
-});
+export const getRecentThreadCount = sharedCache(
+  'feed-recent-thread-count',
+  async (days: number = 7) => {
+    const data = orThrow(
+      '[feed] recent threads',
+      await supabaseAdmin
+        .from('threads')
+        .select('id')
+        .eq('is_deleted', false)
+        .gte('created_at', new Date(Date.now() - days * 86_400_000).toISOString())
+        .limit(50)
+    );
+    return data?.length ?? 0;
+  },
+  { revalidate: 300 },
+  () => 0
+);
 
 export const getDefaultFeedSort = cache(async () => pickDefaultSort(await getRecentThreadCount()));
 
@@ -195,78 +204,100 @@ export interface FigureOfDay {
   trivia: { title: string; body: string | null } | null;
 }
 
-export const getToday = cache(async () => {
-  const today = kstMonthDay();
-  const day = dayNumber();
+type KstDate = ReturnType<typeof kstMonthDay>;
 
-  const [{ data: highlights }, { data: dated }, { data: monthRows }] = await Promise.all([
-    supabaseAdmin
-      .from('person_highlights')
-      .select('person_id, kind, title, body, sort_order')
-      .eq('is_deleted', false)
-      .in('kind', ['ACHIEVEMENT', 'TRIVIA'])
-      .order('sort_order'),
-    supabaseAdmin
-      .from('persons')
-      .select('slug, name_en, birth_year, death_year, birth_date, death_date')
-      .eq('is_deleted', false)
-      .eq('is_published', true)
-      .or('birth_date.not.is.null,death_date.not.is.null'),
-    supabaseAdmin
-      .from('person_timeline')
-      .select('year, month, title, persons!inner ( slug, name_en, is_published, is_deleted )')
-      .eq('month', today.month)
-      .eq('persons.is_published', true)
-      .eq('persons.is_deleted', false)
-      .limit(200),
-  ]);
+// Keyed by the KST date, so the module flips at midnight rather than up to one TTL later
+const loadToday = sharedCache(
+  'feed-today',
+  async (today: KstDate, day: number) => {
+    const [highlightsRes, datedRes, monthRes] = await Promise.all([
+      supabaseAdmin
+        .from('person_highlights')
+        .select('person_id, kind, title, body, sort_order')
+        .eq('is_deleted', false)
+        .in('kind', ['ACHIEVEMENT', 'TRIVIA'])
+        .order('sort_order'),
+      supabaseAdmin
+        .from('persons')
+        .select('slug, name_en, birth_year, death_year, birth_date, death_date')
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+        .or('birth_date.not.is.null,death_date.not.is.null'),
+      supabaseAdmin
+        .from('person_timeline')
+        .select('year, month, title, persons!inner ( slug, name_en, is_published, is_deleted )')
+        .eq('month', today.month)
+        .eq('persons.is_published', true)
+        .eq('persons.is_deleted', false)
+        .limit(200),
+    ]);
+    const highlights = orThrow('[feed] today highlights', highlightsRes);
+    const dated = orThrow('[feed] today dated persons', datedRes);
+    const monthRows = orThrow('[feed] today timeline', monthRes);
 
-  // Figure of the day: rotate through people with editorial content
-  const withContent = Array.from(new Set((highlights ?? []).map((h) => h.person_id))).sort();
-  const [pickId] = rotate(withContent, day, 1);
-  let figure: FigureOfDay | null = null;
-  if (pickId) {
-    const { data: p } = await supabaseAdmin
-      .from('persons')
-      .select('slug, name_en, name_hanja, thumbnail, birth_year, death_year, summary')
-      .eq('id', pickId)
-      .eq('is_published', true)
-      .maybeSingle();
-    if (p) {
-      const mine = (highlights ?? []).filter((h) => h.person_id === pickId);
-      const trivia = mine.find((h) => h.kind === 'TRIVIA');
-      figure = {
-        ...p,
-        summary: p.summary ? truncateText(p.summary, 220) : null,
-        achievement: mine.find((h) => h.kind === 'ACHIEVEMENT')?.title ?? null,
-        trivia: trivia ? { title: trivia.title, body: trivia.body } : null,
-      };
+    // Figure of the day: rotate through people with editorial content
+    const withContent = Array.from(new Set((highlights ?? []).map((h) => h.person_id))).sort();
+    const [pickId] = rotate(withContent, day, 1);
+    let figure: FigureOfDay | null = null;
+    if (pickId) {
+      const { data: p, error } = await supabaseAdmin
+        .from('persons')
+        .select('slug, name_en, name_hanja, thumbnail, birth_year, death_year, summary')
+        .eq('id', pickId)
+        .eq('is_published', true)
+        .maybeSingle();
+      if (error) throw new Error(`[feed] figure of the day: ${error.message}`);
+      if (p) {
+        const mine = (highlights ?? []).filter((h) => h.person_id === pickId);
+        const trivia = mine.find((h) => h.kind === 'TRIVIA');
+        figure = {
+          ...p,
+          summary: p.summary ? truncateText(p.summary, 220) : null,
+          achievement: mine.find((h) => h.kind === 'ACHIEVEMENT')?.title ?? null,
+          trivia: trivia ? { title: trivia.title, body: trivia.body } : null,
+        };
+      }
     }
-  }
 
-  const monthEntries: MonthEntry[] = ((monthRows ?? []) as unknown as {
-    year: number;
-    month: number;
-    title: string;
-    persons: { slug: string; name_en: string };
-  }[]).map((r) => ({ year: r.year, month: r.month, title: r.title, person: r.persons }));
+    const monthEntries: MonthEntry[] = ((monthRows ?? []) as unknown as {
+      year: number;
+      month: number;
+      title: string;
+      persons: { slug: string; name_en: string };
+    }[]).map((r) => ({ year: r.year, month: r.month, title: r.title, person: r.persons }));
 
-  return {
-    date: today,
-    figure,
-    history: onThisDay((dated ?? []) as DatedPerson[], monthEntries, today),
-  };
-});
+    return {
+      date: today,
+      figure,
+      history: onThisDay((dated ?? []) as DatedPerson[], monthEntries, today),
+    };
+  },
+  { revalidate: 600 },
+  (today) => ({ date: today, figure: null as FigureOfDay | null, history: onThisDay([], [], today) })
+);
+
+export const getToday = cache(async () => loadToday(kstMonthDay(), dayNumber()));
 
 /** Slug of the person whose poll is featured today */
+const getActivePolls = sharedCache(
+  'feed-active-polls',
+  async () =>
+    orThrow(
+      '[feed] polls',
+      await supabaseAdmin
+        .from('person_polls')
+        .select('id, persons!inner ( slug, is_published, is_controversial )')
+        .eq('is_active', true)
+        .eq('is_deleted', false)
+        .eq('persons.is_published', true)
+        .order('id')
+    ),
+  { revalidate: 600 },
+  () => null
+);
+
 export const getPollOfDaySlug = cache(async () => {
-  const { data } = await supabaseAdmin
-    .from('person_polls')
-    .select('id, persons!inner ( slug, is_published, is_controversial )')
-    .eq('is_active', true)
-    .eq('is_deleted', false)
-    .eq('persons.is_published', true)
-    .order('id');
+  const data = await getActivePolls();
   const eligible = ((data ?? []) as unknown as { persons: { slug: string; is_controversial: boolean | null } }[])
     .filter((p) => !p.persons.is_controversial)
     .map((p) => p.persons.slug);
@@ -280,14 +311,25 @@ export interface TriviaCard {
   person: FeedFigure;
 }
 
+const getAllTrivia = sharedCache(
+  'feed-trivia',
+  async () =>
+    orThrow(
+      '[feed] trivia',
+      await supabaseAdmin
+        .from('person_highlights')
+        .select('id, title, body, persons!inner ( slug, name_en, thumbnail, is_published )')
+        .eq('kind', 'TRIVIA')
+        .eq('is_deleted', false)
+        .eq('persons.is_published', true)
+        .order('id')
+    ),
+  { revalidate: 600 },
+  () => null
+);
+
 export const getTriviaOfDay = cache(async (count = 6): Promise<TriviaCard[]> => {
-  const { data } = await supabaseAdmin
-    .from('person_highlights')
-    .select('id, title, body, persons!inner ( slug, name_en, thumbnail, is_published )')
-    .eq('kind', 'TRIVIA')
-    .eq('is_deleted', false)
-    .eq('persons.is_published', true)
-    .order('id');
+  const data = await getAllTrivia();
   const all = ((data ?? []) as unknown as { id: string; title: string; body: string | null; persons: FeedFigure }[]).map(
     (r) => ({ id: r.id, title: r.title, body: r.body, person: { slug: r.persons.slug, name_en: r.persons.name_en, thumbnail: r.persons.thumbnail } })
   );
@@ -363,57 +405,86 @@ export interface TrendingFigure extends FeedFigure {
  * Figures with the most views + hearts in the last 7 days.
  * Returns an empty list until there is enough signal (the sidebar then shows "Figures to discover").
  */
-export const getTrendingFigures = cache(async (limit = 5): Promise<TrendingFigure[]> => {
-  const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
-  const [views, hearts] = await Promise.all([
-    supabaseAdmin.from('view_logs').select('target_id').eq('target_type', 'PERSON').gte('viewed_at', since).limit(5000),
-    supabaseAdmin.from('person_item_likes').select('person_id').gte('created_at', since).limit(5000),
-  ]);
-  const score = new Map<string, number>();
-  (views.data ?? []).forEach((v) => score.set(v.target_id, (score.get(v.target_id) ?? 0) + 1));
-  (hearts.data ?? []).forEach((h) => score.set(h.person_id, (score.get(h.person_id) ?? 0) + 3));
+export const getTrendingFigures = sharedCache(
+  'feed-trending-figures',
+  async (limit: number = 5): Promise<TrendingFigure[]> => {
+    const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    const [views, hearts] = await Promise.all([
+      supabaseAdmin.from('view_logs').select('target_id').eq('target_type', 'PERSON').gte('viewed_at', since).limit(5000),
+      supabaseAdmin.from('person_item_likes').select('person_id').gte('created_at', since).limit(5000),
+    ]);
+    orThrow('[feed] trending views', views);
+    orThrow('[feed] trending hearts', hearts);
+    const score = new Map<string, number>();
+    (views.data ?? []).forEach((v) => score.set(v.target_id, (score.get(v.target_id) ?? 0) + 1));
+    (hearts.data ?? []).forEach((h) => score.set(h.person_id, (score.get(h.person_id) ?? 0) + 3));
 
-  const top = Array.from(score.entries())
-    .filter(([, s]) => s >= 3)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit);
-  if (top.length < 3) return [];
+    const top = Array.from(score.entries())
+      .filter(([, s]) => s >= 3)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit);
+    if (top.length < 3) return [];
 
-  const { data } = await supabaseAdmin
-    .from('persons')
-    .select('id, slug, name_en, thumbnail')
-    .in('id', top.map(([id]) => id))
-    .eq('is_published', true);
-  const byId = new Map((data ?? []).map((p) => [p.id, p]));
-  return top
-    .map(([id, s]) => byId.get(id) && { ...byId.get(id)!, score: s })
-    .filter((f): f is TrendingFigure & { id: string } => !!f);
-});
+    const data = orThrow(
+      '[feed] trending persons',
+      await supabaseAdmin
+        .from('persons')
+        .select('id, slug, name_en, thumbnail')
+        .in('id', top.map(([id]) => id))
+        .eq('is_published', true)
+    );
+    const byId = new Map((data ?? []).map((p) => [p.id, p]));
+    return top
+      .map(([id, s]) => byId.get(id) && { ...byId.get(id)!, score: s })
+      .filter((f): f is TrendingFigure & { id: string } => !!f);
+  },
+  { revalidate: 600 },
+  () => []
+);
 
 /** Rotating "figures to discover" (portrait + editorial content first) */
+const getPortraitFigures = sharedCache(
+  'feed-portrait-figures',
+  async () =>
+    orThrow(
+      '[feed] portrait figures',
+      await supabaseAdmin
+        .from('persons')
+        .select('slug, name_en, thumbnail')
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+        .not('thumbnail', 'is', null)
+        .order('slug')
+    ),
+  { revalidate: 600, tags: ['age-flow'] },
+  () => null
+);
+
 export const getDiscoverFigures = cache(async (limit = 5): Promise<FeedFigure[]> => {
-  const { data } = await supabaseAdmin
-    .from('persons')
-    .select('slug, name_en, thumbnail')
-    .eq('is_deleted', false)
-    .eq('is_published', true)
-    .not('thumbnail', 'is', null)
-    .order('slug');
+  const data = await getPortraitFigures();
   return rotate(data ?? [], dayNumber() + 7, limit);
 });
 
-export const getSiteStats = cache(async () => {
-  const count = async (table: string, extra: (q: ReturnType<typeof base>) => ReturnType<typeof base>) =>
-    (await extra(base(table))).count ?? 0;
-  const base = (table: string) =>
-    supabaseAdmin.from(table).select('id', { count: 'exact', head: true }).eq('is_deleted', false);
-  const [figures, nodes, threads] = await Promise.all([
-    count('persons', (q) => q.eq('is_published', true)),
-    count('nodes', (q) => q.eq('is_published', true)),
-    count('threads', (q) => q),
-  ]);
-  return { figures, nodes, threads };
-});
+export const getSiteStats = sharedCache(
+  'feed-site-stats',
+  async () => {
+    const count = async (table: string, extra: (q: ReturnType<typeof base>) => ReturnType<typeof base>) => {
+      const { count: n, error } = await extra(base(table));
+      if (error) throw new Error(`[feed] ${table} count: ${error.message}`);
+      return n ?? 0;
+    };
+    const base = (table: string) =>
+      supabaseAdmin.from(table).select('id', { count: 'exact', head: true }).eq('is_deleted', false);
+    const [figures, nodes, threads] = await Promise.all([
+      count('persons', (q) => q.eq('is_published', true)),
+      count('nodes', (q) => q.eq('is_published', true)),
+      count('threads', (q) => q),
+    ]);
+    return { figures, nodes, threads };
+  },
+  { revalidate: 600 },
+  () => ({ figures: 0, nodes: 0, threads: 0 })
+);
 
 // ─── Thread detail sidebar ───
 

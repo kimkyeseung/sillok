@@ -5,6 +5,7 @@
  */
 import { cache } from 'react';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sharedCache, orThrow } from '@/lib/shared-cache';
 import { mediaKind } from '@/lib/media';
 import { dynastiesOf, type Dynasty } from '@/lib/monarchs';
 import { buildFamilyTree, type FamilyRelation } from '@/lib/family-tree';
@@ -423,15 +424,24 @@ export const getGallery = cache(async (person: PersonDetail): Promise<GalleryIma
 
 // ─── Contemporaries ───
 
-const getLifespanIndex = cache(async () => {
-  const { data } = await supabaseAdmin
-    .from('persons')
-    .select(SUMMARY_FIELDS)
-    .eq('is_deleted', false)
-    .eq('is_published', true)
-    .not('birth_year', 'is', null);
-  return (data ?? []) as PersonSummary[];
-});
+// Every published person — shared across person pages; revalidateAgeFlow() refreshes it on person writes
+const getLifespanIndex = sharedCache(
+  'person-lifespan-index',
+  async () => {
+    const data = orThrow(
+      '[person] lifespan index',
+      await supabaseAdmin
+        .from('persons')
+        .select(SUMMARY_FIELDS)
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+        .not('birth_year', 'is', null)
+    );
+    return (data ?? []) as unknown as PersonSummary[];
+  },
+  { revalidate: 300, tags: ['age-flow'] },
+  () => []
+);
 
 export const getContemporaries = cache(async (person: PersonDetail, limit = 12) => {
   if (person.birth_year == null) return [];
