@@ -117,4 +117,5 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 | 국가유산 일괄 등록 (`metadata.source = 'khs'`) | 국보·보물 ~2,800건은 AI 번역 초안 → 검수 전까지 큐레이션 목록·age-flow·sitemap 제외 + noindex |
 | 유물 이미지 미러링 안 함 | 공공누리 1유형만 썸네일, 1·3유형은 `node_images` 갤러리 (3유형은 크롭 금지) |
 | PersonAvatar 태그별 스타일 | FIELD 태그별 배경·아이콘 (`components/common/PersonAvatar.tsx`) |
+| 저작권 게시 중단 (Takedown) | `/admin/threads` 게시 중단 → `POST /api/admin/threads/[id]/takedown`: threads 버킷 파일 영구 삭제 + `thread_images` 행 삭제 + soft delete (`image_id`면 이미지 1장만). 일반 삭제/복구는 파일을 남김 — 신고 건은 반드시 게시 중단. 외부 URL은 연결만 해제. 로직 `lib/thread-takedown.ts` |
 | 빈 게시판·토픽 noindex | 글 0개면 noindex + sitemap 제외 (thin content 방지) |

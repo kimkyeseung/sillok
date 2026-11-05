@@ -29,6 +29,7 @@ export async function GET(request: Request) {
     .select(
       `id, title, content, is_deleted, view_count, reply_count, like_count, created_at,
        author_id,
+       thread_images ( id, url, sort_order ),
        profiles!threads_author_id_fkey ( nickname ),
        persons!threads_person_id_fkey ( slug, name_ko, name_en )`
     )

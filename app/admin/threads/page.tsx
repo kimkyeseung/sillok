@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { fetcher, apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
+import Modal from '@/components/common/Modal';
 
 interface Thread {
   id: string;
@@ -18,6 +19,21 @@ interface Thread {
   author_id: string;
   profiles: { nickname: string } | null;
   persons: { slug: string; name_ko: string; name_en: string } | null;
+  thread_images: { id: string; url: string; sort_order: number }[] | null;
+}
+
+interface TakedownResult {
+  thread_deleted: boolean;
+  removed_files: string[];
+  external_urls: string[];
+}
+
+const RESTORE_NOTE = '복구해도 삭제된 이미지 파일은 되돌릴 수 없습니다.';
+
+function takedownSummary(r: TakedownResult) {
+  const parts = [`파일 ${r.removed_files.length}개 삭제`];
+  if (r.external_urls.length) parts.push(`외부 이미지 ${r.external_urls.length}개는 연결만 해제`);
+  return parts.join(' · ');
 }
 
 interface ThreadsResponse {
@@ -42,12 +58,14 @@ export default function AdminThreadsPage() {
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState<string | null>(null);
   const { toast } = useToast();
+  const [takedownTarget, setTakedownTarget] = useState<Thread | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const url = `/api/admin/threads?limit=20${search ? `&q=${encodeURIComponent(search)}` : ''}${cursor ? `&cursor=${cursor}` : ''}`;
   const { data, isLoading, mutate } = useSWR<ThreadsResponse>(url, fetcher);
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`스레드 "${title}"을(를) 삭제할까요?`)) return;
+    if (!confirm(`스레드 "${title}"을(를) 삭제(숨김)할까요?\n\n이미지 파일은 그대로 남아 URL로 접근할 수 있습니다. 저작권 신고 건은 '게시 중단'을 사용하세요.`)) return;
     try {
       await apiFetch(`/api/admin/threads/${id}`, { method: 'DELETE' });
       toast('삭제됨');
@@ -57,7 +75,30 @@ export default function AdminThreadsPage() {
     }
   };
 
+  const runTakedown = async (thread: Thread, imageId?: string) => {
+    const message = imageId
+      ? `이 이미지를 게시 중단할까요?\n\n스토리지에서 파일을 영구 삭제합니다 (URL이 404가 됨). 스레드는 유지됩니다.\n${RESTORE_NOTE}`
+      : `스레드 "${thread.title}"을(를) 게시 중단할까요?\n\n스레드를 삭제하고 이미지 파일을 스토리지에서 영구 삭제합니다 (URL이 404가 됨).\n${RESTORE_NOTE}`;
+    if (!confirm(message)) return;
+    setBusy(true);
+    try {
+      const result = await apiFetch<TakedownResult>(`/api/admin/threads/${thread.id}/takedown`, {
+        method: 'POST',
+        body: JSON.stringify(imageId ? { image_id: imageId } : {}),
+      });
+      toast(`게시 중단 완료 — ${takedownSummary(result)}`);
+      const fresh = await mutate();
+      if (result.thread_deleted) setTakedownTarget(null);
+      else setTakedownTarget(fresh?.items.find((t) => t.id === thread.id) ?? null);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '게시 중단하지 못했습니다', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleRestore = async (id: string) => {
+    if (!confirm(`스레드를 복구할까요?\n${RESTORE_NOTE}`)) return;
     try {
       await apiFetch(`/api/admin/threads/${id}`, { method: 'PATCH' });
       toast('복구했습니다');
@@ -187,6 +228,16 @@ export default function AdminThreadsPage() {
                           </svg>
                         </Link>
                       )}
+                      <button
+                        onClick={() => setTakedownTarget(thread)}
+                        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-amber-50 hover:text-amber-700"
+                        title="게시 중단 (저작권 신고)"
+                        aria-label="게시 중단 (저작권 신고)"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                      </button>
                       {thread.is_deleted ? (
                         <button
                           onClick={() => handleRestore(thread.id)}
@@ -226,6 +277,55 @@ export default function AdminThreadsPage() {
           </table>
         </div>
       )}
+
+      <Modal open={!!takedownTarget} onClose={() => !busy && setTakedownTarget(null)} title="게시 중단 (저작권 신고)">
+        {takedownTarget && (
+          <div className="space-y-4 text-sm">
+            <p className="text-gray-600">
+              <span className="font-medium text-gray-900">{takedownTarget.title}</span>
+              <br />
+              게시 중단은 스토리지의 이미지 파일을 <b>영구 삭제</b>합니다. 일반 삭제와 달리 복구해도 파일은 돌아오지 않습니다.
+              외부 URL 이미지는 파일을 지울 수 없어 스레드와의 연결만 해제합니다.
+            </p>
+            {(takedownTarget.thread_images ?? []).length > 0 ? (
+              <ul className="space-y-2">
+                {[...(takedownTarget.thread_images ?? [])]
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map((img) => (
+                    <li key={img.id} className="flex items-center gap-3 rounded-lg border border-gray-100 p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.url} alt="" className="h-12 w-12 rounded object-cover" />
+                      <a href={img.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-xs text-gray-500 hover:text-brand-600">
+                        {img.url}
+                      </a>
+                      <button
+                        onClick={() => runTakedown(takedownTarget, img.id)}
+                        disabled={busy}
+                        className="shrink-0 rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        이 이미지만 삭제
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="text-gray-400">연결된 이미지가 없습니다 (폴더에 남은 업로드 파일은 전체 게시 중단 시 함께 삭제됩니다).</p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setTakedownTarget(null)} disabled={busy} className="btn-ghost text-sm">
+                취소
+              </button>
+              <button
+                onClick={() => runTakedown(takedownTarget)}
+                disabled={busy}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {busy ? '처리 중...' : '스레드 전체 게시 중단'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Pagination */}
       {data?.has_next && (
