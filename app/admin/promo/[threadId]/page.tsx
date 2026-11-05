@@ -87,6 +87,12 @@ export default function ShareKitPage({ params }: { params: { threadId: string } 
       <section>
         <h2 className="mb-1 text-sm font-semibold text-gray-900">인스타그램 캐러셀 (1080×1350)</h2>
         <p className="mb-3 text-xs text-gray-500">세 장을 모두 받아 캐러셀 하나로 올리세요. X와 Threads에도 쓸 수 있습니다.</p>
+        {thread.imageBlocked && (
+          <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            이 스레드의 이미지는 유저가 올린 것이라 표지에서 뺐습니다. 사이트 안에서는 유저 콘텐츠로 게시되지만, 외부
+            홍보에 다시 올리면 서비스가 직접 사용하는 것이 되어 저작권 면책을 받지 못합니다. 이미지는 직접 첨부하지 마세요.
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-3 sm:max-w-3xl">
           {PROMO_SLIDES.map((slide) => (
             <div key={slide} className="flex flex-col gap-1.5">

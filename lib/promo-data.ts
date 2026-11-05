@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabase-admin';
 import { memeName, type MemeKind } from './meme';
+import { promoImage } from './promo';
 
 // ─── Share kit loaders (server only) ───
 
@@ -13,6 +14,8 @@ export interface PromoThread {
   view_count: number;
   is_deleted: boolean;
   image: { url: string; alt: string | null } | null;
+  /** The thread has an image, but a user uploaded it — not reusable off-site */
+  imageBlocked: boolean;
   figures: { slug: string; name: string }[];
   /** ERA tag slugs of the figures (joseon, goryeo, …) */
   eras: string[];
@@ -30,6 +33,7 @@ interface Row {
   view_count: number | null;
   is_deleted: boolean | null;
   thread_images: { url: string; alt?: string | null; sort_order: number }[] | null;
+  profiles: { role: string | null } | null;
   thread_persons:
     | {
         is_primary: boolean;
@@ -51,6 +55,7 @@ export async function loadPromoThread(id: string): Promise<PromoThread | null> {
       .select(
         `id, title, content, created_at, like_count, reply_count, view_count, is_deleted,
          thread_images ( * ),
+         profiles!threads_author_id_fkey ( role ),
          thread_persons ( is_primary, sort_order, persons ( slug, name_en, name_ko, person_tags ( tags ( name_en, type ) ) ) )`,
       )
       .eq('id', id)
@@ -64,7 +69,7 @@ export async function loadPromoThread(id: string): Promise<PromoThread | null> {
     .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)
     .map((tp) => tp.persons)
     .filter((p): p is NonNullable<typeof p> => !!p);
-  const firstImage = [...(r.thread_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0];
+  const { image, blocked } = promoImage(r.profiles?.role, r.thread_images);
 
   return {
     id: r.id,
@@ -75,7 +80,8 @@ export async function loadPromoThread(id: string): Promise<PromoThread | null> {
     reply_count: r.reply_count ?? 0,
     view_count: r.view_count ?? 0,
     is_deleted: r.is_deleted === true,
-    image: firstImage ? { url: firstImage.url, alt: firstImage.alt ?? null } : null,
+    image: image ? { url: image.url, alt: image.alt ?? null } : null,
+    imageBlocked: blocked,
     figures: people.map((p) => ({ slug: p.slug, name: memeName(p.name_en || p.name_ko) })),
     eras: Array.from(
       new Set(people.flatMap((p) => (p.person_tags ?? []).filter((t) => t.tags?.type === 'ERA').map((t) => t.tags!.name_en ?? ''))),
