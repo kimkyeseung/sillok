@@ -1,9 +1,10 @@
 // age-flow 데이터 로더 (서버 전용) — page SSR과 /api/persons/age-flow가 공유
 
-import { unstable_cache, revalidateTag, revalidatePath } from 'next/cache';
+import { revalidateTag, revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildAgeFlowData, JOSEON_START, JOSEON_END, type RawReign } from '@/lib/age-flow';
 import { CURATED_NODES_FILTER } from '@/lib/heritage';
+import { sharedCache } from '@/lib/shared-cache';
 import type {
   AgeFlowEvent,
   AgeFlowArtifact,
@@ -14,6 +15,44 @@ import type {
 const PERSON_LIMIT = 1000;
 const EVENT_LIMIT = 500;
 const ARTIFACT_LIMIT = 100;
+
+// AgeFlowArtifact.metadata keys, selected one by one instead of the whole jsonb
+const ARTIFACT_META_KEYS = [
+  'designation',
+  'designation_ko',
+  'created_year',
+  'created_period',
+  'category',
+  'material',
+] as const;
+type ArtifactMetaKey = (typeof ARTIFACT_META_KEYS)[number];
+
+const ARTIFACT_SELECT = [
+  'id, slug, title, thumbnail',
+  ...ARTIFACT_META_KEYS.map((k) => `meta_${k}:metadata->${k}`),
+].join(', ');
+
+type RawArtifactRow = Omit<AgeFlowArtifact, 'metadata'> & {
+  [K in ArtifactMetaKey as `meta_${K}`]?: unknown;
+};
+
+/** Reassemble the flat `meta_*` columns into the metadata object the client expects */
+export function toAgeFlowArtifacts(rows: RawArtifactRow[]): AgeFlowArtifact[] {
+  return rows.map((row) => {
+    const metadata: Record<string, unknown> = {};
+    for (const k of ARTIFACT_META_KEYS) {
+      const v = row[`meta_${k}`];
+      if (v !== null && v !== undefined) metadata[k] = v;
+    }
+    return {
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      thumbnail: row.thumbnail,
+      metadata: metadata as AgeFlowArtifact['metadata'],
+    };
+  });
+}
 
 async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
   const [personsResult, eventsResult, artifactsResult, reignsResult] = await Promise.all([
@@ -49,7 +88,8 @@ async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
 
     supabaseAdmin
       .from('nodes')
-      .select('id, slug, title, thumbnail, metadata')
+      // Only the keys the timeline reads — artifact metadata jsonb is large
+      .select(ARTIFACT_SELECT)
       .eq('is_deleted', false)
       .eq('is_published', true)
       .eq('node_type', 'ARTIFACT')
@@ -82,15 +122,22 @@ async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
   return buildAgeFlowData({
     persons: rawPersons as Record<string, unknown>[],
     events: (eventsResult.data ?? []) as unknown as AgeFlowEvent[],
-    artifacts: (artifactsResult.data ?? []) as unknown as AgeFlowArtifact[],
+    artifacts: toAgeFlowArtifacts((artifactsResult.data ?? []) as unknown as RawArtifactRow[]),
     reigns: (reignsResult.data ?? []) as unknown as RawReign[],
   });
 }
 
-export const getAgeFlowData = unstable_cache(loadAgeFlowData, ['age-flow-data'], {
-  revalidate: 300,
-  tags: ['age-flow'],
-});
+// sharedCache: on a DB error serve the last good data and back off instead of
+// re-running these four queries on every request (stampede while the DB is slow).
+// With nothing to serve it still throws, so callers never cache empty data.
+export const getAgeFlowData = sharedCache(
+  'age-flow-data',
+  loadAgeFlowData,
+  { revalidate: 300, tags: ['age-flow'] },
+  () => {
+    throw new Error('[age-flow] data unavailable');
+  }
+);
 
 /** Call after admin writes to persons / nodes / tags / links so age-flow and the ISR person/node pages update now, not in 5 min */
 export function revalidateAgeFlow() {
