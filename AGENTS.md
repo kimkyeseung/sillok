@@ -1,7 +1,7 @@
 # Sillok (실록) — AGENTS.md
 
 > 한국 인물 아카이브 + Reddit식 커뮤니티. 1인 개발. Next.js 14 + Supabase + Vercel.
-> 이 파일이 에이전트 공용 원본이다 (CLAUDE.md는 이 파일을 import). 상세 명세는 `Sillok_SPEC.md`.
+> 이 파일이 에이전트 공용 원본이다 (CLAUDE.md는 이 파일을 import). 제품 의도·공식·정책·로드맵은 `Sillok_SPEC.md` (필요한 섹션만). 스키마는 `db/schema.sql`, API는 `app/api/`가 원본.
 
 ---
 
