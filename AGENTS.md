@@ -19,7 +19,8 @@ npm run db:generate  # 타입 자동 생성
 **로컬 개발 주의**
 - dev 서버는 사용자가 3000번에 항상 띄워 둔다 — 에이전트가 따로 실행하지 않는다.
 - 로컬도 **운영 Supabase**를 쓴다. 마이그레이션은 `db/migrations/*.sql`을 사용자가 Supabase SQL Editor에서 실행 → 그 뒤에 의존 코드를 배포/실행. 새 컬럼을 읽는 코드는 마이그레이션 전후 모두 깨지지 않게 (`select('*')` 등).
-- DB 조회·일회성 데이터 작업은 `.env.local`의 service role 키로 node/tsx 스크립트 (Supabase MCP는 이 프로젝트에 접근 불가). 일회성 스크립트는 커밋하지 않는다.
+- DB 조회·일회성 데이터 작업은 `scripts/sb.mjs` 헬퍼로: `node --input-type=module -e "import { sb, out } from './scripts/sb.mjs'; out(await sb.from('persons').select('slug').limit(3))"` (`.env.local` service role 키). 일회성 스크립트는 커밋하지 않는다.
+- `data/`·`scripts/data/`는 `.ignore`로 검색에서 빠져 있다 (수 MB 단일 행 JSON) — 필요하면 jq/node로 직접 읽는다.
 
 **환경 변수** (`.env.local`, Vercel): `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `NEXT_PUBLIC_APP_URL` · `ANTHROPIC_API_KEY`(AI 초안) · `NEXT_PUBLIC_MAPTILER_KEY`(유물 지도, MapTiler에서 origin 제한) · `AI_API_SECRET_KEY`(외부 AI 인물 등록 API) · `OPENAI_API_KEY`(초상화 생성 스크립트)
 
@@ -45,7 +46,7 @@ components/
 ├── common/              Header, Modal, Toast, PersonAvatar, ImageLightbox
 └── person/ thread/ collection/ ranking/ search/ admin/
 lib/                     순수 로직(테스트 대상)과 서버 로더를 파일로 분리
-├── supabase-admin.ts    서버 전용 (SERVICE_ROLE_KEY) · supabase-server.ts SSR 전용
+├── supabase-admin.ts    서버 전용 (SERVICE_ROLE_KEY) · supabase-browser.ts 클라이언트 auth 전용
 ├── auth.ts              requireUser / requireActiveUser(정지 유저 차단) / requireAdmin
 ├── api-helpers.ts       apiError / apiSuccess
 ├── feed.ts · feed-data.ts            피드 로직 / 로더
@@ -60,7 +61,7 @@ db/schema.sql            전체 스키마 (44 테이블) — db/migrations/와 �
 scripts/                 데이터 적재 (heritage: fetch → translate → import → images → enrich → ranks) · meme-draft.ts (밈 초안 CLI: formats / preview / create --post)
 ```
 
-**Supabase 클라이언트:** Server Component → `supabaseAdmin`/`supabaseServer` · API Route → `supabaseAdmin` · Client Component → `fetch('/api/...')` + SWR (직접 접근 금지)
+**Supabase 클라이언트:** Server Component·API Route → `supabaseAdmin` (사이트 공용 목록은 `sharedCache`로 감싸기) · Client Component → `fetch('/api/...')` + SWR (직접 접근 금지, 로그인 세션만 `supabase-browser`)
 
 ---
 

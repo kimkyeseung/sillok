@@ -8,7 +8,7 @@
 
 ## 상수
 
-- **어드민 author_id**: `e9517e9f-511d-4b0d-a8e9-ff22a3346758` (김계승)
+- **어드민 author_id**: `ADMIN_ID` (`scripts/sb.mjs`)
 - **Supabase Storage public URL 패턴**: `{NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/threads/{path}`
 
 ## 작성 전 필수 단계
@@ -73,27 +73,18 @@
 
 ### 1단계: 스레드 INSERT
 
-```javascript
-node -e "
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const envContent = fs.readFileSync('.env.local', 'utf8');
-const env = {};
-envContent.split('\n').forEach(line => {
-  const [k, ...v] = line.split('=');
-  if (k && v.length) env[k.trim()] = v.join('=').trim();
-});
-const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-sb.from('threads').insert({
+DB 접근은 `scripts/sb.mjs` 헬퍼를 쓴다 (`.env.local` service role 키, `ADMIN_ID`, 결과 출력 `out`).
+
+```bash
+node --input-type=module -e "
+import { sb, ADMIN_ID, out } from './scripts/sb.mjs';
+out(await sb.from('threads').insert({
   person_id: '{person_id}',
-  author_id: 'e9517e9f-511d-4b0d-a8e9-ff22a3346758',
+  author_id: ADMIN_ID,
   title: '{title}',
   content: '{content}',
-  category: '{category}'  // DISCUSSION | TRIVIA | QNA | SOURCES | MEDIA
-}).select().single().then(({ data, error }) => {
-  if (error) console.error('INSERT ERROR:', error);
-  else console.log('SUCCESS:', JSON.stringify(data, null, 2));
-});
+  category: '{category}', // DISCUSSION | TRIVIA | QNA | SOURCES | MEDIA
+}).select('id').single());
 "
 ```
 

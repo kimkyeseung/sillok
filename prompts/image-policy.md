@@ -45,34 +45,26 @@ Image: "Ssireum" by Kim Hong-do, public domain via Wikimedia Commons
 
 외부 URL을 `thread_images.url`에 그대로 넣지 않는다 (원본이 바뀌거나 막히면 깨지고, 상대 서버에 부담). 받아서 `threads` 버킷에 올린 뒤 그 URL을 저장한다. jpeg/png/webp, 5MB 이하.
 
-```javascript
-node -e "
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const env = Object.fromEntries(fs.readFileSync('.env.local', 'utf8').split('\n')
-  .filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]));
-const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-const AUTHOR = 'e9517e9f-511d-4b0d-a8e9-ff22a3346758';
+```bash
+node --input-type=module -e "
+import { sb, ADMIN_ID, out } from './scripts/sb.mjs';
 const THREAD = '{thread_id}';
 const images = [
   { src: '{source_image_url}', alt: '{what is shown + any text in the image}' },
 ];
-(async () => {
-  const rows = [];
-  for (const [i, img] of images.entries()) {
-    const res = await fetch(img.src);
-    const type = res.headers.get('content-type') || '';
-    if (!res.ok || !['image/jpeg', 'image/png', 'image/webp'].includes(type)) throw new Error('bad image ' + img.src + ' ' + type);
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > 5 * 1024 * 1024) throw new Error('over 5MB ' + img.src);
-    const path = AUTHOR + '/' + THREAD + '/img-' + Date.now() + '-' + i + '.' + type.split('/')[1].replace('jpeg', 'jpg');
-    const up = await sb.storage.from('threads').upload(path, buf, { contentType: type });
-    if (up.error) throw up.error;
-    rows.push({ thread_id: THREAD, url: sb.storage.from('threads').getPublicUrl(path).data.publicUrl, alt: img.alt, sort_order: i });
-  }
-  const { error } = await sb.from('thread_images').insert(rows);
-  console.log(error ? 'IMAGE INSERT ERROR: ' + error.message : 'IMAGES OK ' + rows.length);
-})().catch((e) => console.error(e.message));
+const rows = [];
+for (const [i, img] of images.entries()) {
+  const res = await fetch(img.src);
+  const type = res.headers.get('content-type') || '';
+  if (!res.ok || !['image/jpeg', 'image/png', 'image/webp'].includes(type)) throw new Error('bad image ' + img.src + ' ' + type);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > 5 * 1024 * 1024) throw new Error('over 5MB ' + img.src);
+  const path = ADMIN_ID + '/' + THREAD + '/img-' + Date.now() + '-' + i + '.' + type.split('/')[1].replace('jpeg', 'jpg');
+  const up = await sb.storage.from('threads').upload(path, buf, { contentType: type });
+  if (up.error) throw up.error;
+  rows.push({ thread_id: THREAD, url: sb.storage.from('threads').getPublicUrl(path).data.publicUrl, alt: img.alt, sort_order: i });
+}
+out(await sb.from('thread_images').insert(rows).select('id, url'));
 "
 ```
 
