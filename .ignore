@@ -2,6 +2,4 @@
 # Bulk data: data/heritage/images.json is a single 4.7 MB line; one match floods the context.
 # Read these deliberately (jq / node) when a task needs them.
 data/
-scripts/data/
-foreign-figures-additional.json
 package-lock.json
