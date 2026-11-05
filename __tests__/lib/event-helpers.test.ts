@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-// ── YouTube ID extraction (same logic used in threads/[id] and RecentThreadsFeed) ──
+// ── YouTube ID extraction (same logic used in threads/[id]) ──
 
 function getYouTubeId(url: string): string | null {
   try {

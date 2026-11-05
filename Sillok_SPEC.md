@@ -1,2030 +1,288 @@
-# Sillok — 한국 인물·문화 아카이브 플랫폼 SPEC
+# Sillok — 제품 명세 · 설계 결정
 
-> **버전:** 2.5 (age-flow 연도 페이지 · 국보·보물 유물 · AI Drafts 반영)
-> **작성 목적:** Claude Code 기반 자동 개발을 위한 전체 명세서
-> **기술 스택:** Next.js 14 (App Router) + Supabase + Vercel
-
-### v2.4 → v2.5 변경 사항
-
-- **age-flow 연도 페이지**: `/age-flow/{year}` ("Korea in 1592") + 공유 카드 `/api/og/age-flow/{year}`. 왕 = `reigns` 테이블(어드민 `/admin/reigns`), 전쟁 = EVENT 노드(war/revolt) + `metadata.end_year`. 생존 인물 5명 미만 연도는 noindex
-- **조선 왕 별칭 검색**: `persons.aliases_en` ("King Sejong" 등)
-- **국보·보물 일괄 등록**: 국가유산청 API로 ARTIFACT 노드 ~2,800건 (`metadata.source = 'khs'`, AI 번역 초안 → 검수 전 noindex·큐레이션 제외). 유물 탭: 목록/지도(MapLibre + MapTiler), 지정·유형·시대·지역·소장처 필터, 커서 페이지네이션 (`/api/artifacts`, `/facets`, `/map`). 이미지는 미러링 없이 공공누리 1·3유형만 `node_images`에 저장
-- **AI Drafts** (`/admin/memes`, 테이블 `ai_drafts`): Claude로 워작 밈·한국 짤 영어 번역·짧은 소설 초안 생성 → 어드민 검토 후 게시하면 관리자 명의 **일반 스레드**가 됨 (밈 전용 카테고리·섹션 없음). 근대 이전 인물만 (섹션 8)
-- **스레드 이미지**: 한 장이면 원본 비율로 크게 표시. `thread_images.alt` 추가 → img alt · og:image:alt · `ImageObject.caption` (이미지 속 텍스트 검색 노출)
-- **환경 변수**: `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_MAPTILER_KEY` 추가 (섹션 14)
-
-### v2.3 → v2.4 변경 사항
-
-- **홈 = Reddit식 커뮤니티 피드**: 히어로 배너·Recent Threads 구조 → Hot/New/Top 정렬 피드 + 게시물 사이 편집 모듈 + 3단 레이아웃 (섹션 7-1)
-- **기본 정렬 자동 전환**: 최근 7일 새 스레드 5개 미만이면 Top(전체), 이상이면 Hot
-- **짧은 경로 추가**: `/b/{board}` 시대별 게시판, `/t/{topic}` 스레드 카테고리별 토픽
-- **threads 컬럼 추가**: `category`, `hot_score`(트리거 + pg_cron 15분), `top_score`(생성 컬럼). `updated_at` 트리거는 내용 컬럼 수정 시에만 동작
-- **대댓글 UI**: 댓글별 Reply, 트리 렌더링, 최대 4단계 (서버에서 부모 검증 + 깊이 제한)
-- **헤더**: `+ Create` 버튼, ⌘K/Ctrl+K 검색 단축키
-- **인물 상세 탭별 URL**: `/persons/{slug}/timeline|relations|legacy|related|gallery|threads|sources|stats`. 항목 수가 기준 미만인 탭은 숨김(404), Overview·Stats는 항상 표시 (섹션 7-3)
-- **인물 편집 콘텐츠**: `person_facts`, `person_highlights`, `person_sources`. AI 초안은 `is_ai_generated` 라벨로 즉시 공개 후 어드민 검수
-- **인물 커뮤니티 기능**: 인물별 투표, 개인 상태(Studied/Visited/Want to learn), 사실 제안, 항목별 하트·댓글
-- **가족관계도**: `person_relations.family_role` (PARENT/SPOUSE/SIBLING)
-- **영화·드라마 출연**: `person_node_links.portrayed_by` (배우명)
-- **SEO**: 스레드 `DiscussionForumPosting`(대댓글 포함), 게시판·토픽 `CollectionPage`, Breadcrumb. 빈 게시판·토픽은 noindex + sitemap 제외
-- **렌더링**: 인물 상세는 SSG+ISR → SSR(`force-dynamic`) (Supabase fetch 캐시로 인한 stale 데이터 방지)
-- **신고 버그 수정**: 클라이언트가 `THREAD` / `THREAD_REPLY` enum 값을 보내도록 수정
-
-### v2.2 → v2.3 변경 사항
-
-- **서비스 범위 확장**: 한국 인물 아카이브 → 한국 인물·문화 지식 그래프. 인물 중심성은 유지하되 음식·문화·스포츠 주제도 노드로 수록
-- **TOPIC 노드 타입 추가**: 김치, 불고기, 한복, 판소리, 한국축구, 한국야구 등 비인물 주제 지원
-- **TOPIC 분류 정책 추가**: `metadata.category`로 `food`, `culture`, `sport`, `music`, `literature`, `custom` 구분
-- **노드 간 연결 테이블 추가 예정**: `node_links`로 TOPIC ↔ EVENT/GROUP/MEDIA/ARTIFACT/TOPIC 연결 지원
-- **컬렉션 확장**: 컬렉션 아이템이 인물뿐 아니라 노드도 담을 수 있도록 스키마 확장
-- **Explore 허브 재정의**: Artifacts, Events, Media, Groups에 Topics 섹션 추가
-- **M1.5/M2 로드맵 보강**: 문화·음식·스포츠 TOPIC 데이터 모델, 어드민 입력, 초기 시드 데이터 작업 추가
-
-### v2.1 → v2.2 변경 사항
-
-- **폴더 구조 실제 반영**: 모노레포(`apps/web/`) 구조 → 플랫 구조 (`app/`, `components/`, `lib/`) 로 수정
-- **GROUP 노드 타입 추가**: 노드 4종 → 5종 (ARTIFACT, MEDIA, EVENT, GROUP). K-pop 그룹 등 현대 문화 엔티티 지원
-- **관계 타입 3종 추가**: MEMBER_OF (멤버/소속), FOUNDED (창업/창설), AFFILIATED (느슨한 연관, 양방향)
-- **Age Flow 기능 추가** (섹션 7-9): 시대 흐름 인터랙티브 타임라인 시각화. 8개 전용 컴포넌트 + useAgeFlow 훅
-- **tags 테이블 스키마 변경**: `name` 단일 → `name_ko` + `name_en` 이중 컬럼
-- **articles.tag 실제 DB 반영**: DB에 한글 태그 사용 (`기획`, `특집`, `인물탐구`, `현대`, `공지`, `안내`)
-- **좋아요/조회 대상 확장**: likes·view_logs에 `article` 타입 추가
-- **신고 대상 확장**: ReportTargetType에 `person` 추가
-- **person_requests 스키마 수정**: `name_en` 필드 미존재 → `name_ko` 필수로 수정
-- **awards 금액 단위**: `amount_usd NUMERIC` → `amount_krw INTEGER` (원화)
-- **번역 테이블 존속**: `person_translations`, `person_timeline_translations` DB에 존재 (v2.0 삭제 선언과 불일치 — 실제로는 아직 사용 중)
-- **네비게이션 전면 수정**: Home | Figures | Age Flow | Explore | Threads | Articles
-- **홈페이지 레이아웃 전면 수정**: Latest Articles + Recent Threads + Recently Added Figures 사이드바
-- **소셜 로그인 축소**: Google + Discord만 (Apple, Twitter 미구현)
-- **도메인 정리**: 기본 도메인 sillok.kr 확정
-- **어드민 페이지 대폭 확장**: Articles CRUD, Curators, Groups, Threads, Timelines 관리 추가
-- **API Routes 대폭 확장**: AI persons, article like/view, thread view, admin curators/groups/threads/timelines 등
-- **PaginatedResponse 스키마 변경**: `data` → `items` 필드명
-- **lib 파일 정리 반영**: supabase-browser.ts, fetcher.ts, hooks/, jsonld.ts, notifications.ts, person-utils.ts, upload.ts 추가
-
-### v2.0 → v2.1 변경 사항
-- URL 경로 영문화, 태그/에러메시지 영문화, 글로벌 피벗 반영, 마일스톤 재조정
-- 소셜 로그인: 카카오 제거, video_url 허용 도메인: 네이버TV → Vimeo 교체
-
-### v1.9 → v2.0 변경 사항
-- 영문화 전환: Public 페이지/API에서 `name_en` 표시, i18n locale 라우팅 제거, 영문 단일 사이트
-- SEO 구현: robots.txt, sitemap.xml, JSON-LD, OG/Twitter 메타태그
-
-### v1.8 → v1.9 변경 사항
-- NestJS 별도 서버 제거 → Next.js App Router API Routes 통합
-- Railway 제거 → Vercel 단일 배포 ($0)
+> 한국 인물 중심 지식 아카이브 + Reddit식 커뮤니티. sillok.kr 운영 중. Next.js 14 (App Router) + Supabase + Vercel, 1인 개발.
+>
+> **이 문서의 범위:** 코드만 봐서는 알 수 없는 것 — 제품 의도, 규칙, 공식, 정책, 로드맵.
+> 코드에서 바로 읽히는 것은 여기 적지 않는다 (적으면 낡는다):
+>
+> | 알고 싶은 것 | 원본 |
+> |---|---|
+> | 작업 규칙 · 아키텍처 · 금지 사항 · 핵심 결정 | `AGENTS.md` |
+> | 테이블 · 컬럼 · 인덱스 · 트리거 | `db/schema.sql` (+ `db/migrations/`) |
+> | API 목록 | `app/api/**/route.ts` (어드민 화면 `/admin/api-docs`) |
+> | 페이지 · 라우트 | `app/` 디렉터리 |
+> | 환경 변수 | `AGENTS.md` Commands 절, `.env.local.example` |
+>
+> 변경 이력은 `git log -- Sillok_SPEC.md`. 섹션 단위로 필요한 곳만 읽는다.
 
 ---
 
-## 목차
+## 1. 서비스 컨셉
 
-1. [프로젝트 개요](#1-프로젝트-개요)
-2. [기술 스택 및 폴더 구조](#2-기술-스택-및-폴더-구조)
-3. [공통 규칙](#3-공통-규칙)
-4. [데이터베이스 스키마](#4-데이터베이스-스키마)
-5. [API 명세](#5-api-명세)
-6. [페이지 및 라우트 구조](#6-페이지-및-라우트-구조)
-7. [핵심 기능 상세 명세](#7-핵심-기능-상세-명세)
-8. [어드민 페이지](#8-어드민-페이지)
-9. [인증 및 권한](#9-인증-및-권한)
-10. [검색 및 필터](#10-검색-및-필터)
-11. [보안](#11-보안)
-12. [SEO 전략](#12-seo-전략)
-13. [마일스톤 로드맵](#13-마일스톤-로드맵)
-14. [환경 변수](#14-환경-변수)
-15. [비즈니스 모델](#15-비즈니스-모델)
+BoardGameGeek(BGG) 구조를 벤치마크해, **한국의 이름 있는 인물**을 핵심 노드로 두고 유물·K-콘텐츠·사건·그룹이 연결되는 그래프형 아카이브. 영어 사용자 대상.
 
----
+- 단군 시대부터 현대까지 수록. 논란 인물(친일파, 독재자 등)도 포함하되 **기본 정보만** (7-6)
+- 운영자가 뼈대(인물·노드·편집 콘텐츠)를 관리하고, 유저가 커뮤니티 콘텐츠(스레드·댓글·컬렉션)를 쌓는다
 
-## 1. 프로젝트 개요
-
-### 서비스 컨셉
-BoardGameGeek(BGG)의 구조를 벤치마크하여, **한국의 이름있는 인물**을 핵심 노드로 삼고 유물·K-콘텐츠·사건·그룹·음식·문화·스포츠 주제가 연결되는 그래프형 한국 지식 아카이브 플랫폼.
-
-- 단군 시대부터 현재 대한민국의 살아있는 인물까지 수록
-- 김치, 불고기, 한복, 판소리, 한국축구, 한국야구처럼 인물만으로 설명되지 않는 한국 문화 주제도 수록
-- 논란 있는 인물(친일파, 독재자 등)도 포함하되 **기본 정보만 제공**
-- 운영진이 기본 뼈대를 관리하고, 유저가 커뮤니티 콘텐츠를 쌓는 구조
-- **운영 도메인**: sillok.kr
-
-### 노드 타입 (6종)
+### 노드 타입
 
 | 타입 | 설명 | 인터랙션 |
 |------|------|----------|
-| `PERSON` | 인물 (핵심 노드) | 스레드 (Reddit식) |
-| `ARTIFACT` | 유물/문화재 | 댓글만 (독립) |
-| `MEDIA` | K-영화/드라마/도서/회화 | 댓글만 (독립) |
-| `EVENT` | 역사적 사건/업적 | 댓글만 (독립) |
-| `GROUP` | K-pop 그룹/현대 문화 엔티티 | 댓글만 (독립) |
-| `TOPIC` | 음식·문화·스포츠·개념 주제 (김치, 불고기, 한국축구 등) | 댓글만 (독립) |
+| `PERSON` (`persons` 테이블) | 인물 — 핵심 노드 | 스레드 (Reddit식) |
+| `ARTIFACT` | 유물·문화재 (국보·보물 일괄 등록 포함) | 노드 댓글 |
+| `MEDIA` | 영화·드라마·도서·회화 | 노드 댓글 |
+| `EVENT` | 사건·전쟁·업적 | 노드 댓글 |
+| `GROUP` | K-pop 그룹 등 현대 문화 엔티티 | 노드 댓글 |
 
-#### TOPIC 설계 원칙
-
-- `TOPIC`은 인물 중심 아카이브를 보완하는 지식 노드이며, 인물보다 상위 개념이 아님
-- `FOOD`, `SPORT`, `CULTURE`를 별도 `node_type`으로 늘리지 않고 `metadata.category`로 분류
-- 대표 예시:
-  - food: `kimchi`, `bulgogi`, `bibimbap`
-  - culture: `hanbok`, `pansori`, `hangul`, `korean-wave`
-  - sport: `korean-football`, `korean-baseball`, `taekwondo`
-- TOPIC 상세 페이지는 관련 인물, 관련 사건, 관련 그룹/미디어, 관련 토론을 함께 보여줌
+`TOPIC`(음식·문화·스포츠 주제)은 **계획만 있고 미구현** — DB `node_type` CHECK에 없다. 로드맵 13 참고.
 
 ---
 
-## 2. 기술 스택 및 폴더 구조
+## 2. 공통 규칙
 
-### 스택
+### 2-1. Slug
+- 영문 소문자 + 하이픈 (`sejong-daewang`, `hunminjeongeum`). 한글 URL 쓰지 않음
+- 로마자 표기는 국립국어원 표준. 동명이인은 생년을 붙임 (`kim-cheol-su-1945`). DB unique 제약
 
-```
-Frontend   Next.js 14.2.35 (App Router) + Tailwind CSS 3.4
-API        Next.js API Routes (app/api/**/route.ts)
-DB         Supabase (PostgreSQL + Auth + Storage + pg_cron)
-검색       PostgreSQL pg_trgm 확장
-시각화     Age Flow (커스텀 시대 흐름 타임라인)
-배포       Vercel (FE + API 통합) — $0
-CSR 상태   SWR 2.2
-검증       zod 3.24
-마크다운   react-markdown 10 + remark-gfm 4
-이미지     react-easy-crop (크롭), sharp (최적화)
-테스트     vitest 4 + @testing-library/react 16
-분석       @vercel/analytics
-```
+### 2-2. 목록 = 커서 페이지네이션
+- 요청 `limit`(기본 20, 최대 100) + `cursor`. 응답 `{ items, has_next, next_cursor }` (`data` 아님)
+- `limit + 1`개 조회 → 넘치면 `has_next`. 정렬 키가 겹칠 수 있으면 `(키, id)` 복합 커서
+- offset 페이지네이션 금지 (중복·누락)
 
-### 인프라 구성
+### 2-3. 응답 형식
+`{ success: true, data }` / `{ success: false, error: { code, message, details? } }` — `lib/api-helpers.ts`의 `apiSuccess` / `apiError`. 공개 API 메시지는 영어, 어드민 API는 한국어.
 
-```
-┌──────────────────────────────────────────────────────┐
-│                      Vercel                          │
-│  Next.js App Router                                  │
-│  ├── app/(public)/         SSR + SSG + CSR 페이지     │
-│  ├── app/(auth)/           로그인 페이지              │
-│  ├── app/api/**            API Routes (런타임 핸들러) │
-│  └── app/admin/            어드민 SSR 페이지          │
-└────────────────────────┬─────────────────────────────┘
-                         │ Supabase JS SDK
-┌────────────────────────▼─────────────────────────────┐
-│                    Supabase                          │
-│  PostgreSQL  Auth  Storage  pg_cron  Realtime        │
-└──────────────────────────────────────────────────────┘
-```
+### 2-4. Rate limit (`lib/rate-limit.ts`, in-memory)
 
-### 폴더 구조 (플랫 — 모노레포 아님)
-
-```
-sillok/
-├── app/
-│   ├── (public)/
-│   │   ├── page.tsx              # 메인 홈 (SSR)
-│   │   ├── about/page.tsx        # About 페이지
-│   │   ├── age-flow/
-│   │   │   ├── layout.tsx        # Age Flow 전용 레이아웃
-│   │   │   └── page.tsx          # Age Flow 시각화 (CSR)
-│   │   ├── articles/
-│   │   │   ├── page.tsx          # 아티클 목록
-│   │   │   └── [slug]/page.tsx   # 아티클 상세
-│   │   ├── artifacts/page.tsx    # 유물 목록
-│   │   ├── collections/
-│   │   │   ├── page.tsx          # 컬렉션 목록
-│   │   │   └── [id]/page.tsx     # 컬렉션 상세
-│   │   ├── nodes/
-│   │   │   ├── page.tsx          # Explore 허브 (전체 노드 타입별)
-│   │   │   └── [slug]/page.tsx   # 노드 상세
-│   │   ├── notifications/page.tsx # 알림 목록
-│   │   ├── persons/
-│   │   │   ├── page.tsx          # 인물 목록 (Figures)
-│   │   │   └── [slug]/page.tsx   # 인물 상세 (SSG + ISR)
-│   │   ├── privacy/page.tsx      # 개인정보처리방침
-│   │   ├── profile/page.tsx      # 내 프로필
-│   │   ├── search/page.tsx       # 통합 검색
-│   │   ├── terms/page.tsx        # 이용약관
-│   │   ├── threads/
-│   │   │   ├── page.tsx          # 스레드 목록
-│   │   │   ├── new/page.tsx      # 스레드 작성
-│   │   │   └── [id]/page.tsx     # 스레드 상세
-│   │   └── layout.tsx            # Public 공통 레이아웃
-│   ├── (auth)/
-│   │   ├── login/page.tsx        # 로그인
-│   │   └── layout.tsx
-│   ├── admin/
-│   │   ├── page.tsx              # 대시보드
-│   │   ├── articles/
-│   │   │   ├── page.tsx          # 아티클 관리
-│   │   │   ├── new/page.tsx      # 아티클 작성
-│   │   │   └── [slug]/edit/page.tsx # 아티클 수정
-│   │   ├── curators/page.tsx     # 큐레이터 관리
-│   │   ├── groups/page.tsx       # 그룹 관리
-│   │   ├── members/page.tsx      # 회원 관리
-│   │   ├── nodes/page.tsx        # 노드 관리
-│   │   ├── person-requests/page.tsx # 인물 추가 요청 큐
-│   │   ├── persons/
-│   │   │   ├── page.tsx          # 인물 관리
-│   │   │   ├── new/page.tsx      # 인물 등록
-│   │   │   └── [slug]/edit/page.tsx # 인물 수정
-│   │   ├── relations/page.tsx    # 관계 제안 큐
-│   │   ├── reports/page.tsx      # 신고 처리
-│   │   ├── tags/page.tsx         # 태그 관리
-│   │   ├── threads/page.tsx      # 스레드 관리 (어드민)
-│   │   ├── timelines/page.tsx    # 타임라인 관리
-│   │   ├── api-docs/page.tsx     # API 문서
-│   │   └── layout.tsx
-│   ├── api/                      # API Routes → 섹션 5 참조
-│   ├── layout.tsx                # Root 레이아웃
-│   ├── error.tsx
-│   ├── not-found.tsx
-│   ├── robots.ts
-│   └── sitemap.ts
-├── components/
-│   ├── admin/                    # AdminForm 컴포넌트
-│   │   ├── ArticleForm.tsx
-│   │   ├── BulkUploadForm.tsx
-│   │   ├── ImageCropModal.tsx
-│   │   └── PersonForm.tsx
-│   ├── age-flow/                 # Age Flow 전용 (8개 + 훅)
-│   │   ├── ArtifactTimeline.tsx  # 유물 타임라인 오버레이
-│   │   ├── DensityBar.tsx        # 인물 밀도 시각화 바
-│   │   ├── EraFilter.tsx         # 시대 필터
-│   │   ├── EventMarker.tsx       # 사건 마커 dot
-│   │   ├── PersonCard.tsx        # 타임라인 인물 카드
-│   │   ├── PersonHoverPanel.tsx  # 인물 호버 상세 패널
-│   │   ├── RelationLines.tsx     # 관계 연결선
-│   │   ├── TimelinePanel.tsx     # 사이드바 연도별 패널
-│   │   └── useAgeFlow.ts         # 핵심 훅 (데이터 로드, 스크롤 로직)
-│   ├── article/
-│   │   └── ...
-│   ├── auth/
-│   │   └── ...
-│   ├── collection/
-│   │   └── ...
-│   ├── common/
-│   │   ├── Footer.tsx
-│   │   ├── Header.tsx            # 상단 네비게이션 (NAV_ITEMS 6개)
-│   │   ├── ImageUpload.tsx
-│   │   ├── Modal.tsx
-│   │   ├── Pagination.tsx
-│   │   ├── PersonAvatar.tsx      # FIELD 태그별 배경색·아이콘 분기
-│   │   └── Toast.tsx
-│   ├── nodes/
-│   │   └── ExploreNodesClient.tsx # Explore 허브 클라이언트
-│   ├── notification/
-│   ├── person/
-│   │   ├── FollowButton.tsx
-│   │   ├── VoteTodayButton.tsx
-│   │   ├── RelationSuggestForm.tsx
-│   │   ├── PersonRequestButton.tsx
-│   │   └── PersonPicker.tsx      # 인물 멀티셀렉트 자동완성
-│   ├── profile/
-│   ├── ranking/
-│   ├── search/
-│   └── thread/
-│       ├── LikeButton.tsx
-│       ├── NodeCommentForm.tsx
-│       ├── NodeInteractions.tsx
-│       ├── RecentThreadsFeed.tsx
-│       ├── ReplyForm.tsx
-│       ├── ReportButton.tsx
-│       ├── ThreadForm.tsx
-│       ├── ThreadInteractions.tsx
-│       └── ViewLogger.tsx
-├── lib/
-│   ├── supabase-admin.ts         # 서버 전용 (SERVICE_ROLE_KEY)
-│   ├── supabase-server.ts        # SSR 서버 컴포넌트 전용
-│   ├── supabase-browser.ts       # 클라이언트 전용
-│   ├── auth.ts                   # requireUser / requireAdmin
-│   ├── api-helpers.ts            # apiError / apiSuccess
-│   ├── fetcher.ts                # SWR용 fetcher
-│   ├── hooks/
-│   │   └── use-auth.ts           # 인증 컨텍스트 훅
-│   ├── jsonld.ts                 # JSON-LD 구조화 데이터
-│   ├── notifications.ts          # 알림 생성 헬퍼
-│   ├── person-utils.ts           # 인물 유틸 (getPrimaryFieldTag 등)
-│   ├── rate-limit.ts             # Rate limit 헬퍼
-│   ├── types.ts                  # 공유 타입 (NodeType, RelationType 등)
-│   └── upload.ts                 # 파일 업로드 유틸
-├── db/
-│   └── schema.sql                # 전체 DB 스키마 (현행 29개 + v2.3 node_links 예정)
-├── public/
-│   └── logo.svg
-└── package.json
-```
-
-**Supabase 클라이언트 사용 규칙:**
-- SSG/Server Component → `supabaseAdmin` 또는 `supabaseServer`
-- API Route (인증/쓰기) → `supabaseAdmin`
-- Client Component → `fetch('/api/...')` + SWR (직접 Supabase 접근 금지)
-- 클라이언트 Auth 상태 → `supabase-browser.ts` + `use-auth.ts` 훅
-
----
-
-## 3. 공통 규칙
-
-### 3-1. Slug 전략
-
-**확정 정책: 영문 slug 사용 (한글 URL 사용 안 함)**
-
-```typescript
-// 예시
-// ✅ /persons/sejong-daewang
-// ✅ /nodes/hunminjeongeum
-// ❌ /인물/세종대왕
-
-// slug 생성 규칙
-// 1. 이름 한글 → 로마자 변환 (romanization: 국립국어원 표준)
-// 2. 소문자 + 하이픈 구분
-// 3. 동명이인: 뒤에 생년 추가 (ex: kim-cheol-su-1945)
-// 4. DB unique 제약으로 중복 방지
-```
-
-### 3-2. Cursor 기반 페이지네이션
-
-**확정 정책: 모든 목록 API는 Cursor 방식 사용**
-
-```typescript
-// 요청
-interface CursorPaginationQuery {
-  limit: number;    // 기본값 20, 최대 100
-  cursor?: string;  // 마지막 아이템의 created_at ISO 문자열 (없으면 첫 페이지)
-}
-
-// 응답
-interface PaginatedResponse<T> {
-  items: T[];           // ※ 'data'가 아닌 'items' 사용
-  has_next: boolean;
-  next_cursor: string | null;
-}
-
-// SQL 패턴
-// WHERE created_at < :cursor ORDER BY created_at DESC LIMIT :limit + 1
-// limit+1 조회 후 has_next 판단, 실제 반환은 limit개
-```
-
-### 3-3. 공통 에러 응답 포맷
-
-```typescript
-// 모든 에러 응답은 아래 형식으로 통일 (API Route 공통 헬퍼 함수로 처리)
-interface ApiErrorResponse {
-  success: false;
-  error: {
-    code: string;       // ex: "PERSON_NOT_FOUND", "UNAUTHORIZED"
-    message: string;    // Human-readable message (English)
-    details?: unknown;  // 추가 정보 (validation 에러 배열 등)
-  };
-}
-
-// 성공 응답
-interface ApiSuccessResponse<T> {
-  success: true;
-  data: T;
-}
-
-type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
-```
-
-### 3-4. API 호출 전략
-
-```typescript
-// ┌──────────────────────────────────────────────────────────┐
-// │ 빌드 타임 SSG      → supabaseAdmin 직접 쿼리              │
-// │ Server Component   → supabaseServer 직접 쿼리 (SSR)       │
-// │ API Route          → supabaseAdmin (인증/쓰기 요청 처리)   │
-// │ Client Component   → fetch('/api/...') + SWR             │
-// │ Client Auth        → supabase-browser + use-auth 훅       │
-// └──────────────────────────────────────────────────────────┘
-
-// lib/api-helpers.ts
-export function apiError(code: string, message: string, status = 400) {
-  return Response.json({ success: false, error: { code, message } }, { status });
-}
-export function apiSuccess<T>(data: T) {
-  return Response.json({ success: true, data });
-}
-```
-
-### 3-5. Rate Limiting
-
-```typescript
-// lib/rate-limit.ts — in-memory 기반 (MVP)
-기본 (전체):         100 req / 1분 / IP
-검색 API:            30 req / 1분 / IP
-인물 추가 요청:      5 req / 1시간 / USER
-관계 제안:           10 req / 1시간 / USER
-신고:                10 req / 1시간 / USER
-스레드 작성:         10 req / 1시간 / USER
-댓글 작성:           30 req / 1시간 / USER
-어드민 API:          rate limit 제외
-```
-
-### 3-6. Soft Delete 정책
-
-**확정 정책: 모든 테이블에 `is_deleted` 통일**
-
-```sql
--- 실제 DELETE는 어드민이 명시적으로 hard delete 요청할 때만 허용
--- 기본 조회 쿼리는 항상 WHERE is_deleted = FALSE 포함
-```
-
-### 3-7. 영문화 전략
-
-#### 기본 방향 — 영문 단일 사이트
-- **사이트 기본 언어**: 영어 (locale 라우팅 없음, 단일 URL 구조)
-- **관리자 화면**: 한국어 (`/admin`, 관리자 API 오류 메시지) — 운영자 전용
-- **정적 콘텐츠**: `persons` 테이블에 직접 영문 저장 (`name_en`, `summary`, `birth_place`)
-- **커뮤니티(스레드/댓글)**: 다국어 혼용 허용, 별도 번역 없음
-- **검색**: `name_en` + `name_ko` + `name_hanja` 동시 검색 지원
-- **번역 테이블**: `person_translations`, `node_translations`, `person_timeline_translations` DB에 존재 (향후 다국어 확장용)
-- **어드민 페이지**: 한국어 인터페이스 유지
-
----
-
-## 4. 데이터베이스 스키마
-
-> Supabase(PostgreSQL) 기준. 현행 29개 테이블 + v2.3 `node_links` 추가 예정. 모든 테이블에 `created_at`, `updated_at` 포함.
-
-### 4-1. 인물 (persons)
-
-```sql
-CREATE TABLE persons (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug             TEXT UNIQUE NOT NULL,
-  name_ko          TEXT NOT NULL,
-  name_hanja       TEXT,
-  name_en          TEXT,
-  birth_year       INTEGER,
-  birth_date       TEXT,                        -- MM-DD
-  death_year       INTEGER,
-  death_date       TEXT,                        -- MM-DD
-  birth_place      TEXT,
-  summary          TEXT,
-  thumbnail        TEXT,                        -- Supabase Storage URL
-  is_controversial BOOLEAN DEFAULT FALSE,
-  is_alive         BOOLEAN DEFAULT FALSE,
-  is_published     BOOLEAN DEFAULT FALSE,
-  is_deleted       BOOLEAN DEFAULT FALSE,
-  view_count       INTEGER DEFAULT 0,
-  follow_count     INTEGER DEFAULT 0,
-  created_at       TIMESTAMPTZ DEFAULT NOW(),
-  updated_at       TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX persons_name_ko_trgm    ON persons USING gin(name_ko gin_trgm_ops);
-CREATE INDEX persons_name_hanja_trgm ON persons USING gin(name_hanja gin_trgm_ops);
-CREATE INDEX persons_birth_year_idx  ON persons (birth_year);
-CREATE INDEX persons_is_published_idx ON persons (is_published) WHERE is_deleted = FALSE;
-CREATE INDEX persons_birth_date_idx  ON persons (birth_date);
-CREATE INDEX persons_death_date_idx  ON persons (death_date);
-```
-
-### 4-2. 태그 (tags / person_tags)
-
-```sql
-CREATE TABLE tags (
-  id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name_ko  TEXT UNIQUE NOT NULL,              -- 한글 태그명 (ex: 왕, 장군)
-  name_en  TEXT,                              -- 영문 태그명 (ex: king, general)
-  type     TEXT NOT NULL CHECK (type IN ('ERA', 'FIELD', 'CUSTOM'))
-  -- ERA:   고대 | 삼국 | 고려 | 조선 | 근현대
-  -- FIELD: 왕 | 장군 | 예술가 | 독립운동가 | 학자
-  --        정치인 | 스포츠 | 문화/예능 | 기업인 | 종교인
-);
-
-CREATE TABLE person_tags (
-  person_id UUID REFERENCES persons(id) ON DELETE CASCADE,
-  tag_id    UUID REFERENCES tags(id) ON DELETE CASCADE,
-  PRIMARY KEY (person_id, tag_id)
-);
-```
-
-### 4-3. 노드 (nodes)
-
-```sql
-CREATE TABLE nodes (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug         TEXT UNIQUE NOT NULL,
-  node_type    TEXT NOT NULL CHECK (node_type IN ('ARTIFACT', 'MEDIA', 'EVENT', 'GROUP', 'TOPIC')),
-  title        TEXT NOT NULL,
-  description  TEXT,
-  thumbnail    TEXT,
-  metadata     JSONB,
-  -- ARTIFACT: { "designation": "국보 제70호", "location": "국립중앙박물관" }
-  -- MEDIA:    { "year": 2023, "genre": "드라마", "platform": "Netflix" }
-  -- EVENT:    { "start_year": 1919, "end_year": 1919, "location": "전국" }
-  -- GROUP:    { "members": [...], "debut_year": 2016, "genre": "K-pop" }
-  -- TOPIC:    { "category": "food|culture|sport|music|literature|custom",
-  --             "origin_period": "Joseon", "aliases": ["Kimchi", "Gimchi"] }
-  is_published BOOLEAN DEFAULT FALSE,
-  is_deleted   BOOLEAN DEFAULT FALSE,
-  view_count   INTEGER DEFAULT 0,
-  follow_count INTEGER DEFAULT 0,
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### 4-4. 인물-노드 연결 (person_node_links)
-
-```sql
-CREATE TABLE person_node_links (
-  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  person_id UUID REFERENCES persons(id) ON DELETE CASCADE,
-  node_id   UUID REFERENCES nodes(id) ON DELETE CASCADE,
-  link_type TEXT,
-  portrayed_by TEXT,            -- MEDIA 연결: 해당 인물을 연기한 배우 (Portrayals 섹션)
-  UNIQUE (person_id, node_id)
-);
-```
-
-`link_type` 권장값:
-
-| 값 | 의미 | 예시 |
-|----|------|------|
-| `ASSOCIATED_WITH` | 느슨한 관련 | 손흥민 ↔ 한국축구 |
-| `REPRESENTS` | 대표 인물/상징 | 박지성 ↔ 한국축구 |
-| `POPULARIZED` | 대중화 기여 | 현대 셰프/연구자 ↔ 김치 |
-| `CREATED_BY` | 창작/창설 | 창작자 ↔ 미디어/그룹 |
-| `PARTICIPATED_IN` | 사건 참여 | 선수/감독 ↔ 2002 FIFA World Cup |
-| `FEATURED_IN` | 작품/미디어 등장 | 인물 ↔ 영화/드라마 |
-
-### 4-4-1. 노드 간 연결 (node_links)
-
-> v2.3 추가 예정. TOPIC 확장 이후 노드끼리의 관계를 표현하기 위한 테이블.
-
-```sql
-CREATE TABLE node_links (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  from_node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-  to_node_id   UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-  link_type    TEXT NOT NULL CHECK (link_type IN (
-    'RELATED_TO',      -- 느슨한 관련 (양방향)
-    'PART_OF',         -- 포함 관계 (단방향)
-    'ORIGINATED_IN',   -- 기원/발생 배경 (단방향)
-    'INFLUENCED_BY',   -- 영향 관계 (단방향)
-    'REPRESENTED_BY',  -- 대표 사건/미디어/그룹 (단방향)
-    'ASSOCIATED_WITH'  -- 운영진 판단의 일반 연관 (양방향)
-  )),
-  description TEXT,
-  source_url  TEXT,
-  is_approved BOOLEAN DEFAULT TRUE,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (from_node_id, to_node_id, link_type)
-);
-```
-
-노드 간 연결 예시:
-
-| from | link_type | to |
-|------|-----------|----|
-| `kimchi` | `PART_OF` | `korean-cuisine` |
-| `bulgogi` | `PART_OF` | `korean-cuisine` |
-| `korean-football` | `REPRESENTED_BY` | `2002-fifa-world-cup` |
-| `korean-baseball` | `REPRESENTED_BY` | `kbo-league` |
-| `hanbok` | `ASSOCIATED_WITH` | `joseon` |
-
-### 4-5. 인물 간 관계 (person_relations)
-
-```sql
-CREATE TYPE relation_type AS ENUM (
-  'FAMILY',        -- 가족/혈연 (양방향)
-  'TEACHER',       -- 스승/제자 (단방향: from=스승, to=제자)
-  'ALLY',          -- 협력자/동지 (양방향)
-  'RIVAL',         -- 대립/적대 (양방향)
-  'LORD_VASSAL',   -- 군신 관계 (단방향: from=왕, to=신하)
-  'INFLUENCE',     -- 영향 (단방향: from=영향을 준 사람, to=받은 사람)
-  'MEMBER_OF',     -- 멤버/소속 (단방향: from=멤버, to=그룹 대표 인물)
-  'FOUNDED',       -- 창업/창설 (단방향: from=창업자, to=조직 대표 인물)
-  'AFFILIATED'     -- 느슨한 연관 (양방향: 고문, 파트너 등)
-);
-
-CREATE TABLE person_relations (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  from_person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  to_person_id   UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  relation_type  relation_type NOT NULL,
-  -- FAMILY 전용: PARENT(from이 to의 부모) / SPOUSE / SIBLING, NULL = 기타 친족 (가족관계도에 사용)
-  family_role    TEXT CHECK (family_role IN ('PARENT', 'SPOUSE', 'SIBLING')),
-  description    TEXT,
-  source_url     TEXT,
-  is_approved    BOOLEAN DEFAULT FALSE,
-  suggested_by   UUID REFERENCES auth.users(id),
-  approved_by    UUID REFERENCES auth.users(id),
-  created_at     TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (from_person_id, to_person_id, relation_type)
-);
-
--- 양방향 관계 처리 규칙
--- FAMILY, ALLY, RIVAL, AFFILIATED: 단방향으로 1건만 저장, 쿼리 시 OR 조건 사용
--- TEACHER, LORD_VASSAL, INFLUENCE, MEMBER_OF, FOUNDED: 단방향 저장, from→to 방향이 의미를 가짐
-
--- 양방향 포함 헬퍼 함수
-CREATE OR REPLACE FUNCTION get_person_relations(p_id UUID)
-RETURNS TABLE (
-  relation_id     UUID,
-  other_person_id UUID,
-  rel_type        relation_type,
-  direction       TEXT,
-  rel_description TEXT
-) AS $$
-  SELECT id, to_person_id, relation_type,
-    CASE WHEN relation_type IN ('FAMILY','ALLY','RIVAL','AFFILIATED') THEN 'both' ELSE 'outgoing' END,
-    description
-  FROM person_relations
-  WHERE from_person_id = p_id AND is_approved = TRUE
-  UNION ALL
-  SELECT id, from_person_id, relation_type,
-    CASE WHEN relation_type IN ('FAMILY','ALLY','RIVAL','AFFILIATED') THEN 'both' ELSE 'incoming' END,
-    description
-  FROM person_relations
-  WHERE to_person_id = p_id AND is_approved = TRUE
-    AND relation_type NOT IN ('FAMILY','ALLY','RIVAL','AFFILIATED')
-$$ LANGUAGE sql;
-```
-
-### 4-6. 스레드 (threads)
-
-```sql
-CREATE TABLE threads (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  person_id   UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  author_id   UUID REFERENCES profiles(id),
-  title       TEXT NOT NULL,
-  content     TEXT NOT NULL,
-  video_url   TEXT,                    -- YouTube/Vimeo URL (선택)
-  category    TEXT NOT NULL DEFAULT 'DISCUSSION'
-              CHECK (category IN ('DISCUSSION', 'TRIVIA', 'QNA', 'SOURCES', 'MEDIA')),
-  is_pinned   BOOLEAN DEFAULT FALSE,
-  is_deleted  BOOLEAN DEFAULT FALSE,
-  view_count  INTEGER DEFAULT 0,
-  reply_count INTEGER DEFAULT 0,       -- 트리거로 동기화
-  like_count  INTEGER DEFAULT 0,       -- 트리거로 동기화
-  hot_score   DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 트리거 + pg_cron 15분 갱신
-  top_score   INTEGER GENERATED ALWAYS AS (COALESCE(like_count, 0) + COALESCE(reply_count, 0)) STORED,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW()  -- 내용 컬럼 수정 시에만 갱신
-);
-```
-
-- **category ↔ 토픽 URL**: DISCUSSION=`/t/discussion`, TRIVIA=`/t/trivia`, QNA=`/t/qna`, SOURCES=`/t/sources`, MEDIA=`/t/film-tv`
-- **hot_score** = `(1 + replies × 0.5 + likes) / (age_days + 2)^1.5`, 소수점 12자리 반올림. PostgREST가 float를 15자리로 직렬화하므로 반올림하지 않으면 피드 커서 경계 행이 다음 페이지에 중복됨
-- **피드 인덱스**: `(hot_score DESC, id DESC)`, `(top_score DESC, id DESC)`, `(created_at DESC, id DESC)` — 모두 `WHERE is_deleted = FALSE`
-- **thread_persons**: 스레드 ↔ 여러 인물 연결 (주 인물 `is_primary`)
-
-### 4-7. 스레드 댓글 (thread_replies)
-
-```sql
-CREATE TABLE thread_replies (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  thread_id  UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
-  parent_id  UUID REFERENCES thread_replies(id) ON DELETE SET NULL,
-  author_id  UUID REFERENCES profiles(id),
-  content    TEXT NOT NULL,
-  depth      INTEGER NOT NULL DEFAULT 0,  -- 트리거로 자동 계산
-  like_count INTEGER DEFAULT 0,
-  is_deleted BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-- **대댓글 규칙** (API): `parent_id`는 같은 스레드의 미삭제 댓글이어야 함 (아니면 404). 부모 depth가 4 이상이면 부모의 부모에 붙여 최대 4단계 유지
-- **표시**: `buildReplyTree` (`lib/feed.ts`) — 부모 아래 오래된 순, 부모가 삭제된 댓글은 최상위로
-
-### 4-8. 스레드 이미지 (thread_images)
-
-```sql
-CREATE TABLE thread_images (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  thread_id  UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
-  url        TEXT NOT NULL,
-  alt        TEXT,             -- 이미지 설명/이미지 속 텍스트 (img alt, ImageObject.caption)
-  sort_order SMALLINT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT max_images_per_thread CHECK (sort_order BETWEEN 0 AND 2)
-);
--- 스레드당 최대 3장, 댓글(replies)에는 이미지 첨부 없음
-```
-
-### 4-9. 노드 댓글 (node_comments)
-
-```sql
-CREATE TABLE node_comments (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  node_id    UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-  author_id  UUID REFERENCES profiles(id),
-  content    TEXT NOT NULL,
-  like_count INTEGER DEFAULT 0,
-  is_deleted BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### 4-10. 조회 로그 (view_logs)
-
-```sql
-CREATE TABLE view_logs (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  target_type TEXT NOT NULL CHECK (target_type IN ('PERSON', 'NODE', 'THREAD', 'ARTICLE')),
-  target_id   UUID NOT NULL,
-  viewer_ip   TEXT,
-  viewed_at   TIMESTAMPTZ DEFAULT NOW()
-);
--- 배치 집계 (5분 간격 cron) → persons/nodes/threads/articles의 view_count 갱신
-```
-
-### 4-11. 인물 타임라인 (person_timeline)
-
-```sql
-CREATE TABLE person_timeline (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  person_id   UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  year        INTEGER NOT NULL,
-  month       INTEGER CHECK (month BETWEEN 1 AND 12),
-  title       TEXT NOT NULL,
-  description TEXT,
-  sort_order  INTEGER DEFAULT 0
-);
-```
-
-### 4-12. 인물 추가 요청 (person_requests)
-
-```sql
-CREATE TABLE person_requests (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  requester_id    UUID REFERENCES profiles(id),
-  name_ko         TEXT NOT NULL,               -- 한글 이름 (필수)
-  birth_year      INTEGER,
-  death_year      INTEGER,
-  reason          TEXT NOT NULL,
-  source_url      TEXT NOT NULL,
-  status          TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
-  admin_note      TEXT,
-  duplicate_count INTEGER DEFAULT 1,
-  created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### 4-13. 신고 (reports)
-
-```sql
-CREATE TABLE reports (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  reporter_id UUID REFERENCES auth.users(id),
-  target_type TEXT NOT NULL CHECK (target_type IN ('THREAD', 'THREAD_REPLY', 'NODE_COMMENT')),
-  target_id   UUID NOT NULL,
-  reason      TEXT NOT NULL,
-  status      TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'RESOLVED', 'DISMISSED')),
-  resolved_by UUID REFERENCES auth.users(id),
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (reporter_id, target_type, target_id)
-);
-```
-
-> **Note:** `lib/types.ts`의 `ReportTargetType`은 `'thread' | 'reply' | 'node_comment' | 'person'` 으로 person 타입도 포함.
-
-### 4-14. 컬렉션 (collections / collection_items)
-
-```sql
-CREATE TABLE collections (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID REFERENCES profiles(id),
-  title       TEXT NOT NULL,
-  description TEXT,
-  is_public   BOOLEAN DEFAULT TRUE,
-  item_count  INTEGER DEFAULT 0,      -- 트리거로 관리
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE collection_items (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  collection_id UUID REFERENCES collections(id) ON DELETE CASCADE,
-  person_id     UUID REFERENCES persons(id) ON DELETE CASCADE,
-  node_id       UUID REFERENCES nodes(id) ON DELETE CASCADE,
-  added_at      TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (
-    (person_id IS NOT NULL AND node_id IS NULL)
-    OR (person_id IS NULL AND node_id IS NOT NULL)
-  ),
-  UNIQUE (collection_id, person_id),
-  UNIQUE (collection_id, node_id)
-);
-```
-
-컬렉션은 인물 중심 큐레이션을 기본으로 하되, TOPIC 확장 이후에는 노드도 함께 담을 수 있다.
-예: `Korean Cuisine Essentials` 컬렉션에 김치·불고기·비빔밥 TOPIC과 관련 인물/사건을 함께 수록.
-
-### 4-15. 알림 (notifications)
-
-```sql
-CREATE TABLE notifications (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  type        TEXT NOT NULL CHECK (type IN (
-    'THREAD_REPLY', 'REPLY_REPLY', 'THREAD_LIKED',
-    'FOLLOW_UPDATE', 'REQUEST_APPROVED', 'REQUEST_REJECTED',
-    'RELATION_APPROVED', 'RELATION_REJECTED', 'WARNING'
-  )),
-  title       TEXT NOT NULL,
-  body        TEXT,
-  link        TEXT,
-  is_read     BOOLEAN DEFAULT FALSE,
-  source_id   UUID,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### 4-16. 유저 프로필 (profiles)
-
-```sql
-CREATE TABLE profiles (
-  id            UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  nickname      TEXT UNIQUE,
-  avatar_url    TEXT,
-  role          TEXT DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN')),
-  is_banned     BOOLEAN DEFAULT FALSE,
-  ban_until     TIMESTAMPTZ,
-  warning_count INTEGER DEFAULT 0,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
-);
--- auth.users INSERT 시 handle_new_user() 트리거로 자동 생성
-```
-
-### 4-17. 경고 이력 (warning_logs)
-
-```sql
-CREATE TABLE warning_logs (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  admin_id    UUID REFERENCES auth.users(id),
-  reason      TEXT NOT NULL,
-  target_type TEXT,
-  target_id   UUID,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### 4-18. 운영진 아티클 (articles)
-
-```sql
-CREATE TABLE articles (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  slug         TEXT UNIQUE NOT NULL,
-  title        TEXT NOT NULL,
-  body         TEXT NOT NULL,              -- 마크다운
-  summary      TEXT,
-  thumbnail    TEXT,
-  tag          TEXT NOT NULL CHECK (tag IN ('기획', '특집', '인물탐구', '현대', '공지', '안내')),
-  is_notice    BOOLEAN DEFAULT FALSE,
-  is_published BOOLEAN DEFAULT FALSE,
-  is_deleted   BOOLEAN DEFAULT FALSE,
-  author_id    UUID REFERENCES auth.users(id),
-  view_count   INTEGER DEFAULT 0,
-  like_count   INTEGER DEFAULT 0,
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### 4-19. 오늘의 인물 투표 (person_of_day_votes)
-
-```sql
-CREATE TABLE person_of_day_votes (
-  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  person_id UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  vote_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  UNIQUE (user_id, vote_date)
-);
-```
-
-### 4-20. 번역 테이블 (person_translations, node_translations, person_timeline_translations)
-
-```sql
--- 인물 번역 (DB에 존재, 향후 다국어 확장용)
-CREATE TABLE person_translations (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  person_id        UUID NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-  locale           TEXT NOT NULL CHECK (locale IN ('en', 'ja')),
-  summary          TEXT,
-  birth_place      TEXT,
-  is_ai_translated BOOLEAN DEFAULT TRUE,
-  UNIQUE (person_id, locale)
-);
-
--- 노드 번역
-CREATE TABLE node_translations (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  node_id          UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-  locale           TEXT NOT NULL CHECK (locale IN ('en', 'ja')),
-  title            TEXT,
-  description      TEXT,
-  is_ai_translated BOOLEAN DEFAULT TRUE,
-  UNIQUE (node_id, locale)
-);
-
--- 타임라인 번역
-CREATE TABLE person_timeline_translations (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timeline_id      UUID NOT NULL REFERENCES person_timeline(id) ON DELETE CASCADE,
-  locale           TEXT NOT NULL CHECK (locale IN ('en', 'ja')),
-  title            TEXT,
-  description      TEXT,
-  is_ai_translated BOOLEAN DEFAULT TRUE,
-  UNIQUE (timeline_id, locale)
-);
-```
-
-### 4-21. 좋아요 (likes)
-
-```sql
-CREATE TABLE likes (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_type TEXT NOT NULL CHECK (target_type IN ('thread', 'reply', 'node_comment', 'article')),
-  target_id   UUID NOT NULL,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (user_id, target_type, target_id)
-);
--- 트리거로 threads/thread_replies/node_comments/articles의 like_count 동기화
-```
-
-### 4-22. 팔로우 (follows)
-
-```sql
-CREATE TABLE follows (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_type TEXT NOT NULL CHECK (target_type IN ('person', 'node')),
-  target_id   UUID NOT NULL,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (user_id, target_type, target_id)
-);
--- 트리거로 persons/nodes의 follow_count 동기화
--- 유저 간 팔로우는 의도적으로 미포함
-```
-
-### 4-23. 구독 (subscriptions)
-
-```sql
-CREATE TABLE subscriptions (
-  id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id                  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  plan                     TEXT NOT NULL CHECK (plan IN ('monthly', 'yearly')),
-  status                   TEXT NOT NULL CHECK (status IN ('active', 'canceled', 'expired')),
-  current_period_start     TIMESTAMPTZ NOT NULL,
-  current_period_end       TIMESTAMPTZ NOT NULL,
-  payment_provider         TEXT NOT NULL CHECK (payment_provider IN ('stripe', 'toss')),
-  provider_subscription_id TEXT,
-  UNIQUE (user_id)
-);
-```
-
-### 4-24. 어워드 (awards)
-
-```sql
-CREATE TABLE awards (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  giver_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  receiver_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_type TEXT NOT NULL CHECK (target_type IN ('thread', 'comment')),
-  target_id   UUID NOT NULL,
-  award_type  TEXT NOT NULL CHECK (award_type IN ('certification', 'prose', 'wow', 'debate', 'sillok')),
-  amount_krw  INTEGER NOT NULL,            -- 결제 금액 (원화)
-  created_at  TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### 4-25. 큐레이터 (curator_roles)
-
-```sql
-CREATE TABLE curator_roles (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role_type   TEXT NOT NULL CHECK (role_type IN ('era', 'field', 'global')),
-  role_value  TEXT NOT NULL,
-  granted_by  UUID REFERENCES auth.users(id),
-  granted_at  TIMESTAMPTZ DEFAULT NOW(),
-  is_active   BOOLEAN DEFAULT TRUE,
-  UNIQUE (user_id, role_type, role_value)
-);
-```
-
-### 4-26. 인물 편집 콘텐츠 (person_facts / person_highlights / person_sources)
-
-```sql
-CREATE TABLE person_facts (          -- 인포박스 행 (Reign, Tomb, Predecessor …)
-  id UUID PRIMARY KEY, person_id UUID NOT NULL REFERENCES persons(id),
-  label TEXT NOT NULL, value TEXT NOT NULL,
-  linked_person_id UUID REFERENCES persons(id),   -- 값이 인물이면 링크
-  sort_order INTEGER, is_ai_generated BOOLEAN, is_deleted BOOLEAN, created_at, updated_at
-);
-CREATE TABLE person_highlights (     -- 업적·어록·트리비아
-  ..., kind TEXT CHECK (kind IN ('ACHIEVEMENT', 'QUOTE', 'TRIVIA')),
-  title TEXT NOT NULL, body TEXT, year INTEGER, ...
-);
-CREATE TABLE person_sources (        -- 사료·백과·도서
-  ..., kind TEXT CHECK (kind IN ('PRIMARY', 'ENCYCLOPEDIA', 'BOOK', 'ARTICLE', 'WEB')),
-  title TEXT NOT NULL, url TEXT, citation TEXT, ...
-);
-```
-
-- `is_ai_generated = TRUE` → "AI draft" 라벨로 즉시 공개, 어드민 검수 시 해제
-- 전체 컬럼: `db/schema.sql` / 마이그레이션 `20260925_person_content.sql`
-
-### 4-27. 인물 커뮤니티 (투표 / 개인 상태 / 사실 제안)
-
-| 테이블 | 용도 | 제약 |
-|--------|------|------|
-| `person_polls` | 인물별 질문 | `is_active`, soft delete |
-| `person_poll_options` | 선택지 | `sort_order` |
-| `person_poll_votes` | 투표 | `UNIQUE (poll_id, user_id)` — 1인 1표 |
-| `person_user_status` | 개인 상태 | `STUDIED` / `VISITED` / `WANT_TO_LEARN`, `UNIQUE (person_id, user_id, status)` |
-| `person_suggestions` | "Suggest a fact" 제안 | `kind`: FACT/ACHIEVEMENT/TRIVIA/SOURCE/CORRECTION, `status`: PENDING/APPROVED/REJECTED |
-
-### 4-28. 인물 페이지 항목 반응 (person_item_likes / person_item_comments)
-
-- 대상: `target_type` ∈ `HIGHLIGHT` / `GALLERY` / `PORTRAYAL`, `target_key` = 항목 식별자
-- 하트: `UNIQUE (person_id, target_type, target_key, user_id)`
-- 댓글: 1~1000자, soft delete, 신고 대상 `PERSON_ITEM_COMMENT`
-- 이미지 첨부 없음 (댓글 이미지 금지 원칙 유지)
-
-### 4-29. 재위 (reigns)
-
-- 왕 1인 1재위 1행 (복위한 왕은 2행). `UNIQUE (person_id, reign_start)`, `reign_end >= reign_start`
-- age-flow의 "현재 왕"·연도 페이지가 사용. 어드민 `/admin/reigns`
-
-### 4-30. 노드 이미지 (node_images)
-
-- 국가유산청 API 이미지 URL (스토리지 미러링 없음). `license` ∈ `kogl-1`(자유), `kogl-3`(변경금지 → 크롭 없이 표시)
-- `caption_ko` / `caption_en`, `UNIQUE (node_id, url)`
-
-### 4-31. AI 초안 (ai_drafts)
-
-- 어드민 전용 작업 공간. `kind` ∈ `template`(워작 밈) / `translated`(한국 짤 번역) / `story`(짧은 소설)
-- `content` JSONB: 캡션 · 번역 박스(0..1 좌표) · 소설 본문. `title`, `fact`(역사적 근거), `person_ids`, 번역 원본(`source_image_url`, `source_url`, `source_credit`)
-- `status` draft / published / rejected. 게시하면 `thread_id`로 일반 스레드와 연결 (수정 시 스레드 갱신, 게시 취소·삭제 시 스레드 soft delete)
-- 번역할 원본 이미지는 public `memes` 버킷 (jpeg/png)
-
-> 4-26 ~ 4-31의 모든 테이블: RLS 켜고 정책 없음 — service role(서버)로만 접근
-
-### DB 트리거 목록
-
-| 트리거 | 대상 | 동작 |
-|--------|------|------|
-| `update_updated_at()` | 모든 주요 테이블 | BEFORE UPDATE → `updated_at = NOW()` (threads는 `title, content, video_url, category, person_id, is_pinned, is_deleted` 수정 시에만) |
-| `set_thread_hot_score()` | threads | BEFORE INSERT / UPDATE OF like_count, reply_count → `hot_score` 재계산 |
-| `calc_reply_depth()` | thread_replies | BEFORE INSERT → `depth = parent.depth + 1` |
-| `update_thread_reply_count()` | thread_replies | AFTER INSERT/UPDATE → threads.reply_count 동기화 |
-| `update_like_count()` | likes | AFTER INSERT/DELETE → 대상 테이블 like_count 동기화 |
-| `update_follow_count()` | follows | AFTER INSERT/DELETE → persons/nodes follow_count 동기화 |
-| `update_collection_item_count()` | collection_items | AFTER INSERT/DELETE → collections.item_count 동기화 |
-| `handle_new_user()` | auth.users | AFTER INSERT → profiles 자동 생성 |
-
-### pg_cron 작업
-
-```sql
--- 1. 정지 해제 자동화 (매 시간)
--- UPDATE profiles SET is_banned = FALSE WHERE ban_until < NOW() AND is_banned = TRUE
-
--- 2. view_count 배치 집계 (5분마다)
--- persons/nodes/threads/articles의 view_count 갱신
-
--- 3. 오래된 view_logs 정리 (매일 자정)
--- DELETE FROM view_logs WHERE viewed_at < NOW() - INTERVAL '7 days'
-
--- 4. 피드 hot_score 시간 감쇠 (15분마다) — pg_cron 확장 활성화 필요
--- SELECT cron.schedule('refresh-thread-hot-scores', '*/15 * * * *', 'SELECT refresh_thread_hot_scores()');
-```
-
----
-
-## 5. API 명세
-
-> Next.js API Routes 기반. Base URL: `/api`
-> 인증: Supabase JWT — Authorization: Bearer {token}
-> 모든 응답: [공통 에러/성공 포맷](#3-3-공통-에러-응답-포맷) 준수
-> 페이지네이션: [Cursor 방식](#3-2-cursor-기반-페이지네이션) 통일
-
-### 5-1. 인물 (Persons)
-
-```
-GET    /persons                   인물 목록
-  Query: limit, cursor, era, field, sort(name|popular|recent), q
-
-GET    /persons/:slug             인물 상세
-GET    /persons/:slug/timeline    타임라인
-GET    /persons/:slug/relations   관계 목록 (relation_type 필터 가능)
-GET    /persons/:slug/threads     스레드 목록 (cursor 페이지네이션)
-GET    /persons/:slug/nodes       연결된 노드 목록
-DELETE /persons/:slug/hard        인물 hard delete [ADMIN]
-
-POST   /persons/:slug/vote-today  오늘의 인물 추천 투표 [USER]
-GET    /persons/today-ranking     오늘 투표 현황
-
-GET    /persons/:slug/poll        인물 투표 + 결과
-POST   /persons/:slug/poll        투표 [USER]
-GET    /persons/:slug/status      개인 상태 집계 (+ 내 상태)
-POST   /persons/:slug/status      개인 상태 토글 [USER]
-POST   /persons/:slug/suggestions 사실 제안 [USER]
-GET    /persons/:slug/reactions   항목별 하트 수 (+ 내가 누른 항목)
-POST   /persons/:slug/reactions   항목 하트 토글 [USER]
-GET    /persons/:slug/comments    항목 댓글 목록 (target_type, target_key)
-POST   /persons/:slug/comments    항목 댓글 작성 [USER]
-DELETE /person-item-comments/:id  항목 댓글 soft delete [OWNER|ADMIN]
-
-POST   /admin/persons             인물 등록 [ADMIN]
-GET    /admin/persons             인물 목록 (어드민) [ADMIN]
-GET    /admin/persons/all         전체 인물 (필터 없음) [ADMIN]
-POST   /admin/persons/bulk        CSV 벌크 등록 [ADMIN]
-```
-
-### 5-2. 노드 (Nodes)
-
-```
-GET    /nodes                     노드 목록
-  Query: limit, cursor, type(ARTIFACT|MEDIA|EVENT|GROUP|TOPIC), category, q
-
-GET    /nodes/:slug               노드 상세
-GET    /nodes/:slug/links         연결된 노드 목록
-GET    /nodes/:slug/comments      댓글 목록 (cursor 페이지네이션)
-POST   /nodes/:slug/comments      댓글 작성 [USER]
-
-POST   /admin/nodes               노드 등록/수정 [ADMIN]
-POST   /admin/nodes/:id/links     노드 간 연결 등록/수정 [ADMIN]
-```
-
-### 5-3. 관계 (Relations)
-
-```
-GET    /persons/:slug/relations   특정 인물의 관계
-POST   /relations/suggest         관계 제안 [USER]
-PUT    /relations/:id/approve     승인 [ADMIN]
-PUT    /relations/:id/reject      반려 [ADMIN]
-
-GET    /admin/relations           관계 목록 (어드민) [ADMIN]
-```
-
-### 5-4. 스레드 (Threads)
-
-```
-GET    /feed                      홈·게시판·토픽 피드
-  Query: sort(hot|new|top), t(day|week|month|all — top 전용), board, topic, cursor, limit
-  커서: base64url JSON {v: 정렬값, id} — (정렬값, id) keyset, 서버에서 엄격 검증
-  hot/top 컬럼이 없으면(마이그레이션 전) new로 폴백
-
-GET    /threads                   스레드 목록 (전체 피드)
-GET    /threads/:id               스레드 상세
-POST   /threads                   스레드 작성 [USER]
-PUT    /threads/:id               스레드 수정 [OWNER]
-DELETE /threads/:id               스레드 soft delete [OWNER|ADMIN]
-
-POST   /threads/:id/like          좋아요 토글 [USER]
-POST   /threads/:id/view          조회 로그 기록
-GET    /threads/:id/replies       댓글 목록 (트리, cursor)
-POST   /threads/:id/replies       댓글 작성 [USER]
-
-PUT    /replies/:id               댓글 수정 [OWNER]
-DELETE /replies/:id               댓글 soft delete [OWNER|ADMIN]
-POST   /replies/:id/like          댓글 좋아요 토글 [USER]
-
-GET    /admin/threads             스레드 목록 (어드민) [ADMIN]
-PUT    /admin/threads/:id         스레드 관리 (pin 등) [ADMIN]
-```
-
-### 5-5. 노드 댓글 (Node Comments)
-
-```
-GET    /nodes/:slug/comments      댓글 목록 (cursor)
-POST   /nodes/:slug/comments      댓글 작성 [USER]
-PUT    /comments/:id              수정 [OWNER]
-DELETE /comments/:id              soft delete [OWNER|ADMIN]
-POST   /comments/:id/like         노드 댓글 좋아요 토글 [USER]
-```
-
-### 5-6. 아티클 (Articles)
-
-```
-GET    /articles                  아티클 목록
-  Query: limit, cursor, tag, is_notice
-
-GET    /articles/:slug            아티클 상세
-POST   /articles/:slug/like       아티클 좋아요 토글 [USER]
-POST   /articles/:slug/view       아티클 조회 로그 기록
-```
-
-### 5-7. 팔로우 (Follows)
-
-```
-POST   /follows                   팔로우 토글 [USER]
-  body: { target_type: 'person'|'node', target_id: UUID }
-
-GET    /follows/me                내가 팔로우한 목록 [USER]
-GET    /follows/me/feed           팔로우 피드 [USER]
-```
-
-### 5-8. 검색 (Search)
-
-```
-GET    /search
-  Query: q, type(ALL|PERSON|ARTIFACT|MEDIA|EVENT|GROUP|TOPIC), category, era, field, sort, limit, cursor
-
-GET    /search/suggest
-  Query: q
-  반환: 타입별 그룹핑, 최대 8개
-```
-
-### 5-9. 인물 추가 요청
-
-```
-POST   /person-requests           요청 제출 [USER]
-  body: { name_ko, birth_year?, death_year?, reason, source_url }
-
-PUT    /person-requests/:id/approve  승인 [ADMIN]
-PUT    /person-requests/:id/reject   반려 [ADMIN]
-```
-
-### 5-10. 신고
-
-```
-POST   /reports                   신고 제출 [USER]
-GET    /reports                   신고 목록 [ADMIN]
-PUT    /reports/:id/resolve       처리 완료 [ADMIN]
-PUT    /reports/:id/dismiss       기각 [ADMIN]
-```
-
-### 5-11. 컬렉션
-
-```
-GET    /collections               내 컬렉션 목록 [USER]
-GET    /collections/:id           컬렉션 상세
-POST   /collections               생성 [USER]
-PUT    /collections/:id           수정 [OWNER]
-DELETE /collections/:id           삭제 [OWNER]
-POST   /collections/:id/items     인물/노드 추가 [OWNER]
-  body: { person_id?: UUID, node_id?: UUID } // exactly one
-DELETE /collections/:id/items     인물/노드 제거 [OWNER]
-```
-
-### 5-12. 알림
-
-```
-GET    /notifications             내 알림 목록 [USER]
-GET    /notifications/unread-count 미읽음 수 [USER] (30초 폴링)
-```
-
-### 5-13. 업로드
-
-```
-POST   /upload/presigned-url      Presigned URL 발급 [USER]
-  body: { file_type, file_size, target: 'avatar'|'thread'|'person' }
-  제한: 5MB, image/jpeg|png|webp
-```
-
-### 5-14. 랭킹
-
-```
-GET    /ranking                   핫한 인물 랭킹 (Gravity Decay)
-  Query: tag, limit, cursor
-```
-
-### 5-15. 조회 로그
-
-```
-POST   /view-logs                 조회 로그 기록
-```
-
-### 5-16. 어드민 전용
-
-```
-GET    /admin/stats               대시보드 통계 [ADMIN]
-GET    /admin/members             회원 목록 [ADMIN]
-PUT    /admin/members/:id/ban     정지 [ADMIN]
-PUT    /admin/members/:id/unban   정지 해제 [ADMIN]
-PUT    /admin/members/:id/warn    경고 [ADMIN]
-
-GET    /admin/tags                태그 목록 [ADMIN]
-POST   /admin/tags                태그 생성 [ADMIN]
-PUT    /admin/tags/:id            태그 수정 [ADMIN]
-DELETE /admin/tags/:id            태그 삭제 [ADMIN]
-
-GET    /admin/curators            큐레이터 목록 [ADMIN]
-POST   /admin/curators            큐레이터 지정 [ADMIN]
-DELETE /admin/curators/:id        큐레이터 해제 [ADMIN]
-
-GET    /admin/groups              그룹 목록 [ADMIN]
-POST   /admin/groups/:id/members  그룹 멤버 관리 [ADMIN]
-
-GET    /admin/timelines           타임라인 목록 [ADMIN]
-POST   /admin/timelines           타임라인 생성 [ADMIN]
-PUT    /admin/timelines/:id       타임라인 수정 [ADMIN]
-DELETE /admin/timelines/:id       타임라인 삭제 [ADMIN]
-
-GET    /admin/api-docs            API 문서 [ADMIN]
-
-GET    /admin/persons/:slug/content        인물 편집 콘텐츠 조회 [ADMIN]
-POST   /admin/persons/:slug/content        인물 편집 콘텐츠 추가 [ADMIN]
-PATCH  /admin/person-content/:kind/:id     콘텐츠 수정·검수(AI 라벨 해제) [ADMIN]
-DELETE /admin/person-content/:kind/:id     콘텐츠 삭제 [ADMIN]
-GET    /admin/person-content/pending       검수 대기 AI 초안 [ADMIN]
-GET    /admin/suggestions                  사실 제안 큐 [ADMIN]
-PATCH  /admin/suggestions/:id              제안 승인·반려 [ADMIN]
-```
-
-### 5-17. AI
-
-```
-POST   /ai/persons                AI 인물 데이터 생성 [ADMIN]
-```
-
-### 5-18. CSV 벌크 업로드 상세
-
-```
-POST   /admin/persons/bulk  [ADMIN]
-  Content-Type: multipart/form-data
-  file: CSV
-
-처리 방식: 부분 성공 허용
-  - 각 행 독립적으로 처리 (전체 롤백 없음)
-  - 응답: { total, success, failed, errors[] }
-```
-
----
-
-## 6. 페이지 및 라우트 구조
-
-### 6-1. 네비게이션 구조
-
-```
-NAV: [Logo] Home | Figures | Age Flow | Explore | Threads | Articles | [Search] | [User Menu]
-```
-
-### 6-2. 공개 페이지
-
-| 경로 | 설명 | 렌더링 |
-|------|------|--------|
-| `/` | 커뮤니티 피드 홈 (`?sort=hot|new|top&t=…`, 정렬 변형은 `/`로 canonical) | SSR (`force-dynamic`) |
-| `/b/[board]` | 시대별 게시판 — ancient, three-kingdoms, unified-silla, goryeo, joseon, modern | SSR |
-| `/t/[topic]` | 토픽 (스레드 category) — discussion, trivia, qna, sources, film-tv | SSR |
-| `/persons` | 인물 목록 (Figures) — Trending + 전체 그리드 + 검색 | SSR |
-| `/persons/[slug]` | 인물 상세 (Overview 탭) | SSR (`force-dynamic`) |
-| `/persons/[slug]/{tab}` | timeline, relations, legacy, related, gallery, threads, sources, stats — 기준 미만 탭은 404 | SSR |
-| `/age-flow` | 시대 흐름 인터랙티브 타임라인 | CSR |
-| `/nodes` | Explore 허브 (전체 노드 타입별 그리드) | SSR |
-| `/nodes/[slug]` | 노드 상세 (유물/미디어/사건/그룹/토픽) | SSR |
-| `/artifacts` | 유물 전용 목록 | SSR |
-| `/threads` | 스레드 목록 | SSR |
-| `/threads/new` | 스레드 작성 | CSR |
-| `/threads/[id]` | 스레드 상세 + 댓글 트리 | SSR |
-| `/articles` | 아티클 목록 | SSR |
-| `/articles/[slug]` | 아티클 상세 | SSG + ISR(1h) |
-| `/search` | 통합 검색 결과 | SSR |
-| `/collections` | 컬렉션 목록 | SSR |
-| `/collections/[id]` | 컬렉션 상세 | SSR |
-| `/notifications` | 알림 목록 [로그인 필요] | CSR |
-| `/profile` | 내 프로필 [로그인 필요] | CSR |
-| `/about` | About Sillok | SSG |
-| `/terms` | 이용약관 | SSG |
-| `/privacy` | 개인정보처리방침 | SSG |
-| `/login` | 로그인 | CSR |
-
-### 6-3. 어드민 페이지 (Admin Guard 적용)
-
-| 경로 | 설명 |
+| 대상 | 한도 |
 |------|------|
-| `/admin` | 대시보드 |
-| `/admin/persons` | 인물 관리 |
-| `/admin/persons/new` | 인물 등록 |
-| `/admin/persons/[slug]/edit` | 인물 수정 |
-| `/admin/nodes` | 노드 관리 |
-| `/admin/articles` | 아티클 관리 |
-| `/admin/articles/new` | 아티클 작성 |
-| `/admin/articles/[slug]/edit` | 아티클 수정 |
-| `/admin/threads` | 스레드 관리 |
-| `/admin/timelines` | 타임라인 관리 |
-| `/admin/person-requests` | 인물 추가 요청 큐 |
-| `/admin/relations` | 관계 제안 큐 |
-| `/admin/reports` | 신고 처리 |
-| `/admin/members` | 회원 관리 |
-| `/admin/tags` | 태그 관리 |
-| `/admin/curators` | 큐레이터 관리 |
-| `/admin/groups` | 그룹 관리 |
-| `/admin/api-docs` | API 문서 |
+| 전체 기본 | 100 / 분 / IP |
+| 검색 | 30 / 분 / IP |
+| 인물 추가 요청 | 5 / 시간 / 유저 |
+| 관계 제안 · 신고 · 스레드 작성 | 각 10 / 시간 / 유저 |
+| 댓글 작성 | 30 / 시간 / 유저 |
+| 어드민 API | 제외 |
+
+### 2-5. Soft delete
+모든 콘텐츠 테이블에 `is_deleted`. 읽기 쿼리는 항상 `is_deleted = FALSE`. hard delete는 어드민이 명시적으로 요청할 때만.
+
+### 2-6. 언어
+- 공개 사이트는 **영어 단일** (locale 라우팅 없음). 인물은 `name_en`·`summary` 등 영문을 테이블에 직접 저장
+- 한글은 meta·구조화 데이터·인용 원문에만. 관리자 화면은 한국어
+- 검색은 `name_en` + `name_ko` + `name_hanja` + `aliases_en`("King Sejong" 등) 동시 지원
+- 커뮤니티(스레드·댓글)는 언어 혼용 허용, 번역 없음
+- `person_translations` / `node_translations` / `person_timeline_translations`는 향후 다국어용으로 남아 있음
 
 ---
 
-## 7. 핵심 기능 상세 명세
+## 3. 데이터 모델 — 설계 결정
 
-### 7-1. 홈페이지 레이아웃 (커뮤니티 피드)
+컬럼 정의는 `db/schema.sql`. 여기는 스키마만 봐서는 모르는 규칙만.
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│ NAV: Logo | Home Figures Age Flow Explore Threads Articles           │
-│      | [🔍 Search ⌘K] | + Create | 🔔 | Log In/Out | Avatar          │
-├──────────┬───────────────────────────────────────┬───────────────────┤
-│ 좌측 레일 │ 메인 피드                               │ 우측 사이드바 300px │
-│ (xl~)    │                                       │ (lg~)             │
-│ Home     │ [✎ Start a discussion…]  [+ Create]   │ Today in Korean   │
-│ Popular  │ [🔥Hot] [🆕New] [🏆Top ▾기간]          │  History (compact)│
-│ Newest   │ ┌ FeedCard ────────────────────────┐ │ Trending figures  │
-│ Boards   │ │ ♥N │ 인물칩 · flair · 작성자 · 2h │ │  (활동 적으면     │
-│  b/joseon│ │    │ 제목 / 미리보기      [썸네일] │ │   Discover)       │
-│  …       │ │    │ 💬 N comments                 │ │ Editor's pick     │
-│ Topics   │ └──────────────────────────────────┘ │ About · 통계      │
-│  t/trivia│ … 2번째 뒤: Today (모바일)            │  · 규칙 · Create  │
-│  …       │ … 4번째 뒤: 🗳 Poll of the Day          │                   │
-│ Explore  │ … 7번째 뒤: 💡 Trivia                   │                   │
-│          │ … 10번째 뒤: 최근 활동                  │                   │
-│          │ 무한 스크롤 (IntersectionObserver + Load more) │           │
-└──────────┴───────────────────────────────────────┴───────────────────┘
-```
+### 3-1. 인물 간 관계 (`person_relations`)
 
-**정렬:**
-- Hot: `hot_score` (시간 감쇠), New: `created_at`, Top: `top_score` + 기간(day/week/month/all)
-- 기본값: 최근 7일 스레드 5개 미만 → Top·All time, 이상 → Hot (`pickDefaultSort`)
-- 커서 기반 페이지네이션 (`/api/feed`), 20개 단위
+| 타입 | 방향 | 의미 |
+|------|------|------|
+| `FAMILY` | 양방향 | 가족·혈연. `family_role` = `PARENT`(from이 to의 부모) / `SPOUSE` / `SIBLING` / NULL(기타 친족) — 가족관계도에 사용 |
+| `ALLY` · `RIVAL` · `AFFILIATED` | 양방향 | 협력 · 대립 · 느슨한 연관 |
+| `TEACHER` | from=스승 → to=제자 | |
+| `LORD_VASSAL` | from=왕 → to=신하 | |
+| `INFLUENCE` | from=영향 준 사람 → to=받은 사람 | |
+| `MEMBER_OF` · `FOUNDED` | from=멤버/창업자 → to=그룹/조직 대표 인물 | |
 
-**편집 모듈 (피드 사이 삽입, KST 날짜 기준 매일 교체):**
-- Today in Korean History: 오늘의 인물(하이라이트 보유 인물 순환) + 오늘/이번 달의 탄생·사망·사건
-- Poll of the Day: 투표가 있는 인물 순환
-- Trivia: 인물 하이라이트(TRIVIA) 순환
-- Recent activity: 인물 페이지 항목 댓글 (없으면 숨김)
+- **양방향 타입은 1건만 저장**하고 조회 시 `from = X OR to = X` (헬퍼 `get_person_relations`)
+- 유저 제안은 `is_approved = FALSE`로 들어와 어드민 승인 후 노출
 
-**게시판·토픽 페이지 (`/b/*`, `/t/*`):** 같은 피드 + 헤더(게시판은 대표 인물 칩·인물 수·스레드 수). 글이 0개면 noindex.
+### 3-2. 인물 ↔ 노드 (`person_node_links.link_type`)
+`ASSOCIATED_WITH`(느슨한 관련) · `REPRESENTS`(대표 인물) · `POPULARIZED` · `CREATED_BY` · `PARTICIPATED_IN`(사건 참여) · `FEATURED_IN`(작품 등장). 영화·드라마 출연은 `portrayed_by`(배우명).
 
-**구현 위치:** `lib/feed.ts`(순수 로직), `lib/feed-data.ts`(로더), `components/feed/*`
+### 3-3. 스레드
+- `category` ↔ 토픽 URL: `DISCUSSION`=`/t/discussion`, `TRIVIA`=`/t/trivia`, `QNA`=`/t/qna`, `SOURCES`=`/t/sources`, `MEDIA`=`/t/film-tv`
+- **hot_score** = `(1 + replies × 0.5 + likes) / (age_days + 2)^1.5`, **소수점 12자리 반올림** — PostgREST가 float를 15자리로 직렬화해서, 반올림하지 않으면 피드 커서 경계 행이 다음 페이지에 중복된다. 트리거(좋아요·댓글 변경 시) + pg_cron 15분 감쇠
+- `top_score`는 생성 컬럼. 피드 인덱스는 `(hot_score|top_score|created_at DESC, id DESC) WHERE is_deleted = FALSE`
+- `updated_at`은 내용 컬럼(`title, content, video_url, category, person_id, is_pinned, is_deleted`) 수정 시에만 갱신 — 카운터 변경으로 sitemap lastmod가 흔들리지 않게
+- `thread_persons`: 스레드 ↔ 여러 인물 (`is_primary` 주 인물)
+- 이미지: 스레드당 최대 3장. `thread_images.alt` = 이미지 설명 + 이미지 속 글자 → img alt · og:image:alt · `ImageObject.caption`
+- `video_url`: YouTube · Vimeo만 (`youtube.com`, `youtu.be`, `vimeo.com`)
 
-### 7-2. 인물 목록 페이지 (Figures)
+### 3-4. 대댓글 (`thread_replies`)
+- `parent_id`는 같은 스레드의 미삭제 댓글이어야 함 (아니면 404). `depth`는 트리거로 계산
+- 부모 depth가 4 이상이면 **부모의 부모**에 붙여 최대 4단계 유지
+- 표시는 `buildReplyTree`(`lib/feed.ts`): 부모 아래 오래된 순, 부모가 삭제된 댓글은 최상위로. 들여쓰기는 3단계까지, 더 깊으면 `@부모닉네임` 표시
+- 댓글에는 이미지 첨부 없음
 
-```
-┌──────────────────────────────────────────────────┐
-│  🔥 Trending Figures (캐러셀)                      │
-│  상위 10명 — 최근 활동 가중 랭킹                     │
-│  [rank] [썸네일] [이름] [태그] [스레드수] [좋아요수]  │
-├──────────────────────────────────────────────────┤
-│  All Figures                                      │
-│  [🔍 Search by name...]                          │
-│  그리드 카드 (썸네일 + 이름 + 한자 + 생몰년)         │
-└──────────────────────────────────────────────────┘
-```
+### 3-5. 카운터 · 조회수
+- `like_count`, `reply_count`, `follow_count`, `item_count`는 트리거로 동기화
+- `view_count`는 직접 UPDATE 금지 → `view_logs` INSERT + 배치 집계 (race condition 방지). `view_logs`는 7일 보관
+- pg_cron 설계: 정지 해제(매시), view_count 집계(5분), view_logs 정리(매일), hot_score 감쇠(15분)
 
-### 7-3. 인물 상세 페이지 레이아웃 (탭별 URL)
+### 3-6. 팔로우 · 좋아요
+- 팔로우 대상은 인물·노드만. **유저 간 팔로우 없음** (SNS화 방지)
+- 좋아요만 있고 싫어요·다운보트 없음. 대상: 스레드 · 댓글 · 노드 댓글 · 아티클
 
-```
-┌──────────────────────────────────────────────────────────┐
-│ [초상] 이름 (한자) · 생몰년 · 태그 · [팔로우] [컬렉션]       │
-│ 개인 상태: Studied / Visited / Want to learn               │
-│ 탭: Overview | Timeline | Relations | Legacy | Related |   │
-│     Gallery | Threads | Sources | Stats                    │
-├─────────────────────────────────┬────────────────────────┤
-│ Overview                         │ 인포박스 (person_facts) │
-│  요약 · 하이라이트(업적/어록/트리비아) │ Community Poll         │
-│  ♥ 하트 · 💬 항목 댓글            │ Suggest a fact         │
-│  갤러리 가로 스트립 + 뷰어          │                        │
-│  On screen (portrayed_by)        │                        │
-│  가족관계도 (왕 중심, family_role) │                        │
-└─────────────────────────────────┴────────────────────────┘
-```
+### 3-7. 인물 편집 콘텐츠 · 커뮤니티
+- `person_facts`(인포박스) · `person_highlights`(업적 `ACHIEVEMENT` / 어록 / `TRIVIA`) · `person_sources`
+- AI 초안은 `is_ai_generated = TRUE`로 **즉시 공개 + "AI draft" 라벨**, 어드민 검수(`/admin/content-review`) 시 라벨 해제
+- 인물별 투표(`person_polls`, 1인 1표), 개인 상태(`STUDIED` / `VISITED` / `WANT_TO_LEARN`), 사실 제안(`person_suggestions`: FACT · ACHIEVEMENT · TRIVIA · SOURCE · CORRECTION → 어드민 승인·반려)
+- 항목 반응(`person_item_likes` / `person_item_comments`): 대상 `HIGHLIGHT` · `GALLERY` · `PORTRAYAL`, 댓글 1~1000자, 신고 대상 `PERSON_ITEM_COMMENT`
 
-- 각 탭은 별도 URL·메타데이터·canonical. 항목 수가 `TAB_MIN_ITEMS` 미만이면 탭 숨김 + 404 (Overview·Stats는 항상 표시)
-- 헤더(layout): 인포박스 Facts, 개인 상태 버튼, Suggest a fact / Overview(page): 하이라이트, 투표, 갤러리, On screen, 가족관계도
-- 로더: `lib/person-page.ts` (React `cache()`로 layout/page/generateMetadata 공유)
-- AI 초안 항목은 "AI draft" 라벨 표시
-- 구조화 데이터: `Person`(+ 확장 필드), `BreadcrumbList`
+### 3-8. 재위 · 유물 이미지 · AI 초안
+- `reigns`: 왕 1인 1재위 1행 (복위한 왕은 2행). age-flow의 "현재 왕"과 연도 페이지가 사용
+- `node_images`: 국가유산청 API 이미지 URL, **미러링 없음**. `license` = `kogl-1`(자유) / `kogl-3`(변경금지 → 크롭 없이 표시)
+- `ai_drafts`: 어드민 작업 공간 (섹션 8). 게시하면 `thread_id`로 일반 스레드와 연결 — 수정 시 스레드 갱신, 게시 취소·삭제 시 스레드 soft delete
+- 이 계열 신규 테이블은 RLS 켜고 정책 없음 (service role 전용)
 
-### 7-4. 스레드 목록 페이지
-
-```
-┌──────────────────────────────────────────────┐
-│  Threads                                     │
-│  "Community discussions about Korean         │
-│   historical figures"            [✏️ Write]  │
-├──────────────────────────────────────────────┤
-│  [썸네일] [인물배지] 스레드 제목              │
-│           작성자 · ❤ N · 💬 N · 2d ago      │
-│  ... 무한 스크롤 ...                         │
-└──────────────────────────────────────────────┘
-```
-
-### 7-5. Explore 허브 (/nodes)
-
-```
-┌──────────────────────────────────────────────┐
-│  Explore  (157 items)                        │
-│  [🔍 All] [🏺 Artifacts] [⚔ Events]         │
-│  [🎬 Media] [👥 Groups] [🧭 Topics]         │
-├──────────────────────────────────────────────┤
-│  ⭐ Featured (6개 하이라이트)                 │
-├──────────────────────────────────────────────┤
-│  🧭 Topics (음식·문화·스포츠) → View All      │
-│  Kimchi, Bulgogi, Hanbok, Korean Football    │
-│  Korean Baseball, Taekwondo                  │
-├──────────────────────────────────────────────┤
-│  🏺 Artifacts (47) → View All               │
-│  유물 카드 그리드                             │
-├──────────────────────────────────────────────┤
-│  ⚔ Events (69) → View All                   │
-│  사건 카드 그리드                             │
-├──────────────────────────────────────────────┤
-│  🎬 Media (38) → View All                   │
-│  미디어 카드 그리드                           │
-├──────────────────────────────────────────────┤
-│  👥 Groups (3) → View All                   │
-│  그룹 카드 (BLACKPINK, NewJeans, BTS)        │
-└──────────────────────────────────────────────┘
-```
-
-### 7-5-1. TOPIC 상세 페이지
-
-TOPIC은 음식·문화·스포츠처럼 인물 하나에 종속되지 않는 주제를 다룬다. 단, Sillok의 기본 탐색 축은 여전히 인물이므로 TOPIC 상세는 항상 관련 인물과 사건을 함께 노출한다.
-
-```
-┌──────────────────────────────────────────────┐
-│  Kimchi                                      │
-│  TOPIC · Food                                │
-│  "A fermented Korean food..."                │
-│  [Follow] [Add to Collection]                │
-├──────────────────────────────────────────────┤
-│  Overview                                    │
-│  기원, 변천, 지역성, 현대적 의미              │
-├──────────────────────┬───────────────────────┤
-│  Related Figures     │  Related Nodes         │
-│  인물 카드 리스트      │  Korean Cuisine        │
-│                      │  Joseon Food Culture   │
-├──────────────────────┴───────────────────────┤
-│  Discussions                                  │
-│  노드 댓글 + 관련 스레드                       │
-└──────────────────────────────────────────────┘
-```
-
-TOPIC 상세 데이터:
-- `nodes.metadata.category`: food | culture | sport | music | literature | custom
-- `person_node_links`: 관련 인물
-- `node_links`: 관련 주제/사건/그룹/미디어
-- `node_comments`: TOPIC 자체 댓글
-- `view_logs`, `follows`, `collections`: 기존 노드 공통 인터랙션 재사용
-
-### 7-6. 스레드 댓글 렌더링 규칙
-
-```typescript
-const MAX_VISUAL_DEPTH = 3;
-
-function renderReply(reply: Reply, visualDepth: number) {
-  const indentDepth = Math.min(visualDepth, MAX_VISUAL_DEPTH);
-  return (
-    <div style={{ marginLeft: indentDepth * 24 }}>
-      {visualDepth > MAX_VISUAL_DEPTH && reply.parent && (
-        <span className="text-blue-500">@{reply.parent.author.nickname}</span>
-      )}
-      <ReplyContent reply={reply} />
-      <button>Reply</button>
-    </div>
-  );
-}
-```
-
-### 7-7. 논란 인물 처리
-
-```typescript
-if (person.is_controversial) {
-  // 1. 페이지 최상단 배너
-  // "⚠️ This figure is considered historically controversial.
-  //  Sillok provides factual information only."
-  // 2. summary 필드 비워둠 — 기본 정보만 표시
-  // 3. 스레드 게시판 상단 안내
-}
-```
-
-### 7-8. 핫한 인물 랭킹 (Gravity Decay Algorithm)
-
-```
-공식: person_score = Σ (1 + reply_count × 0.5 + like_count) / (age_days + 2)^1.5
-범위: 최근 30일 스레드 대상
-순위 변동: ▲(상승) / ▼(하락) / –(유지) 표시
-```
-
-### 7-9. Age Flow — 시대 흐름 시각화
-
-인물의 생존 기간을 시각적으로 표현하는 인터랙티브 타임라인. `/age-flow` 경로.
-
-**구성 컴포넌트 (8개 + 훅):**
-
-| 컴포넌트 | 역할 |
-|----------|------|
-| `useAgeFlow.ts` | 핵심 훅 — 인물 데이터 로드, 스크롤/줌 로직, 현재 연도 상태 관리 |
-| `PersonCard.tsx` | 타임라인 위의 인물 카드 (PersonAvatar 활용, 생존 바) |
-| `PersonHoverPanel.tsx` | 인물 호버 시 상세 패널 (요약, 태그, 타임라인) |
-| `TimelinePanel.tsx` | 사이드바 — 연도별 컨텍스트 정보 (왕조, 주요 사건) |
-| `EraFilter.tsx` | 시대 필터 (고대~근현대) |
-| `DensityBar.tsx` | 인물 밀도 시각화 바 (특정 시대에 얼마나 많은 인물이 있는지) |
-| `EventMarker.tsx` | 다이얼 바 위 사건 마커 dot |
-| `ArtifactTimeline.tsx` | 유물 타임라인 카드 오버레이 |
-| `RelationLines.tsx` | 인물 간 관계 연결선 시각화 |
-
-**동작:**
-- 전체 인물을 메모리에 로드 (~1,000명 OK, 2,000명 이상 시 구간 로드 전환)
-- 스크롤/줌으로 시대를 탐색하며 인물이 나타나고 사라지는 것을 시각적으로 확인
-- PersonAvatar의 FIELD 태그별 배경색·아이콘으로 분야 구분
-- 사건 마커로 역사적 맥락 제공
-- 유물 타임라인으로 문화재와 인물의 시대적 관계 표현
-
-### 7-10. video_url 유효성 검증
-
-```typescript
-const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'vimeo.com'];
-```
-
-### 7-11. OG 이미지 자동 생성
-
-```typescript
-// app/persons/[slug]/opengraph-image.tsx
-// Next.js ImageResponse 활용
-// 인물 이름 + 대표 이미지 + 생몰년 카드 형식 (1200 x 630)
-```
+### 3-9. 업로드
+- jpeg / png / webp, 5MB. presigned URL. 경로 `{bucket}/{user_id}/…`
+- `memes` 버킷(번역할 원본 짤)은 jpeg / png만 — 렌더러가 webp 불가
+- 이미지 출처 정책(운영자 콘텐츠 vs 유저 업로드)은 `prompts/image-policy.md`, 저작권 신고는 `/copyright`
 
 ---
 
-## 8. 어드민 페이지
+## 4. 인증 · 권한
 
-### 대시보드 위젯
+- Supabase Auth: 이메일 + **Google, Discord만**
+- API Route: `requireUser()` / `requireActiveUser()`(작성·댓글 — 정지 유저 차단) / `requireAdmin()` (`lib/auth.ts`, `profiles.role = 'ADMIN'`)
+- `middleware.ts`: `/admin/*` 보호 (비로그인·비관리자 → `/login`)
+- JWT는 Authorization 헤더 → CSRF 위험 없음. 입력은 zod, DB는 query builder (raw SQL 금지)
 
-```
-오늘 조회수 | 주간 신규 가입 | 미처리 요청 수 | 미처리 신고 수
-주간 인기 인물 TOP 5
-최근 신고 목록
-```
-
-### 인물 관리
-- 목록: 이름, 태그, 공개 여부, 조회수, 등록일 + 검색/필터
-- 등록/수정 폼: 기본 정보 + 태그 멀티셀렉트 + 타임라인 항목 추가 (`PersonForm.tsx`)
-- 이미지 크롭: `ImageCropModal.tsx`
-- CSV 벌크 업로드: `BulkUploadForm.tsx` — 부분 성공 + 에러 리포트
-
-### 아티클 관리
-- 목록: 제목, 태그, 공개 여부, 조회수
-- 작성/수정 폼: `ArticleForm.tsx` — 마크다운 에디터 + 썸네일 + 태그
-
-### 타임라인 관리
-- 인물별 타임라인 항목 CRUD (연도, 월, 제목, 설명, 정렬순서)
-
-### 큐레이터 관리
-- 유저 검색 → 큐레이터 역할 부여 (era/field/global + role_value)
-
-### 그룹 관리
-- GROUP 타입 노드 전용 관리 — 멤버 인물 연결
-
-### 스레드 관리
-- 스레드 pin/unpin, 삭제 관리
-
-### 홍보 Share kit (`/admin/promo`)
-- 참여도(좋아요+댓글) 순 스레드 목록, 게시 이력 배지, "이미 게시한 스레드 숨기기"
-- 스레드별 Share kit: 인스타 캐러셀 3장(1080×1350, 표지·역사·CTA, `/api/og/promo/{id}`) 다운로드, Instagram·Reddit(서브레딧별)·X·Threads 문구(Claude 초안 또는 직접 작성), 플랫폼별 UTM 링크, 글자 수 표시, 복사 버튼
-- 게시는 사람이 직접 → 게시 URL 입력 시 `promo_posts.status = posted`. 레딧 자동 게시는 하지 않음. 운영자임을 숨기는 문구 금지
-- 2단계(예정): Instagram Graph API 자동 게시 + 예약 (Meta 비즈니스 계정·앱 검수 필요)
-
-### 재위 관리 (`/admin/reigns`)
-- age-flow용 왕 재위 기간 CRUD (인물 slug + 시작·종료 연도)
-
-### AI Drafts (`/admin/memes`)
-- **워작 밈**: 포맷 4종(I know that feel bro · Reject/Prefer · Virgin vs Chad · It's over) + 인물 1~2명(+사건). 캡션·제목은 Claude가 DB 사실로 작성. 모자(익선관·갓·투구·상투)는 FIELD 태그로 자동. 자동 생성은 쓰지 않은 RIVAL/ALLY/FAMILY 쌍에서 1~5개
-- **짧은 소설**: 반전으로 끝나는 초단편, 이미지 없는 스레드. 본문 뒤 "What's real:" + AI 표기
-- **한국 짤 번역**: 업로드 → Claude가 한국어 위치 탐지·번역 → 영어 박스(드래그·크기 조절 편집). 게시하려면 인물 지정 + 출처·크레딧
-- 편집기 실시간 미리보기(`/api/og/meme/{id}`, 어드민 전용) → "Save & post as thread"
-- 대상: 게시된 근대 이전 인물만 (1850년 이후 출생·생존·modern 태그 제외 — 명예훼손 방지). 모델 `claude-opus-5-5` (`ANTHROPIC_API_KEY`)
-
-### 회원 관리
-```
-검색: 닉네임, 이메일
-필터: 정지 여부, 경고 수
-정지 해제 자동화: pg_cron 매 시간
-```
-
----
-
-## 9. 인증 및 권한
-
-### Supabase Auth
-
-```typescript
-// 소셜 로그인: Google (메인) + Discord
-// 이메일 인증 지원
-// → Supabase Auth OAuth 사용
-
-// lib/hooks/use-auth.ts — 클라이언트 인증 상태 관리 (signIn, signOut, user 상태)
-// lib/supabase-browser.ts — 클라이언트 Supabase 싱글턴 인스턴스
-```
-
-### Middleware (middleware.ts)
-
-```typescript
-// /admin/* 라우트 보호
-// - 비인증 → /login 리다이렉트
-// - profiles.role !== 'ADMIN' → /login 리다이렉트
-// - Supabase SSR 쿠키 동기화
-// - localhost 개발 환경 바이패스
-```
-
-### API Route 권한 체크 패턴
-
-```typescript
-// lib/auth.ts
-export async function requireUser(request: Request) { /* JWT 검증 */ }
-export async function requireAdmin(request: Request) { /* JWT + ADMIN role */ }
-```
-
-### 권한 매트릭스
-
-| 기능 | 비회원 | 일반 회원 | 운영진 |
-|------|--------|-----------|--------|
-| 페이지 열람 | ✅ | ✅ | ✅ |
-| 스레드/댓글 작성 | ❌ | ✅ | ✅ |
-| 좋아요/팔로우 | ❌ | ✅ | ✅ |
-| 사진 업로드 | ❌ | ✅ | ✅ |
-| 인물 추가 요청 | ❌ | ✅ | ✅ |
-| 관계 제안 | ❌ | ✅ | ✅ |
-| 컬렉션 관리 | ❌ | ✅ | ✅ |
+| 기능 | 비회원 | 회원 | 운영자 |
+|------|:--:|:--:|:--:|
+| 열람 | ✅ | ✅ | ✅ |
+| 스레드·댓글 작성, 좋아요·팔로우, 이미지 업로드 | ❌ | ✅ | ✅ |
+| 인물 추가 요청, 관계 제안, 사실 제안, 컬렉션 | ❌ | ✅ | ✅ |
 | 어드민 패널 | ❌ | ❌ | ✅ |
 
----
-
-## 10. 검색 및 필터
-
-### PostgreSQL 전문 검색
-
-```sql
-SELECT id, slug, name_en, name_hanja, birth_year, death_year
-FROM persons
-WHERE
-  is_deleted = FALSE AND is_published = TRUE
-  AND (
-    name_en ILIKE '%' || $1 || '%'
-    OR name_ko ILIKE '%' || $1 || '%'
-    OR name_hanja % $1
-  )
-ORDER BY similarity(name_en, $1) DESC, view_count DESC
-LIMIT $limit + 1;
-```
-
-### 필터 파라미터
-
-```
-era:      tags.type = 'ERA' (고대, 삼국, 고려, 조선, 근현대)
-field:    tags.type = 'FIELD' (왕, 장군, 예술가, 독립운동가, 학자, 종교인, 기업인, 정치인, 스포츠, 문화/예능)
-type:     ALL | PERSON | ARTIFACT | MEDIA | EVENT | GROUP | TOPIC
-category: TOPIC 전용 (food | culture | sport | music | literature | custom)
-sort:  relevance | name_asc | popular | recent
-```
+**제재:** 경고(`warning_logs`) → 게시물 삭제 → 계정 정지(`ban_until`, 만료 시 자동 해제). 심각한 위반은 즉시 정지.
 
 ---
 
-## 11. 보안
+## 5. 핵심 기능
 
-### XSS / SQL Injection 방어
+### 5-1. 홈 = 커뮤니티 피드 (`/`, `/b/{board}`, `/t/{topic}`)
+- 정렬: Hot(`hot_score`) · New(`created_at`) · Top(`top_score` + 기간 day/week/month/all)
+- **기본 정렬 자동 전환**: 최근 7일 새 스레드 5개 미만이면 Top·전체 기간, 이상이면 Hot (`pickDefaultSort`)
+- **편집 모듈**을 피드 사이에 삽입 (KST 날짜 기준 매일 교체) — 활동이 적을 때도 피드가 비어 보이지 않게:
+  - Today in Korean History: 오늘의 인물(하이라이트 보유 인물 순환) + 오늘/이번 달 탄생·사망·사건
+  - Poll of the Day · Trivia(인물 TRIVIA 하이라이트) · Recent activity(항목 댓글, 없으면 숨김)
+- 게시판(`/b/`)은 시대별: ancient, three-kingdoms, unified-silla, goryeo, joseon, modern. 토픽(`/t/`)은 스레드 category
+- **스레드는 단일 스트림**: 뻘글·사진·밈·장문 모두 같은 스레드. 특정 콘텐츠 유형 전용 카테고리·섹션·UI를 만들지 않는다
+- 이미지 한 장짜리 스레드는 원본 비율로 크게, 여러 장이면 썸네일 스트립
+- 구현: `lib/feed.ts`(순수 로직) · `lib/feed-data.ts`(로더) · `components/feed/*`
 
-```typescript
-// API Route 입력 검증: zod
-// Supabase parameterized query 사용 (raw SQL 금지)
-```
+### 5-2. 인물 상세 (`/persons/{slug}/{tab}`)
+- 탭: Overview · timeline · relations · legacy · related · gallery · threads · sources · stats. **탭마다 별도 URL·메타·canonical** (탭마다 색인)
+- 항목 수가 `TAB_MIN_ITEMS` 미만인 탭은 숨김 + 404. Overview·Stats는 항상
+- 헤더(layout): 인포박스, 개인 상태, Suggest a fact. Overview: 하이라이트, 투표, 갤러리, On screen(portrayed_by), 가족관계도(왕 중심, `family_role`)
+- 로더 `lib/person-page.ts` — React `cache()`로 layout·page·metadata 공유, 사이트 공용 목록은 `sharedCache`
+- PersonAvatar는 FIELD 태그별 배경·아이콘 (`components/common/PersonAvatar.tsx`)
 
-### CSRF 보호
-- JWT가 Authorization 헤더로 전달 → CSRF 위험 없음
+### 5-3. 트렌딩 인물 랭킹 (Gravity decay)
+`person_score = Σ (1 + reply_count × 0.5 + like_count) / (age_days + 2)^1.5`, 최근 30일 스레드 대상. 순위 변동 ▲ ▼ – 표시.
 
-### 파일 업로드 제한
+### 5-4. Age Flow (`/age-flow`, `/age-flow/{year}`)
+- 인물 생존 기간을 스크롤·줌으로 탐색하는 타임라인. 사건 마커, 유물 타임라인, 관계선
+- 데이터는 `lib/age-flow-data.ts`(sharedCache 5분, 쓰기 API는 `revalidateAgeFlow()`). 전체 인물 메모리 로드는 ~2,000명까지 — 넘으면 구간 로드로 전환
+- **카드 뷰포트 캡**: 화면에 들어가는 만큼만 중요도(포커스·왕·전쟁·조회수) 순으로, 나머지는 "+N more"
+- 왕은 `reigns`, 전쟁은 EVENT 노드(`war`/`revolt`) + `metadata.end_year` + 참여자 링크. **하드코딩 금지**
+- 연도 페이지 "Korea in 1592" + 공유 카드 `/api/og/age-flow/{year}`. 생존 인물 5명(`YEAR_PAGE_MIN_FIGURES`) 미만 연도는 noindex, sitemap에는 사건·즉위 연도만
 
-```
-허용 MIME 타입: image/jpeg, image/png, image/webp
-최대 파일 크기: 5MB
-업로드 경로:
-  avatars/{user_id}/{uuid}.webp
-  threads/{user_id}/{uuid}.webp
-  persons/{person_id}/{uuid}.webp  (어드민만)
-```
+### 5-5. 유물 (`/nodes` 유물 탭, `/nodes/{slug}`)
+- 국보·보물 ~2,800건을 국가유산청 API로 일괄 등록 (`metadata.source = 'khs'`). AI 번역 초안이라 **검수 전까지 큐레이션 목록·age-flow·sitemap 제외 + noindex**
+- 목록/지도(MapLibre + MapTiler) 보기, 지정·유형·시대·지역·소장처 필터, 커서 페이지네이션
+- 이미지는 공공누리 1유형만 썸네일, 1·3유형은 갤러리 (3유형은 크롭 금지)
 
----
+### 5-6. 논란 인물 (`is_controversial`)
+정책: 페이지 상단 배너("This figure is considered historically controversial. Sillok provides factual information only."), summary는 비우고 기본 정보만, 스레드 목록 상단 안내.
+**현재는 어드민 플래그만 있고 공개 페이지 표시는 미구현** (로드맵 M1.5).
 
-## 12. SEO 전략
-
-### 렌더링
-
-- 인물·스레드·피드 페이지는 SSR `force-dynamic` + `fetchCache = 'force-no-store'` (Next 14의 Supabase fetch 무기한 캐시 방지)
-- 사이트맵은 `revalidate = 3600`
-
-### Schema.org 구조화 데이터 (`lib/jsonld.ts`)
-- 인물: `Person` type
-- 유물: `VisualArtwork`
-- 미디어: `Movie | TVSeries`
-- 사건: `Event`
-- 토픽: `Thing` 기본, category에 따라 `DefinedTerm`, `SportsOrganization`, `SportsEvent`, `CreativeWork` 보조 검토
-- 사이트: `WebSite` (홈페이지)
-- 스레드: `DiscussionForumPosting` — 작성자, 날짜, 좋아요·댓글 수, `about`(관련 인물), 대댓글은 `comment` 중첩 + `BreadcrumbList`
-- 게시판·토픽: `CollectionPage`(표시된 스레드 `ItemList`) + `BreadcrumbList`
-- 사용자 입력이 들어가는 JSON-LD는 `<` → `\u003c` 이스케이프
-
-### Sitemap (`app/sitemap.ts`)
-- persons(+ 기준 이상 탭), nodes, threads, articles, 게시판·토픽
-- PostgREST 1000행 제한 → `fetchAll`로 페이징
-- `lastmod`: 실제 수정 시각 (게시판·토픽은 최신 글 시각), 글 0개 게시판·토픽은 제외
-
-### robots.ts
-- `app/robots.ts` — 크롤링 규칙
-
-### Next.js Image 설정
-
-```javascript
-// next.config.js
-images: {
-  unoptimized: true,
-  remotePatterns: [
-    { hostname: '*.supabase.co' },           // Supabase Storage
-    { hostname: 'img.youtube.com' },          // YouTube 썸네일
-    { hostname: 'lh3.googleusercontent.com' } // Google 아바타
-  ]
-}
-```
+### 5-7. OG 이미지
+연도 공유 카드 · 밈 미리보기 · 홍보 슬라이드는 `ImageResponse`로 생성 (`app/api/og/age-flow|meme|promo`). 인물·스레드·아티클은 썸네일·첫 이미지를 og:image로 쓰고 없으면 기본 이미지.
 
 ---
 
-## 13. 마일스톤 로드맵
+## 6. 어드민 (`/admin`, 한국어)
 
-> 1인 개발 기준. **현재 상태**: sillok.kr 운영 중, M1 핵심 개발 완료, Age Flow 출시.
+- 인물·노드·아티클·타임라인·태그·그룹·큐레이터·재위 CRUD, CSV 벌크 업로드(행 단위 부분 성공 + 에러 리포트)
+- 큐(queue): 인물 추가 요청, 관계 제안, 사실 제안, 신고, AI 콘텐츠 검수
+- 스레드 pin/삭제, 회원 경고·정지
 
----
+### 6-1. AI Drafts (`/admin/memes`, 테이블 `ai_drafts`)
+- **워작 밈**: 형식은 도감 `lib/meme-formats.ts`가 원본 (형식 추가 = 도감 항목 + MemeCanvas 레이아웃 + 테스트 샘플). 캡션은 Claude가 DB 사실로 작성. 모자(익선관·갓·투구·상투)는 FIELD 태그로 자동
+- **한국 짤 번역**: 업로드 → Claude가 한국어 위치 탐지·번역 → 영어 박스 편집. 게시하려면 인물 지정 + 출처·크레딧 필수
+- **짧은 소설**: 반전으로 끝나는 초단편, 이미지 없는 스레드. 본문 뒤 "What's real:" + AI 표기
+- 게시하면 관리자 명의 **일반 스레드**. 사용자는 이 테이블을 모른다. 밈 PNG는 threads 버킷, 이미지 속 글자는 `thread_images.alt`
+- **대상은 근대 이전 인물만** (1850년 이후 출생·생존·modern 태그 제외 — 명예훼손 방지). 사실 기반, 본문에 근거(`fact`)와 AI 표기
+- 남의 밈은 구조만 빌리고 이미지·문구·캐릭터는 가져오지 않는다
+- CLI: `scripts/meme-draft.ts` (`/write-meme` 스킬)
 
-### Milestone 1 — 씨앗 심기 ✅ 완료
-**달성:** 서비스 런칭 + 기본 기능 완성
-
-#### 완료 항목
-- [x] DB 스키마 29개 테이블 + 트리거 + pg_cron
-- [x] API Routes 공통 인프라
-- [x] 인물 CRUD + CSV 벌크 업로드
-- [x] 노드 CRUD (ARTIFACT, MEDIA, EVENT, GROUP)
-- [x] 스레드 + 댓글 + 좋아요 + 팔로우
-- [x] 통합 검색 (pg_trgm)
-- [x] 회원가입/로그인 (이메일 + Google + Discord)
-- [x] 메인 페이지 + 인물 목록/상세 (SSG + ISR)
-- [x] Explore 허브 (/nodes) + Artifacts 목록
-- [x] Threads 목록 + 작성 페이지
-- [x] Articles 목록/상세 + 어드민 CRUD
-- [x] 어드민 패널 (14개 페이지)
-- [x] OG 이미지, Sitemap, JSON-LD, robots.txt
-- [x] 영문화 전환 (Public 전체 영어)
-- [x] **Age Flow 시대 흐름 시각화** (8 컴포넌트)
-- [x] PersonAvatar 태그별 스타일
-- [x] 컬렉션/알림/프로필 페이지
-- [x] About/Terms/Privacy 페이지
-- [x] 인물 175명+ 등록
-
-#### 남은 작업 (M1.5)
-- [ ] TOPIC 노드 타입 DB 마이그레이션 (`nodes.node_type`, `metadata.category`)
-- [ ] `node_links` 테이블 추가 및 어드민 연결 관리 UI
-- [ ] 컬렉션 아이템 노드 지원 (`collection_items.node_id`)
-- [ ] Explore 허브 Topics 섹션 추가
-- [ ] 초기 TOPIC 시드 30개 등록
-  - food: 김치, 불고기, 비빔밥, 떡볶이, 막걸리
-  - culture: 한복, 한글, 판소리, 사물놀이, Korean Wave
-  - sport: 한국축구, 한국야구, 태권도, KBO League, K League
-- [ ] Google Search Console 등록 + Sitemap 제출
-- [ ] Vercel Analytics 활성화
-- [ ] 소셜 채널 개설
+### 6-2. 홍보 Share kit (`/admin/promo`)
+- 참여도 순 스레드 목록 → 스레드별 인스타 캐러셀 3장(1080×1350: 표지·역사·CTA), Instagram·Reddit(서브레딧별)·X·Threads 문구(Claude 초안), UTM 링크
+- **게시는 사람이 직접** → 게시 URL 기록(`promo_posts`). 레딧 자동 게시 금지(자기홍보 차단·계정 정지 위험). 운영자임을 숨기는 문구 금지 — 제3자 행세 금지
+- 외부 재사용 이미지는 관리자가 작성한 스레드의 것만 (`promoImage`) — 유저 업로드는 사이트 안에서만
+- 예정: Instagram Graph API 자동 게시·예약 (Meta 앱 검수 필요)
 
 ---
 
-### Milestone 2 — 뿌리 내리기 (트래픽 + 차별화)
-**목표:** 글로벌 SEO 트래픽 확보 + 핵심 차별화 기능 완성
-**목표 지표:** DAU 500+, 등록 인물 500명+
+## 7. SEO
 
-#### 핵심 개발
-- [ ] **관계도 시각화** (D3.js 미니 + vis-network 전체 탐색, lazy expand)
-- [ ] **생애 타임라인 시각화** 고도화
-- [ ] **문화 TOPIC 상세 페이지 고도화** — 관련 인물/사건/노드 그래프, 카테고리별 탐색
-- [ ] **음식·스포츠 SEO 랜딩 확장** — Korean Cuisine, Korean Sports, Korean Culture 클러스터
-- [ ] 오늘의 인물 생일/기일 자동 선정 cron
-- [ ] **Twitter/X 자동 포스팅** — 오늘의 인물 매일 자동 트윗
-- [ ] 인물 랭킹 고도화 (주간/월간 시각화)
-- [ ] 인물 데이터 500명+ 확장
-- [ ] TOPIC 데이터 100개+ 확장
-
-#### 비즈니스 모델
-- [ ] Google AdSense 심사 신청
-- [ ] Sillok Plus 출시 — $3.99/월
-- [ ] 운영진 후원 페이지
+- 공개 페이지는 대부분 SSR `force-dynamic` + `fetchCache = 'force-no-store'` (Next 14의 Supabase fetch 무기한 캐시 방지). DB 부하는 `sharedCache`로 줄인다
+- **빌드 시점에 DB를 조회하지 않는다** — DB가 느리면 빌드가 60초 제한에 걸려 실패한다 (sitemap · `/api/reigns`도 요청 시점 생성)
+- 구조화 데이터(`lib/jsonld.ts`): 인물 `Person` · 유물 `VisualArtwork` · 미디어 `Movie|TVSeries` · 사건 `Event` · 홈 `WebSite` · 스레드 `DiscussionForumPosting`(대댓글 `comment` 중첩) · 게시판/토픽 `CollectionPage` + `BreadcrumbList`. 사용자 입력이 들어가는 JSON-LD는 `<` → `<`
+- Sitemap(`app/sitemap.ts`): 인물(+ 기준 이상 탭) · 노드 · 스레드 · 아티클 · 게시판/토픽. PostgREST 1000행 제한 → `fetchAll`로 페이징. `lastmod`는 실제 수정 시각
+- **얇은 페이지 noindex**: 글 0개 게시판·토픽, 기준 미만 인물 탭, 생존 인물 5명 미만 연도, 검수 전 국가유산
 
 ---
 
-### Milestone 3 — 가지 뻗기 (글로벌 확장)
-**목표:** 글로벌 K-culture 커뮤니티 + 수익 다변화
-**목표 지표:** DAU 5,000+, 월 수익 $2,000+
+## 8. 커뮤니티 규칙
 
-#### 핵심 개발
-- [ ] 공개 API v1
-- [ ] PWA
-- [ ] Upstash Redis 캐싱
-- [ ] 고급 검색 필터
-- [ ] 모바일 UX 고도화
-
-#### 비즈니스 모델
-- [ ] 공개 API 유료화
-- [ ] 글로벌 기관 스폰서십
-- [ ] 어워드 시스템
-
----
-
-### Milestone 4 — 숲이 되기 (플랫폼화)
-**목표:** 한국 역사 영문 데이터의 글로벌 레퍼런스
-**목표 지표:** DAU 30,000+, 월 수익 $30,000+
-
-#### 핵심 개발
-- [ ] React Native 앱
-- [ ] AI 인물 요약
-- [ ] 교육 모드
-- [ ] 인물 비교 기능
-
----
-
-## 14. 환경 변수
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=          # 서버/빌드 전용 (노출 금지)
-
-# 소셜 로그인 (Google, Discord): Supabase Auth 대시보드에서 설정 — 앱 환경 변수 없음
-
-# 파일 업로드
-MAX_FILE_SIZE_MB=5
-
-# 앱
-NEXT_PUBLIC_APP_URL=https://sillok.kr
-
-# AI Drafts (어드민 밈·번역·소설 생성, 서버 전용)
-ANTHROPIC_API_KEY=
-
-# 유물 지도 (MapTiler — 대시보드에서 허용 origin 제한)
-NEXT_PUBLIC_MAPTILER_KEY=
-
-# 외부 AI 인물 등록 API (/api/ai/persons, X-API-Key 헤더)
-AI_API_SECRET_KEY=
-
-# 광고 (Milestone 2)
-NEXT_PUBLIC_ADSENSE_CLIENT=
-
-# Rate Limit (Milestone 2 — Upstash Redis)
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# 결제 (Milestone 2)
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-```
-
----
-
-## 15. 비즈니스 모델
-
-### 15-1. 수익원 전체 구조
-
-| 수익원 | 적용 시점 | 설명 |
-|--------|----------|------|
-| Google AdSense | Milestone 2 | 메인 ×3, 인물 ×3 슬롯 |
-| Sillok Plus 구독 | Milestone 2 | $3.99/월 · $35.99/년 (Stripe) |
-| 운영진 후원 | Milestone 2 | Ko-fi / Buy Me a Coffee |
-| 어워드 시스템 | Milestone 3 | 소액 결제 (원화 기준) |
-| 공개 API 유료화 | Milestone 3 | 개발자/교육 앱/게임사 대상 |
-| 기관 스폰서십 | Milestone 3 | Korea Foundation, KTO 등 |
-| 교육기관 B2B | Milestone 4 | 글로벌 한국문화 학과 타겟 |
-| AI 데이터 라이선싱 | Milestone 4 | 글로벌 AI 회사 |
-
-### 15-2. Sillok Plus 구독
-
-| 플랜 | 금액 | 결제 주기 |
-|------|------|----------|
-| Monthly | $3.99 | 매월 자동결제 |
-| Yearly | $35.99 (월 환산 $2.99) | 연 1회 |
-
-### 15-3. 어워드 시스템
-
-| 이름 | 아이콘 | 설명 |
-|------|--------|------|
-| Verified Fact | 🏅 | Well-researched post |
-| Great Writing | ✍️ | Exceptionally well-written |
-| Mind Blown | 😮 | Surprising insight |
-| Debate Starter | 🔥 | Sparked meaningful discussion |
-| Sillok's Choice | 🎩 | Most valuable contribution |
-
-> 금액은 원화(`amount_krw`) 기준으로 DB 저장
-
-### 15-4. 자원봉사 큐레이터 제도
-
-| 역할 | 권한 |
-|------|------|
-| Era Curator | 해당 시대 인물 편집 요청 승인/반려 |
-| Field Curator | 해당 분야 태그 관리, 부적절 스레드 숨김 |
-| Global Curator | 영문 콘텐츠 검수, 해외 유저 모더레이션 |
-
----
-
-**커뮤니티 규칙 요약:**
 - **권장:** 출처 기반 정보 공유, 건설적 토론, 오류 정정 요청
-- **금지:** 근거 없는 비방/욕설, 사생활 침해, 역사 왜곡, 저작권 침해, 스팸
-- **논란 인물:** 단정적 가치 판단 지양, 다양한 시각 전제, 출처 없는 주장 삭제 가능
-- **제재:** 경고 → 게시물 삭제 → 계정 정지 (심각한 위반 시 즉시 정지)
+- **금지:** 근거 없는 비방·욕설, 사생활 침해, 역사 왜곡, 저작권 침해, 스팸
+- **논란 인물:** 단정적 가치 판단 지양, 다양한 시각 전제, 출처 없는 주장은 삭제 가능
+- 영상 직접 업로드 없음 (스토리지 비용) — YouTube·Vimeo 임베드만
+
+---
+
+## 9. 로드맵
+
+> 1인 개발. **현재:** sillok.kr 운영 중, M1 완료. 상태는 확인된 것만 체크한다.
+
+### M1.5 — 남은 기반 작업
+- [ ] **TOPIC 노드** (음식·문화·스포츠): `node_type`에 `TOPIC` 추가, `metadata.category` = food / culture / sport / music / literature / custom (별도 node_type으로 쪼개지 않음). 인물보다 상위 개념이 아니며, TOPIC 상세는 항상 관련 인물·사건을 함께 노출
+- [ ] `node_links` 테이블 (노드 ↔ 노드: `kimchi` PART_OF `korean-cuisine` 등) + 어드민 연결 UI
+- [ ] 컬렉션에 노드 담기 (`collection_items.node_id`)
+- [ ] 초기 TOPIC 시드 30개 (김치·불고기·비빔밥·한복·한글·판소리·한국축구·한국야구·태권도 …)
+- [ ] Google Search Console 등록 + sitemap 제출
+- [x] Vercel Analytics
+- [ ] 국가유산 AI 번역 검수 (검수 전에는 noindex)
+- [ ] 논란 인물 배너·안내 공개 페이지 표시 (5-6)
+
+### M2 — 트래픽 + 차별화 (목표: DAU 500+, 인물 500명+)
+- [ ] 관계도 시각화 고도화, 생애 타임라인 고도화
+- [ ] TOPIC 상세·SEO 랜딩 (Korean Cuisine / Sports / Culture 클러스터), TOPIC 100개+
+- [ ] 오늘의 인물 생일·기일 자동 선정
+- [ ] 인물 랭킹 주간·월간
+- [ ] 수익: AdSense, Sillok Plus, 후원 페이지
+
+### M3 — 글로벌 확장 (목표: DAU 5,000+)
+- [ ] 공개 API v1, PWA, Upstash Redis(rate limit·캐시), 고급 검색 필터
+- [ ] 수익: 공개 API 유료화, 기관 스폰서십, 어워드
+
+### M4 — 플랫폼화 (목표: DAU 30,000+)
+- [ ] 모바일 앱, 교육 모드, 인물 비교
+
+---
+
+## 10. 비즈니스 모델 (계획)
+
+| 수익원 | 시점 | 내용 |
+|--------|------|------|
+| Google AdSense | M2 | 메인 ×3, 인물 ×3 슬롯 |
+| Sillok Plus 구독 | M2 | $3.99/월 · $35.99/년 (Stripe) — `subscriptions` 테이블 준비됨 |
+| 운영자 후원 | M2 | Ko-fi / Buy Me a Coffee |
+| 어워드 | M3 | 소액 결제(원화 `amount_krw`): Verified Fact 🏅 · Great Writing ✍️ · Mind Blown 😮 · Debate Starter 🔥 · Sillok's Choice 🎩 — `awards` 테이블 준비됨 |
+| 공개 API 유료화 | M3 | 개발자·교육 앱·게임사 |
+| 기관 스폰서십 | M3 | Korea Foundation, KTO 등 |
+| 교육기관 B2B · AI 데이터 라이선싱 | M4 | |
+
+**자원봉사 큐레이터** (`curator_roles`): Era Curator(시대별 인물 편집 승인) · Field Curator(분야 태그 관리, 부적절 스레드 숨김) · Global Curator(영문 검수, 해외 모더레이션).
