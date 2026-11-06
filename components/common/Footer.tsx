@@ -26,6 +26,7 @@ export default function Footer() {
               <a href="/about" className="block hover:text-gray-900">About</a>
               <a href="/terms" className="block hover:text-gray-900">Terms of Service</a>
               <a href="/privacy" className="block hover:text-gray-900">Privacy Policy</a>
+              <a href="/copyright" className="block hover:text-gray-900">Copyright</a>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-gray-700">Contact</p>

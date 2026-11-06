@@ -20,9 +20,12 @@
 
 2. 해당 인물에 대한 흥미로운 사실, 일화, 밈 소재를 웹에서 검색합니다.
 
-3. **이미지 검색**: 구글/웹에서 스레드 내용과 어울리는 이미지를 1~3장 찾습니다.
-   - 인물 초상화, 관련 유물, 장소, 밈 등
-   - 이미지 URL을 확보해둡니다
+3. **이미지 찾기 (필수)**: `prompts/image-policy.md`를 먼저 읽고, **허용 출처 안에서** 스레드와 어울리는 이미지를 1~3장 찾습니다.
+   - 이미지는 기본값입니다. 못 찾았을 때만 이미지 없이 올리고, 그 이유를 사용자에게 말합니다.
+   - 먼저 볼 곳: 인물 초상화·풍속화·기록화·고지도·유물 (공공누리 1유형, 퍼블릭 도메인), Sillok 자체 이미지 (인물 썸네일, `node_images`, age-flow 화면 캡처)
+   - 웃음 포인트를 이미지로 살릴 수 있으면 살립니다 — 엄숙한 초상화 + 현대 자막·선글라스 (변형 가능한 출처만)
+   - **금지**: 영화·드라마 캡처, 연예인 사진, 라이선스 불명 구글 이미지, 남의 밈
+   - 이미지마다 출처 URL, 라이선스, alt(무엇이 보이는지 + 이미지 속 글자)를 확보해둡니다
 
 ## 스레드 톤 & 스타일 가이드
 
@@ -54,6 +57,10 @@
 | `SOURCES` | `/t/sources` | 실록·일기·편지 등 사료 인용이 중심인 글 |
 | `MEDIA` | `/t/film-tv` | 영화·드라마·웹툰 속 인물 묘사, 고증 비교 |
 
+### 이미지 출처 표기
+이미지를 쓰면 본문 끝에 한 줄 출처를 붙입니다 (형식은 `prompts/image-policy.md`).
+예: `Image: Portrait of Yi Hwang, National Museum of Korea (KOGL Type 1)`
+
 ### 절대 하면 안 되는 것
 - 백과사전처럼 딱딱하게 쓰기
 - 격식체 학술 영어 사용
@@ -62,7 +69,7 @@
 
 ## 출력 및 DB INSERT
 
-스레드 작성 후 사용자에게 **제목, 본문, 카테고리, 이미지 URL**을 보여주고 확인 받으면 **직접 DB에 INSERT** 합니다.
+스레드 작성 후 사용자에게 **제목, 본문, 카테고리, 이미지(출처·라이선스·alt)**를 보여주고 확인 받으면 **직접 DB에 INSERT** 합니다.
 
 ### 1단계: 스레드 INSERT
 
@@ -90,40 +97,17 @@ sb.from('threads').insert({
 "
 ```
 
-### 2단계: 이미지 첨부 (thread_images INSERT)
+### 2단계: 이미지 업로드 + 첨부 (thread_images INSERT)
 
-스레드 INSERT 성공 후, 찾은 이미지 URL을 thread_images에 직접 INSERT합니다.
-이미지는 외부 URL을 그대로 저장합니다 (스레드당 최대 3장, sort_order 0~2).
-
-```javascript
-node -e "
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const envContent = fs.readFileSync('.env.local', 'utf8');
-const env = {};
-envContent.split('\n').forEach(line => {
-  const [k, ...v] = line.split('=');
-  if (k && v.length) env[k.trim()] = v.join('=').trim();
-});
-const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-sb.from('thread_images').insert([
-  { thread_id: '{thread_id}', url: '{image_url_1}', sort_order: 0 },
-  // { thread_id: '{thread_id}', url: '{image_url_2}', sort_order: 1 },
-  // { thread_id: '{thread_id}', url: '{image_url_3}', sort_order: 2 },
-]).then(({ error }) => {
-  if (error) console.error('IMAGE INSERT ERROR:', error);
-  else console.log('IMAGES OK');
-});
-"
-```
+외부 URL을 그대로 저장하지 않습니다. `prompts/image-policy.md`의 **업로드 스크립트**로 이미지를 받아 `threads` 버킷에 올리고, 그 URL과 `alt`를 `thread_images`에 넣습니다 (스레드당 최대 3장, sort_order 0~2).
 
 ## 실행 순서
 
 1. `https://sillok.kr/api/search?q={인물이름}&type=person&limit=1` API 호출로 인물 정보 조회
 2. 웹 검색으로 재미있는 소재 탐색
-3. 스레드 내용과 어울리는 이미지 1~3장 검색 (구글 등)
+3. `prompts/image-policy.md`의 허용 출처에서 이미지 1~3장 찾기 (출처·라이선스·alt 확보)
 4. 스레드 유형 하나를 골라 영어로 작성하고 카테고리 지정
-5. 사용자에게 제목, 본문, 카테고리, 이미지 URL을 보여주고 확인 요청
+5. 사용자에게 제목, 본문(출처 줄 포함), 카테고리, 이미지(출처·라이선스·alt)를 보여주고 확인 요청
 6. 확인 시:
    - 1단계: threads 테이블에 INSERT → thread_id 확보
-   - 2단계: thread_images 테이블에 이미지 URL INSERT
+   - 2단계: 이미지를 threads 버킷에 업로드하고 thread_images에 URL·alt INSERT

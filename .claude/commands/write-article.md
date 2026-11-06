@@ -20,6 +20,7 @@
 | body | Yes | Markdown |
 | tag | Yes | One of: `기획`, `특집`, `인물탐구`, `현대`, `공지`, `안내` |
 | is_notice | - | true for pinned announcements |
+| thumbnail | Yes | Cover image URL (list card + share image). Upload first — see Images |
 | is_published | - | true to make visible |
 
 ## Tag Selection Guide
@@ -43,12 +44,25 @@
 - **No emoji** unless specifically requested
 - **No academic tone** — conversational but informative
 
+## Images
+
+Read `prompts/image-policy.md` first. Images are the default, not an extra:
+
+- **`thumbnail` is required** — without it the article falls back to the generic share image.
+- **About one image per `##` section**: `![alt text](url)` — alt describes what is shown and any text in it.
+- Sources: KOGL Type 1 / public domain (portraits, genre paintings, records, maps, artifacts), Sillok's own images (figure thumbnails, `node_images`, screenshots of age-flow/timeline). **No film/drama stills, celebrity photos, or unlicensed Google images.**
+- Upload to the `threads` bucket with the script in `prompts/image-policy.md` (skip the `thread_images` insert; just use the public URL). Don't hotlink.
+- Credit each image under it in italics: `*Portrait of Yi Hwang — National Museum of Korea (KOGL Type 1)*`
+
 ## Body Structure Template
 
 ```markdown
 Opening paragraph — what's new, why it matters (2-3 sentences)
 
 ## Section 1
+![Portrait of ... seated in official robes](https://.../threads/...)
+*Portrait of ... — National Museum of Korea (KOGL Type 1)*
+
 Content with **bold names** and bullet lists
 
 ## Section 2
@@ -74,7 +88,8 @@ spotlight-yi-sun-sin
 
 1. 사용자가 준 주제를 분석하고, 적절한 tag를 결정
 2. 관련 인물/노드 정보가 필요하면 웹 검색
-3. slug, title, summary, body, tag를 모두 결정
+3. 이미지 찾기 — `prompts/image-policy.md` 허용 출처에서 표지 1장 + 섹션별 이미지, 업로드해서 URL 확보
+4. slug, title, summary, body, tag, thumbnail을 모두 결정
 
 ## 출력 및 DB INSERT
 
@@ -99,6 +114,7 @@ sb.from('articles').insert({
   body: \`{body}\`,
   summary: '{summary}',
   tag: '{tag}',
+  thumbnail: '{thumbnail_url}',
   is_notice: {is_notice},
   is_published: true,
   author_id: 'e9517e9f-511d-4b0d-a8e9-ff22a3346758'
@@ -113,9 +129,10 @@ sb.from('articles').insert({
 
 1. 주제 파악 및 tag 결정
 2. 필요 시 웹 검색으로 소재 탐색
-3. slug, title, summary, body 작성
-4. 사용자에게 전체 내용 보여주고 확인 요청
-5. 확인 시 위 스크립트로 DB에 직접 INSERT
+3. 이미지 찾기 → 업로드 (표지 + 섹션별)
+4. slug, title, summary, body, thumbnail 작성
+5. 사용자에게 전체 내용(이미지 출처·라이선스 포함) 보여주고 확인 요청
+6. 확인 시 위 스크립트로 DB에 직접 INSERT
 
 ## Checklist Before Publishing
 
@@ -124,4 +141,6 @@ sb.from('articles').insert({
 - [ ] Summary: filled in
 - [ ] Body: no broken markdown
 - [ ] Tag: correct one selected
+- [ ] Thumbnail set; sections have images with alt text and a credit line
+- [ ] Every image is from an allowed source in `prompts/image-policy.md` (no film/drama stills)
 - [ ] is_notice: only if pinning to top
