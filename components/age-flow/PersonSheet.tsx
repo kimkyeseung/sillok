@@ -52,6 +52,7 @@ export default function PersonSheet({
 
         <div className="mt-4 flex gap-2">
           <Link
+            prefetch={false}
             href={`/persons/${person.slug}`}
             className="flex-1 rounded-lg bg-brand-600 px-3 py-2 text-center text-sm font-medium text-white"
           >
@@ -78,6 +79,7 @@ export default function PersonSheet({
                 rel.other_person ? (
                   <li key={rel.relation_id}>
                     <Link
+                      prefetch={false}
                       href={`/persons/${rel.other_person.slug}`}
                       className="flex items-center gap-2 py-2 text-sm"
                     >

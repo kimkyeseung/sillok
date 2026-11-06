@@ -271,6 +271,7 @@ export default function ArtifactTimeline({
 
             return (
               <Link
+                prefetch={false}
                 key={artifact.id}
                 href={`/nodes/${artifact.slug}`}
                 className="absolute bottom-0 transition-all duration-[400ms] ease-out"
@@ -318,6 +319,7 @@ export default function ArtifactTimeline({
                     const isHovered = hoveredArtifact === artifact.id;
                     return (
                       <Link
+                        prefetch={false}
                         key={artifact.id}
                         href={`/nodes/${artifact.slug}`}
                         className="transition-all duration-300 ease-out"

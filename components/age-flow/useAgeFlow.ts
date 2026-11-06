@@ -44,6 +44,7 @@ export interface AgeFlowPerson {
   thumbnail: string | null;
   view_count: number;
   follow_count: number;
+  show_in_age_flow?: boolean; // false → left off the timeline (year pages still list them)
   tags: AgeFlowTag[];
 }
 

@@ -261,6 +261,7 @@ export default function TimelinePanel({
               {formatCount(aliveCount)} alive
             </p>
             <Link
+              prefetch={false}
               href={`/age-flow/${currentYear}`}
               className="mt-1 block text-[11px] text-amber-300/80 transition-colors hover:text-amber-200"
             >

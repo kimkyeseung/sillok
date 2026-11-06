@@ -58,11 +58,8 @@ async function loadAgeFlowData(): Promise<AgeFlowInitialData> {
   const [personsResult, eventsResult, artifactsResult, reignsResult] = await Promise.all([
     supabaseAdmin
       .from('persons')
-      .select(
-        `id, slug, name_en, name_ko, birth_year, death_year, is_alive,
-         thumbnail, view_count, follow_count,
-         person_tags ( tag_id, tags ( id, name_en, type ) )`
-      )
+      // '*' so this keeps working before the show_in_age_flow migration; transformPerson picks the fields
+      .select('*, person_tags ( tag_id, tags ( id, name_en, type ) )')
       .eq('is_deleted', false)
       .eq('is_published', true)
       .not('birth_year', 'is', null)

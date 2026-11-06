@@ -99,7 +99,7 @@ function FigureListSheetInner({
                     <PersonAvatar name={p.name_ko} fieldTag={getPrimaryFieldTag(p.tags)} size="sm" />
                   )}
                 </div>
-                <Link href={`/persons/${p.slug}`} className="min-w-0 flex-1">
+                <Link prefetch={false} href={`/persons/${p.slug}`} className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-gray-900">
                     {p.name_en || p.name_ko}
                   </p>

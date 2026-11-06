@@ -77,6 +77,7 @@ CREATE TABLE persons (
   is_alive         BOOLEAN DEFAULT FALSE,
   is_published     BOOLEAN DEFAULT FALSE,
   is_deleted       BOOLEAN DEFAULT FALSE,
+  show_in_age_flow BOOLEAN NOT NULL DEFAULT TRUE,  -- FALSE면 age-flow 타임라인에서 제외 (연도 페이지에는 표시)
   view_count       INTEGER DEFAULT 0,
   follow_count     INTEGER DEFAULT 0,
   created_at       TIMESTAMPTZ DEFAULT NOW(),

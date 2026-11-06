@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getAgeFlowData } from '@/lib/age-flow-data';
-import { parseInitialYear, parseFocusSlug, parseYearSegment } from '@/lib/age-flow';
+import { parseInitialYear, parseFocusSlug, parseYearSegment, selectTimelineData } from '@/lib/age-flow';
 import { ageFlowJsonLd } from '@/lib/jsonld';
 import AgeFlowClient from './AgeFlowClient';
 
@@ -37,8 +37,9 @@ export function generateMetadata({ searchParams }: Props): Metadata {
 }
 
 export default async function AgeFlowPage({ searchParams }: Props) {
-  const initialData = await fetchAgeFlowData();
+  const fullData = await fetchAgeFlowData();
   const initialFocus = parseFocusSlug(searchParams.focus);
+  const initialData = fullData && selectTimelineData(fullData, initialFocus);
   // ?focus= without ?year= starts at the focused figure's birth
   const focusBirth = initialFocus
     ? initialData?.persons.find((p) => p.slug === initialFocus)?.birth_year

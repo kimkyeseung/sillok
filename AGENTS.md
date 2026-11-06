@@ -113,6 +113,8 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 | AI Drafts 대상·원칙 | 근대 이전 인물만 (1850년 이후 출생·생존·modern 제외 — 명예훼손 방지). 사실 기반, 본문에 근거(`fact`)와 AI 표기. 번역 짤은 출처·크레딧 필수 |
 | age-flow 카드 뷰포트 캡 | sticky 뷰포트 → 중요도(포커스·왕·전쟁·조회수) 순으로 화면에 맞는 만큼, 나머지 "+N more" |
 | age-flow 왕·전쟁은 DB | 재위 `reigns`, 전쟁 = EVENT 노드(war/revolt) + `metadata.end_year` + 참여자 링크. 하드코딩 금지 |
+| age-flow 표시 인물 (`persons.show_in_age_flow`) | 타임라인에만 적용 (`selectTimelineData`, `?focus=` 인물은 예외). 연도 페이지·OG·sitemap은 전체 인물 사용. 재위 왕은 숨기지 않음 |
+| age-flow 타임라인 링크 `prefetch={false}` | 스크롤마다 인물·노드 페이지 ISR 재생성이 몰려 DB 부하 발생 |
 | age-flow 색인·로드 | 생존 인물 5명(`YEAR_PAGE_MIN_FIGURES`) 미만 연도 noindex, sitemap은 사건·즉위 연도만. 전체 메모리 로드는 ~2,000명까지 |
 | 국가유산 일괄 등록 (`metadata.source = 'khs'`) | 국보·보물 ~2,800건은 AI 번역 초안 → 검수 전까지 큐레이션 목록·age-flow·sitemap 제외 + noindex |
 | 유물 이미지 미러링 안 함 | 공공누리 1유형만 썸네일, 1·3유형은 `node_images` 갤러리 (3유형은 크롭 금지) |

@@ -52,6 +52,7 @@ function EventToastCard({
     >
       <div className="flex items-center gap-2.5 px-3 py-2.5">
         <Link
+          prefetch={false}
           href={`/nodes/${event.slug}`}
           className="flex min-w-0 flex-1 items-center gap-2.5 hover:opacity-80"
         >
@@ -80,6 +81,7 @@ function EventToastCard({
           <div className="flex -space-x-1.5">
             {linkedPersons.slice(0, 5).map((person) => (
               <Link
+                prefetch={false}
                 key={person.id}
                 href={`/persons/${person.slug}`}
                 title={person.name_en || person.name_ko}

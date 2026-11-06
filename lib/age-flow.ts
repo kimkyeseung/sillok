@@ -47,7 +47,24 @@ export function transformPerson(raw: Record<string, unknown>): AgeFlowPerson | n
     thumbnail: raw.thumbnail as string | null,
     view_count: (raw.view_count as number) ?? 0,
     follow_count: (raw.follow_count as number) ?? 0,
+    // Column missing (before the migration) → shown
+    show_in_age_flow: raw.show_in_age_flow !== false,
     tags,
+  };
+}
+
+/**
+ * Data for the scrolling timeline: only figures flagged to show, plus the focused
+ * one so ?focus= links from a hidden figure's page still work. Year pages, share
+ * cards and the sitemap keep using the full data.
+ */
+export function selectTimelineData(
+  data: AgeFlowInitialData,
+  focusSlug?: string | null
+): AgeFlowInitialData {
+  return {
+    ...data,
+    persons: data.persons.filter((p) => p.show_in_age_flow !== false || p.slug === focusSlug),
   };
 }
 

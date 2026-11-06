@@ -81,6 +81,7 @@ export default function PersonCard({
 
   return (
     <Link
+      prefetch={false}
       href={`/persons/${person.slug}`}
       ref={cardRef}
       data-person-id={person.id}
