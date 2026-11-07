@@ -36,6 +36,7 @@ app/
 │   ├── threads/[id]/        스레드 상세 + 대댓글 트리
 │   ├── persons/[slug]/      인물 상세 — 탭별 URL (timeline, relations, legacy, related, gallery, threads, sources, stats)
 │   ├── age-flow/[year]/     연도 페이지 ("Korea in 1592") — 공유 카드 /api/og/age-flow/[year]
+│   ├── age-flow/royal-family/  조선 왕실 가계도 탭 — 왕족은 lib/joseon-royal-family.ts (대부분 인물 레코드 없음), 초상화·링크만 DB, 배치는 lib/royal-tree.ts
 │   └── nodes/               노드 탐색 · 유물 탭 (목록/지도, 필터, 컬렉션) · /nodes/[slug] 상세
 ├── (auth)/              로그인/회원가입
 ├── admin/               어드민 (로그인 필수) — memes/ = "AI Drafts", promo/ = 홍보 Share kit

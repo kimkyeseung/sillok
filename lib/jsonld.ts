@@ -125,6 +125,21 @@ export function ageFlowJsonLd() {
   };
 }
 
+/** Royal family tree page: the members who have a person page */
+export function royalFamilyJsonLd(name: string, members: { slug: string; name_en: string | null }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name,
+    url: `${BASE_URL}/age-flow/royal-family`,
+    hasPart: members.map((m) => ({
+      '@type': 'Person',
+      name: m.name_en,
+      url: `${BASE_URL}/persons/${m.slug}`,
+    })),
+  };
+}
+
 export function eventJsonLd(event: {
   title: string;
   title_ko?: string;

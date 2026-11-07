@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { getEraRangeInAgeFlow } from '@/lib/age-flow';
+import AgeFlowTabs from './AgeFlowTabs';
 import { Era } from './useAgeFlow';
 
 interface EraFilterProps {
@@ -13,16 +15,30 @@ interface EraFilterProps {
 const ERA_LIST: Era[] = ['Ancient', 'Three Kingdoms', 'Goryeo', 'Joseon', 'Modern'];
 
 export default function EraFilter({ currentEra, onEraSelect, onOpenFigures, onShare }: EraFilterProps) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // On narrow screens only part of the list fits — keep the current era in view
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const pill = scroller?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (!scroller || !pill) return;
+    // Not smooth: the page's own scroll to ?year= on load cancels a smooth one
+    scroller.scrollLeft = pill.offsetLeft - (scroller.clientWidth - pill.offsetWidth) / 2;
+  }, [currentEra]);
+
   return (
     <div className="sticky top-14 z-30 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
       <div className="relative mx-auto flex max-w-5xl items-center">
+        <div className="ml-4">
+          <AgeFlowTabs active="timeline" />
+        </div>
         <div className="relative min-w-0 flex-1">
           {/* Left/right fade edges */}
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-white/90 to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-white/90 to-transparent" />
 
           {/* Era tabs — highlight follows the scrolled year; eras outside the timeline are disabled (hidden on mobile) */}
-          <div className="flex gap-1 overflow-x-auto px-4 py-2 scrollbar-hide">
+          <div ref={scrollerRef} className="flex gap-1 overflow-x-auto px-4 py-2 scrollbar-hide">
             {ERA_LIST.map((era) => {
               const available = getEraRangeInAgeFlow(era) !== null;
               const isCurrent = era === currentEra;
@@ -68,13 +84,14 @@ export default function EraFilter({ currentEra, onEraSelect, onOpenFigures, onSh
         </button>
         <button
           onClick={onOpenFigures}
-          className="mr-4 flex shrink-0 items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 md:text-sm"
+          aria-label="Figures"
+          className="mr-4 flex shrink-0 items-center gap-1 rounded-full border border-gray-200 p-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 md:px-3 md:py-1 md:text-sm"
         >
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="9" cy="9" r="6" />
             <path d="M14 14l4 4" />
           </svg>
-          Figures
+          <span className="hidden md:inline">Figures</span>
         </button>
       </div>
     </div>
