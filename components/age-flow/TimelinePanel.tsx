@@ -174,22 +174,24 @@ export default function TimelinePanel({
           </div>
 
           {/* Filter toggle (mobile only) */}
-          <button
-            onClick={() => setShowMobileFilters((v) => !v)}
-            className={`relative shrink-0 rounded-md p-1.5 transition-colors ${
-              showMobileFilters || hiddenCount > 0
-                ? 'bg-emerald-600/20 text-emerald-400'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-            title="Toggle filters"
-          >
-            <EyeIcon size={16} />
-            {hiddenCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-white">
-                {hiddenCount}
-              </span>
-            )}
-          </button>
+          {fieldTags.length > 0 && (
+            <button
+              onClick={() => setShowMobileFilters((v) => !v)}
+              className={`relative shrink-0 rounded-md p-1.5 transition-colors ${
+                showMobileFilters || hiddenCount > 0
+                  ? 'bg-emerald-600/20 text-emerald-400'
+                  : 'text-gray-400 hover:text-gray-200'
+              }`}
+              title="Toggle filters"
+            >
+              <EyeIcon size={16} />
+              {hiddenCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-white">
+                  {hiddenCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Year */}
           {isEditing ? (

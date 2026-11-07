@@ -1,18 +1,21 @@
 import type { Metadata } from 'next';
-import AgeFlowTabs from '@/components/age-flow/AgeFlowTabs';
-import RoyalFamilyJump from '@/components/age-flow/RoyalFamilyJump';
-import RoyalFamilyTree from '@/components/age-flow/RoyalFamilyTree';
+import Link from 'next/link';
+import RoyalFamilyFlow from '@/components/age-flow/RoyalFamilyFlow';
+import { getAgeFlowData } from '@/lib/age-flow-data';
+import { parseInitialYear } from '@/lib/age-flow';
 import { ROYAL_FAMILY } from '@/lib/joseon-royal-family';
-import { getRoyalRecords } from '@/lib/royal-family-data';
 import { royalFamilyJsonLd } from '@/lib/jsonld';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
-// Dynamic like the timeline; the portraits are cached (lib/royal-family-data.ts)
+// Dynamic: initial year comes from ?year=. Data itself is cached (lib/age-flow-data.ts).
 export const dynamic = 'force-dynamic';
 
 const TITLE = 'Joseon Royal Family Tree — Kings, Queens, Princes and Princesses';
 const DESCRIPTION =
-  'The family tree of the Joseon dynasty: all 27 monarchs from Taejo to Sunjong with their queens, consorts, princes and princesses.';
+  'Scroll through the Joseon dynasty year by year and watch the royal family change: 27 monarchs from Taejo to Sunjong with their queens, consorts, princes and princesses.';
+
+/** The founding of Joseon: the first year with a full court on screen */
+const DEFAULT_YEAR = '1392';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -28,34 +31,51 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: [DEFAULT_OG_IMAGE] },
 };
 
-export default async function RoyalFamilyPage() {
-  const records = await getRoyalRecords();
-  const kings = ROYAL_FAMILY.filter((p) => p.role === 'king')
-    .map((p) => ({ id: p.id, name: p.name, birth: p.birth ?? 0 }))
-    .sort((a, b) => a.birth - b.birth);
+interface Props {
+  searchParams: { year?: string | string[] };
+}
+
+export default async function RoyalFamilyPage({ searchParams }: Props) {
+  const full = await getAgeFlowData().catch((err) => {
+    console.error('[royal-family] SSR fetch failed:', err);
+    return null; // the client fetches its own data
+  });
+
+  // Only what this view reads: the family's records, plus reigns and wars for the sidebar
+  const slugs = new Set(ROYAL_FAMILY.flatMap((p) => (p.slug ? [p.slug] : [])));
+  const persons = full?.persons.filter((p) => slugs.has(p.slug)) ?? [];
+  const initialData = full ? { ...full, persons, artifacts: [] } : undefined;
+  const pageSlugs = new Map(persons.map((p) => [p.slug, p.name_en || p.name_ko]));
 
   return (
-    <div className="-mx-4 -mt-4">
+    <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(royalFamilyJsonLd(TITLE, records)) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            royalFamilyJsonLd(TITLE, Array.from(pageSlugs, ([slug, name_en]) => ({ slug, name_en })))
+          ),
+        }}
       />
-
-      <div className="sticky top-14 z-30 border-b border-gray-200 bg-white/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2">
-          <AgeFlowTabs active="royal-family" />
-          <RoyalFamilyJump kings={kings} />
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-5xl px-4 pt-6">
-        <h1 className="text-2xl font-bold text-gray-900">Joseon Royal Family Tree</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {ROYAL_FAMILY.length} members of the royal family. Monarchs are highlighted. Scroll sideways to explore, or jump to a monarch.
-        </p>
-      </div>
-
-      <RoyalFamilyTree records={records} />
-    </div>
+      <h1 className="sr-only">Joseon Royal Family Tree</h1>
+      {/* Only one year is on screen at a time: this keeps the whole family readable without scrolling */}
+      <ul className="sr-only">
+        {ROYAL_FAMILY.map((person) => (
+          <li key={person.id}>
+            {person.slug && pageSlugs.has(person.slug) ? (
+              <Link href={`/persons/${person.slug}`} prefetch={false}>
+                {person.name}
+              </Link>
+            ) : (
+              person.name
+            )}
+          </li>
+        ))}
+      </ul>
+      <RoyalFamilyFlow
+        initialData={initialData}
+        initialYear={parseInitialYear(searchParams.year ?? DEFAULT_YEAR)}
+      />
+    </>
   );
 }

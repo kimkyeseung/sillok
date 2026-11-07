@@ -1,16 +1,23 @@
 'use client';
 
-/** The tree is far wider than the screen — jump straight to a monarch's card */
-export default function RoyalFamilyJump({ kings }: { kings: { id: string; name: string }[] }) {
+/** Follows the reigning monarch; picking one jumps to their accession */
+export default function RoyalFamilyJump({
+  kings,
+  current,
+  onJump,
+}: {
+  kings: { slug: string; name: string; year: number }[];
+  current: string | null;
+  onJump: (year: number) => void;
+}) {
   return (
     <label className="min-w-0 flex-1 sm:flex-none">
       <span className="sr-only">Jump to a monarch</span>
       <select
-        defaultValue=""
+        value={current ?? ''}
         onChange={(event) => {
-          document
-            .getElementById(event.target.value)
-            ?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+          const king = kings.find((k) => k.slug === event.target.value);
+          if (king) onJump(king.year);
         }}
         className="w-full rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600 md:text-sm"
       >
@@ -18,7 +25,7 @@ export default function RoyalFamilyJump({ kings }: { kings: { id: string; name: 
           Jump to a monarch
         </option>
         {kings.map((king) => (
-          <option key={king.id} value={king.id}>
+          <option key={king.slug} value={king.slug}>
             {king.name}
           </option>
         ))}

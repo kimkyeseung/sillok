@@ -113,6 +113,7 @@ export interface UseAgeFlowReturn {
   allPersons: AgeFlowPerson[];
   events: AgeFlowEvent[];
   artifacts: AgeFlowArtifact[];
+  reigns: AgeFlowReign[];
   currentKing: AgeFlowPerson | null;
   currentWars: War[];
   warParticipantSlugs: Set<string>;
@@ -446,6 +447,7 @@ export function useAgeFlow(
     allPersons,
     events,
     artifacts,
+    reigns,
     currentKing,
     currentWars,
     warParticipantSlugs,
