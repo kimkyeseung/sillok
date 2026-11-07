@@ -141,17 +141,15 @@ describe('groups', () => {
     expect(cards).toContain(ROYAL_FAMILY.find((p) => p.name === 'Queen Uiin')!.id);
   });
 
-  it('keeps monarchs, heirs, the line and people with a page as cards', () => {
+  it('keeps monarchs, queens, heirs and the line as cards', () => {
     const { cards, groups } = withCards(1440);
     const grouped = Array.from(groups.values()).flatMap((g) => g.members);
     for (const person of grouped) {
       expect(person.role).not.toBe('king');
       expect(person.role).not.toBe('queen');
       expect(person.role).not.toBe('crown-prince');
-      expect(person.slug).toBeNull();
     }
     expect(cards).toContain('sejo-yi-yu');
-    expect(cards).toContain('grand-prince-anpyeong');
   });
 
   it('leaves a lone consort and a small family as separate cards', () => {
@@ -161,9 +159,24 @@ describe('groups', () => {
     expect(groups.has('yeonsangun-yi-yung:children')).toBe(false);
   });
 
+  it('keeps a king\'s mother as a card even as a consort', () => {
+    const { cards, groups } = withCards(1700);
+    const jang = ROYAL_FAMILY.find((p) => p.slug === 'jang-hui-bin')!;
+    const choe = ROYAL_FAMILY.find((p) => p.slug === 'choe-suk-bin')!;
+    expect(cards).toContain(jang.id);
+    expect(cards).toContain(choe.id);
+    expect(Array.from(groups.values()).flatMap((g) => g.members).map((m) => m.id)).not.toContain(choe.id);
+  });
+
+  it('groups people with a page like anyone else', () => {
+    const { groups } = withCards(1440);
+    const members = groups.get('sejong-daewang:children')!.members;
+    expect(members.some((m) => m.slug === 'grand-prince-anpyeong')).toBe(true);
+  });
+
   it('collapses two consorts', () => {
-    const { groups } = withCards(1800);
-    expect(groups.get('jeongjo-yi-san:consorts')?.members.length).toBeGreaterThanOrEqual(2);
+    const { groups } = withCards(1848);
+    expect(groups.get('heonjong-yi-hwan:consorts')?.members.length).toBe(2);
   });
 
   it('merges families with no living ancestor into one card', () => {

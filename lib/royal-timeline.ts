@@ -70,6 +70,12 @@ const markLine = (person: RoyalPerson): boolean => {
   return carries;
 };
 ROYAL_FAMILY.filter((p) => !p.parentId && !p.spouseOf).forEach(markLine);
+// A king's mother is part of the line too, even as a consort
+for (const person of ROYAL_FAMILY) {
+  if (!onLine.has(person.id) || !person.mother || !person.parentId) continue;
+  const mother = wivesOf.get(person.parentId)?.find((wife) => wife.name === person.mother);
+  if (mother) onLine.add(mother.id);
+}
 
 /** Who always gets a card of their own */
 function isProminent(person: RoyalPerson): boolean {
@@ -77,7 +83,6 @@ function isProminent(person: RoyalPerson): boolean {
     person.role === 'king' ||
     person.role === 'queen' ||
     person.role === 'crown-prince' ||
-    person.slug !== null ||
     onLine.has(person.id)
   );
 }

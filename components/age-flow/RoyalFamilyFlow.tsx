@@ -304,17 +304,30 @@ export default function RoyalFamilyFlow({
                 <h3 className="sticky top-0 bg-gray-50 px-4 py-1.5 text-xs font-semibold text-gray-500">{section.title}</h3>
               )}
               <ul className="divide-y divide-gray-100">
-                {section.members.map((member) => (
+                {section.members.map((member) => {
+                  const record = member.slug ? recordOf.get(member.slug) : undefined;
+                  return (
                   <li key={member.id} className="flex items-baseline justify-between gap-3 px-4 py-2.5">
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-gray-900">{member.name}</span>
+                      {record ? (
+                        <Link
+                          href={`/persons/${record.slug}`}
+                          prefetch={false}
+                          className="block text-sm font-medium text-brand-700 hover:underline"
+                        >
+                          {record.name_en || member.name}
+                        </Link>
+                      ) : (
+                        <span className="block text-sm font-medium text-gray-900">{member.name}</span>
+                      )}
                       <span className="text-[11px] uppercase tracking-wide text-gray-400">{ROLE_LABELS[member.role]}</span>
                     </span>
                     <span className="shrink-0 text-xs text-gray-500">
                       {lifeDetail(member.birth, member.death, currentYear)}
                     </span>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </section>
           ))}

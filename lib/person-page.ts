@@ -222,7 +222,8 @@ export const getFamilyTree = cache(async (personId: string) => {
     .from('persons')
     .select('id, slug, name_en, thumbnail, birth_year, death_year')
     .in('id', ids)
-    .eq('is_deleted', false);
+    .eq('is_deleted', false)
+    .eq('is_published', true);
 
   const persons: Record<string, FamilyTreePerson> = Object.fromEntries(
     (people ?? []).map((p) => [p.id, p])

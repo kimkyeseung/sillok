@@ -68,6 +68,15 @@ describe('ROYAL_FAMILY', () => {
     expect(byId.get('prince-namyeon')?.parentId).toBe('prince-eunsin');
   });
 
+  it('links the first batch of figures without clashes', () => {
+    const slugs = ROYAL_FAMILY.flatMap((p) => (p.slug ? [p.slug] : []));
+    expect(new Set(slugs).size).toBe(slugs.length);
+    expect(slugs.length).toBeGreaterThanOrEqual(110);
+    expect(ROYAL_FAMILY.find((p) => p.slug === 'queen-jeongsun-danjong')?.spouseOf).toBe('danjong-yi-hong-wi');
+    expect(ROYAL_FAMILY.find((p) => p.slug === 'queen-jeongsun-yeongjo')?.spouseOf).toBe('yeongjo-yi-geum');
+    expect(ROYAL_FAMILY.find((p) => p.slug === 'park-gyeong-bin')?.spouseOf).toBe('jungjong-yi-yeok');
+  });
+
   it('uses valid slugs', () => {
     for (const person of ROYAL_FAMILY) {
       if (person.slug) expect(person.slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);

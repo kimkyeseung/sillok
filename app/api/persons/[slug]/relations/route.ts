@@ -57,7 +57,8 @@ export async function GET(
     .from('persons')
     .select('id, slug, name_ko, name_en, thumbnail, birth_year, death_year')
     .in('id', otherIds)
-    .eq('is_deleted', false);
+    .eq('is_deleted', false)
+    .eq('is_published', true);
 
   const personMap = new Map(
     (persons ?? []).map((p: { id: string }) => [p.id, p])
