@@ -7,23 +7,30 @@ import PersonAvatar from '@/components/common/PersonAvatar';
 import AgeFlowTabs from '@/components/age-flow/AgeFlowTabs';
 import DensityBar from '@/components/age-flow/DensityBar';
 import RoyalFamilyJump from '@/components/age-flow/RoyalFamilyJump';
+import Sheet from '@/components/age-flow/Sheet';
 import TimelinePanel from '@/components/age-flow/TimelinePanel';
 import { ERA_BG_COLORS, useAgeFlow, type AgeFlowInitialData, type AgeFlowPerson } from '@/components/age-flow/useAgeFlow';
 import { ROYAL_FAMILY, type RoyalPerson, type RoyalRole } from '@/lib/joseon-royal-family';
 import { DYNASTIES } from '@/lib/monarchs';
-import { aliveTree, fitScale, resolveLifespans, royalDensity, VIRTUAL_ROOT } from '@/lib/royal-timeline';
+import {
+  aliveTree,
+  fitScale,
+  groupLabel,
+  groupSections,
+  groupTitle,
+  resolveLifespans,
+  royalDensity,
+  VIRTUAL_ROOT,
+  type RoyalGroup,
+} from '@/lib/royal-timeline';
 import { layoutTree, type TreeInput } from '@/lib/royal-tree';
 
 const NODE_W = 120;
 const NODE_H = 128;
 const GAP_X = 12;
-const LINE_GAP = 10;
 const ROW_GAP = 32;
-const BOX_PAD = 5;
 const PAD = 8;
 const SLOT = NODE_W + GAP_X;
-/** How childless siblings may wrap, per side of the heir. Each year uses whichever comes out largest. */
-const WRAP_OPTIONS = [1, 2, 3, 4, 6];
 /** Below this the names are hard to read, so a wide year scrolls sideways instead */
 const MIN_WIDTH_SCALE = 0.85;
 /** Until the stage is measured (the tree stays hidden until then) */
@@ -43,25 +50,19 @@ const NO_TAGS: never[] = [];
 const NO_HIDDEN = new Set<string>();
 const noop = () => {};
 
-const lineHeight = (lines: number) => lines * (NODE_H + LINE_GAP) - LINE_GAP;
+const leftOf = (x: number) => PAD + x * SLOT;
+/** The virtual root's row is dropped: generation 1 is the top row */
+const topOf = (gen: number) => PAD + (gen - 1) * (NODE_H + ROW_GAP);
 
-/** Positions for one year. The virtual root's row is dropped: gen 1 becomes the top row. */
-function layoutYear(year: number, spans: ReturnType<typeof resolveLifespans>, maxCols: number) {
-  const { tree, wives } = aliveTree(year, spans);
-  const layout = layoutTree(tree, { maxCols });
-  const rowSpans = layout.rowSpans.slice(1);
-  const genTops = rowSpans.reduce<number[]>(
-    (tops, lines, i) => [...tops, tops[i] + lineHeight(lines) + ROW_GAP],
-    [PAD]
-  );
+/** Only recorded dates are shown; estimated ones just place the person on the timeline */
+function lifeDetail(birth: number | null, death: number | null, year: number) {
+  if (birth) return `Age ${Math.max(year - birth, 1)}`;
+  return death ? `? – ${death}` : null;
+}
 
-  const leftOf = (x: number) => PAD + x * SLOT;
-  const topOf = (gen: number, subRow = 0) => genTops[gen - 1] + subRow * (NODE_H + LINE_GAP);
-  const position = new Map(layout.positions.map((p) => [p.id, p]));
-
-  const realGroups = layout.groups.filter((group) => group.parentId !== VIRTUAL_ROOT);
-  const boxes = realGroups.filter((group) => group.rows > 1);
-  const boxed = new Set(boxes.flatMap((group) => group.memberIds));
+function layoutYear(year: number, spans: ReturnType<typeof resolveLifespans>) {
+  const { tree, wives, groups } = aliveTree(year, spans);
+  const layout = layoutTree(tree);
 
   const edges: { parent: string; child: string }[] = [];
   const walk = (node: TreeInput) => {
@@ -74,15 +75,12 @@ function layoutYear(year: number, spans: ReturnType<typeof resolveLifespans>, ma
 
   return {
     wives,
+    groups,
     edges,
-    boxes,
-    boxed,
-    position,
+    position: new Map(layout.positions.map((p) => [p.id, p])),
     positions: layout.positions.filter((p) => p.id !== VIRTUAL_ROOT),
-    leftOf,
-    topOf,
     width: PAD * 2 + layout.columns * SLOT - GAP_X,
-    height: genTops[genTops.length - 1] - ROW_GAP + PAD,
+    height: PAD * 2 + (layout.rows - 1) * (NODE_H + ROW_GAP) - ROW_GAP,
   };
 }
 
@@ -111,8 +109,9 @@ export default function RoyalFamilyFlow({
   const recordOf = useMemo(() => new Map(allPersons.map((p) => [p.slug, p])), [allPersons]);
   const spans = useMemo(() => resolveLifespans(Object.fromEntries(recordOf)), [recordOf]);
   const density = useMemo(() => royalDensity(spans, minYear, maxYear), [spans, minYear, maxYear]);
+  const yearLayout = useMemo(() => layoutYear(currentYear, spans), [currentYear, spans]);
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
 
-  // Measured below; the wrap that gives the largest cards depends on the screen
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<{ width: number; height: number } | null>(null);
   useEffect(() => {
@@ -139,16 +138,7 @@ export default function RoyalFamilyFlow({
     return () => window.removeEventListener('resize', measure);
   }, [isLoading]);
 
-  const { yearLayout, scale } = useMemo(() => {
-    let best: { yearLayout: ReturnType<typeof layoutYear>; scale: number } | null = null;
-    for (const maxCols of WRAP_OPTIONS) {
-      const candidate = layoutYear(currentYear, spans, maxCols);
-      const fit = fitScale(candidate, stage ?? DEFAULT_STAGE, MIN_WIDTH_SCALE);
-      // Strictly larger: on a tie the earlier, narrower option stays and needs less sideways scrolling
-      if (!best || fit > best.scale + 0.001) best = { yearLayout: candidate, scale: fit };
-    }
-    return best!;
-  }, [currentYear, spans, stage]);
+  const scale = fitScale(yearLayout, stage ?? DEFAULT_STAGE, MIN_WIDTH_SCALE);
 
   const kings = useMemo(() => {
     const monarchs = DYNASTIES.find((d) => d.id === 'joseon')?.monarchs ?? [];
@@ -170,7 +160,7 @@ export default function RoyalFamilyFlow({
   // they leave the view, but otherwise leave the visitor's sideways scroll alone
   const kingSlug = currentKing?.slug ?? null;
   const kingPosition = kingSlug ? yearLayout.position.get(kingSlug) : undefined;
-  const kingLeft = kingPosition ? yearLayout.leftOf(kingPosition.x) * scale : null;
+  const kingLeft = kingPosition ? leftOf(kingPosition.x) * scale : null;
   useEffect(() => {
     const el = stageRef.current;
     if (!el || kingLeft === null || el.scrollWidth <= el.clientWidth) return;
@@ -187,7 +177,29 @@ export default function RoyalFamilyFlow({
     );
   }
 
-  const { positions, position, wives, edges, boxes, boxed, leftOf, topOf, width, height } = yearLayout;
+  const { positions, position, wives, groups, edges, width, height } = yearLayout;
+  const openGroup = openGroupId ? groups.get(openGroupId) ?? null : null;
+
+  const renderSlot = (id: string, x: number, gen: number) => {
+    const group = groups.get(id);
+    if (group) {
+      return <GroupCard key={id} group={group} left={leftOf(x)} top={topOf(gen)} onOpen={() => setOpenGroupId(id)} />;
+    }
+    const person = personById.get(id);
+    if (!person) return null;
+    return (
+      <RoyalCard
+        key={id}
+        person={person}
+        record={person.slug ? recordOf.get(person.slug) : undefined}
+        year={currentYear}
+        isReigning={!!kingSlug && person.slug === kingSlug}
+        reign={reignSpan(person.slug)}
+        left={leftOf(x)}
+        top={topOf(gen)}
+      />
+    );
+  };
 
   return (
     <div className="-mx-4 -mt-4">
@@ -204,53 +216,22 @@ export default function RoyalFamilyFlow({
             className={`absolute inset-y-0 pb-14 transition-colors duration-1000 md:pb-4 md:pl-52 md:pr-24 ${ERA_BG_COLORS[currentEra]}`}
             style={bleed ?? { left: 0, width: '100%' }}
           >
-          <div ref={stageRef} className="h-full overflow-x-auto overflow-y-hidden scrollbar-hide">
-            <div
-              className={`relative mx-auto ${stage && bleed ? '' : 'invisible'}`}
-              style={{ width: width * scale, height: height * scale }}
-            >
+            <div ref={stageRef} className="h-full overflow-x-auto overflow-y-hidden scrollbar-hide">
               <div
-                className="absolute left-0 top-0 origin-top-left"
-                style={{ width, height, transform: `scale(${scale})` }}
+                className={`relative mx-auto ${stage && bleed ? '' : 'invisible'}`}
+                style={{ width: width * scale, height: height * scale }}
               >
-                <svg className="absolute inset-0 text-gray-300" width={width} height={height} aria-hidden="true">
-                  {boxes.map((box) => {
-                    const parent = position.get(box.parentId);
-                    if (!parent) return null;
-                    const boxWidth = box.cols * SLOT - GAP_X;
-                    const yMid = topOf(box.gen) - ROW_GAP / 2;
-                    return (
-                      <g key={box.memberIds[0]}>
-                        <rect
-                          x={leftOf(box.x) - BOX_PAD}
-                          y={topOf(box.gen) - BOX_PAD}
-                          width={boxWidth + BOX_PAD * 2}
-                          height={lineHeight(box.rows) + BOX_PAD * 2}
-                          rx={14}
-                          className="fill-gray-100/70"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                        />
-                        <path
-                          d={`M ${leftOf(parent.x) + NODE_W / 2} ${topOf(parent.gen) + NODE_H} V ${yMid} H ${
-                            leftOf(box.x) + boxWidth / 2
-                          } V ${topOf(box.gen) - BOX_PAD}`}
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={1.5}
-                        />
-                      </g>
-                    );
-                  })}
-
-                  {edges
-                    .filter((edge) => !boxed.has(edge.child))
-                    .map(({ parent, child }) => {
+                <div className="absolute left-0 top-0 origin-top-left" style={{ width, height, transform: `scale(${scale})` }}>
+                  <svg className="absolute inset-0 text-gray-300" width={width} height={height} aria-hidden="true">
+                    {edges.map(({ parent, child }) => {
                       const p = position.get(parent);
                       const c = position.get(child);
                       if (!p || !c) return null;
                       // Dashed: adopted, or a generation in between has died
-                      const direct = personById.get(child)?.parentId === parent && !personById.get(child)?.adopted;
+                      const person = personById.get(child);
+                      const direct = person
+                        ? person.parentId === parent && !person.adopted
+                        : groups.get(child)?.ownerId === parent;
                       return (
                         <path
                           key={child}
@@ -265,45 +246,29 @@ export default function RoyalFamilyFlow({
                       );
                     })}
 
-                  <g className="text-rose-300" stroke="currentColor" strokeWidth={1.5}>
-                    {positions.flatMap((p) =>
-                      (wives.get(p.id) ?? []).map((wife, i) => {
-                        const from = leftOf(p.x + i) + NODE_W;
-                        const y = topOf(p.gen) + NODE_H / 2;
-                        return (
-                          <g key={wife.id}>
-                            <line x1={from} y1={y - 2} x2={from + GAP_X} y2={y - 2} />
-                            <line x1={from} y1={y + 2} x2={from + GAP_X} y2={y + 2} />
-                          </g>
-                        );
-                      })
-                    )}
-                  </g>
-                </svg>
+                    <g className="text-rose-300" stroke="currentColor" strokeWidth={1.5}>
+                      {positions.flatMap((p) =>
+                        (wives.get(p.id) ?? []).map((slot, i) => {
+                          const from = leftOf(p.x + i) + NODE_W;
+                          const y = topOf(p.gen) + NODE_H / 2;
+                          return (
+                            <g key={slot}>
+                              <line x1={from} y1={y - 2} x2={from + GAP_X} y2={y - 2} />
+                              <line x1={from} y1={y + 2} x2={from + GAP_X} y2={y + 2} />
+                            </g>
+                          );
+                        })
+                      )}
+                    </g>
+                  </svg>
 
-                {positions.flatMap((p) => {
-                  const person = personById.get(p.id);
-                  if (!person) return [];
-                  const cards = [{ person, x: p.x, top: topOf(p.gen, p.subRow) }];
-                  (wives.get(p.id) ?? []).forEach((wife, i) => {
-                    cards.push({ person: wife, x: p.x + i + 1, top: topOf(p.gen) });
-                  });
-                  return cards.map((card) => (
-                    <RoyalCard
-                      key={card.person.id}
-                      person={card.person}
-                      record={card.person.slug ? recordOf.get(card.person.slug) : undefined}
-                      year={currentYear}
-                      isReigning={!!kingSlug && card.person.slug === kingSlug}
-                      reign={reignSpan(card.person.slug)}
-                      left={leftOf(card.x)}
-                      top={card.top}
-                    />
-                  ));
-                })}
+                  {positions.flatMap((p) => [
+                    renderSlot(p.id, p.x, p.gen),
+                    ...(wives.get(p.id) ?? []).map((slot, i) => renderSlot(slot, p.x + i + 1, p.gen)),
+                  ])}
+                </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </div>
@@ -326,6 +291,34 @@ export default function RoyalFamilyFlow({
         totalYears={density.length}
         onYearClick={scrollToYear}
       />
+
+      <Sheet
+        open={!!openGroup}
+        onClose={() => setOpenGroupId(null)}
+        title={openGroup ? `${groupTitle(openGroup)} in ${currentYear}` : ''}
+      >
+        {openGroup &&
+          groupSections(openGroup).map((section) => (
+            <section key={section.title ?? 'all'}>
+              {section.title && (
+                <h3 className="sticky top-0 bg-gray-50 px-4 py-1.5 text-xs font-semibold text-gray-500">{section.title}</h3>
+              )}
+              <ul className="divide-y divide-gray-100">
+                {section.members.map((member) => (
+                  <li key={member.id} className="flex items-baseline justify-between gap-3 px-4 py-2.5">
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-gray-900">{member.name}</span>
+                      <span className="text-[11px] uppercase tracking-wide text-gray-400">{ROLE_LABELS[member.role]}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-gray-500">
+                      {lifeDetail(member.birth, member.death, currentYear)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+      </Sheet>
     </div>
   );
 }
@@ -337,6 +330,64 @@ function roleLabel(person: RoyalPerson, year: number, reign: { start: number; en
   // <=: in a handover year the predecessor is the one counted as reigning
   if (reign && year <= reign.start) return 'Prince';
   return reign ? 'Former King' : 'King';
+}
+
+const CARD_CLASS =
+  'animate-card-appear absolute flex flex-col items-center rounded-xl border px-2 py-2 transition-[left,top,background-color,border-color] duration-300';
+
+function GroupCard({
+  group,
+  left,
+  top,
+  onOpen,
+}: {
+  group: RoyalGroup;
+  left: number;
+  top: number;
+  onOpen: () => void;
+}) {
+  const count = group.members.length;
+
+  // Births and deaths inside a group would go unseen, so flash the change on the card
+  const previous = useRef(count);
+  const [delta, setDelta] = useState(0);
+  useEffect(() => {
+    const change = count - previous.current;
+    previous.current = count;
+    if (change === 0) return;
+    setDelta(change);
+    const timer = setTimeout(() => setDelta(0), 1200);
+    return () => clearTimeout(timer);
+  }, [count]);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      title={`${groupTitle(group)}: view all ${count}`}
+      style={{ left, top, width: NODE_W, height: NODE_H }}
+      className={`${CARD_CLASS} border-dashed border-gray-300 bg-gray-50 hover:border-brand-300 hover:bg-white`}
+    >
+      {delta !== 0 && (
+        <span
+          key={`${count}-${delta}`}
+          aria-hidden="true"
+          className={`animate-card-appear absolute -right-1.5 -top-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold text-white ${
+            delta > 0 ? 'bg-emerald-500' : 'bg-gray-500'
+          }`}
+        >
+          {delta > 0 ? `+${delta}` : `−${-delta}`}
+        </span>
+      )}
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-gray-600 ring-1 ring-gray-200">
+        +{count}
+      </span>
+      <span className="mt-1 line-clamp-2 shrink-0 text-center text-xs font-medium leading-tight text-gray-900">
+        {groupLabel(group)}
+      </span>
+      <span className="mt-auto text-[10px] font-medium uppercase leading-tight tracking-wide text-brand-600">View all</span>
+    </button>
+  );
 }
 
 function RoyalCard({
@@ -357,10 +408,7 @@ function RoyalCard({
   top: number;
 }) {
   const name = record?.name_en || person.name;
-  const birth = record?.birth_year ?? person.birth;
-  const death = record?.death_year ?? person.death;
-  // Only recorded dates are shown; estimated ones just place the card on the timeline
-  const detail = birth ? `Age ${Math.max(year - birth, 1)}` : death ? `? – ${death}` : null;
+  const detail = lifeDetail(record?.birth_year ?? person.birth, record?.death_year ?? person.death, year);
   const title = person.adopted
     ? `${name} — adopted into this line`
     : person.mother
@@ -386,7 +434,7 @@ function RoyalCard({
     </>
   );
 
-  const className = `animate-card-appear absolute flex flex-col items-center rounded-xl border px-2 py-2 transition-[left,top,background-color,border-color] duration-300 ${
+  const className = `${CARD_CLASS} ${
     isReigning ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-400/40' : 'border-gray-200 bg-white'
   }`;
   const style = { left, top, width: NODE_W, height: NODE_H };

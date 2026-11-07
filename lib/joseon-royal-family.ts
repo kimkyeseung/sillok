@@ -3,7 +3,9 @@
  *
  * Most princes, princesses and consorts have no person record, so (like DYNASTIES in
  * lib/monarchs.ts) the family lives here and `slug` links those who do. The DB supplies
- * portraits for linked people. Source: English Wikipedia family sections of each monarch.
+ * portraits for linked people. Source: English Wikipedia family sections of each monarch, checked
+ * against the Korean pages' Hangul names and dates. Dates a year apart are left as they are, since
+ * the sources mix lunar and solar years.
  *
  * Scope: named wives of consort rank or above, and named children, of each monarch and of
  * the non-reigning men on the line to a later monarch. Other princes' descendants, infants
@@ -116,7 +118,7 @@ const HOUSEHOLDS: Record<string, WifeSpec[]> = {
       prince('Prince Jangcheon', 1418, 1465),
       prince('Prince Murim', 1419, 1475),
       princess('Princess Hamyang'),
-      princess('Princess Sukshin'),
+      princess('Princess Suksin'),
       princess('Princess Deokcheon'),
       princess('Princess Goseong'),
       princess('Princess Sangwon'),
@@ -174,7 +176,7 @@ const HOUSEHOLDS: Record<string, WifeSpec[]> = {
       linked('grand-prince-anpyeong', 'Grand Prince Anpyeong', 'prince', 1418, 1453),
       prince('Grand Prince Imyeong', 1420, 1469),
       prince('Grand Prince Gwangpyeong', 1425, 1444),
-      prince('Grand Prince Geumseong', 1426, 1456),
+      prince('Grand Prince Geumseong', 1426, 1457),
       prince('Grand Prince Pyeongwon', 1427, 1445),
       prince('Grand Prince Yeongeung', 1434, 1467),
     ]),
@@ -189,10 +191,10 @@ const HOUSEHOLDS: Record<string, WifeSpec[]> = {
     consort('Consort Hye', null, 1455, [
       prince('Prince Hannam', 1429, 1459),
       prince('Prince Suchun', 1431, 1455),
-      prince('Prince Yeongpung', 1431, 1463),
+      prince('Prince Yeongpung', 1434, 1456),
     ]),
     consort('Consort Yeong', null, 1483, [prince('Prince Hwaui', 1425)]),
-    others([princess('Princess Jeongan', null, 1461), princess('Princess Jeonghyeon', 1425, 1480)]),
+    others([princess('Princess Jeongan', 1441, 1461), princess('Princess Jeonghyeon', 1425, 1480)]),
   ],
   'munjong-yi-hyang': [
     queen('Queen Hyeondeok', 1418, 1441, [
@@ -246,7 +248,7 @@ const HOUSEHOLDS: Record<string, WifeSpec[]> = {
     others([
       princess('Princess Hyesuk', 1478),
       princess('Princess Suksin', 1478, 1487),
-      prince('Prince Gyesong', 1480, 1504),
+      prince('Prince Gyeseong', 1480, 1504),
       prince('Prince Anyang', 1480, 1505),
       prince('Prince Wanwon', 1481, 1509),
       princess('Princess Gongsin', 1481, 1549),
@@ -258,8 +260,8 @@ const HOUSEHOLDS: Record<string, WifeSpec[]> = {
       princess('Princess Jeongsun', 1486),
       princess('Princess Gyeonghwi', null, 1525),
       prince('Prince Ikyang', 1488, 1552),
-      prince('Prince Yiseong', 1489, 1553),
-      prince('Prince Gyeongmyeong', 1489, 1552),
+      prince('Prince Iseong', 1489, 1553),
+      prince('Prince Gyeongmyeong', 1489, 1526),
       prince('Prince Jeonseong', 1490, 1505),
       princess('Princess Jeonghye', 1490, 1507),
       prince('Prince Yeongsan', 1490, 1538),
@@ -345,19 +347,19 @@ const HOUSEHOLDS: Record<string, WifeSpec[]> = {
     consort('Consort Jeong', 1567, 1626, [
       prince('Prince Inseong', 1588, 1628),
       princess('Princess Jeongin', 1590, 1656),
-      princess('Princess Jeongseon', 1594, 1674),
+      princess('Princess Jeongseon', 1594, 1614),
       princess('Princess Jeonggeun', 1599, 1613),
       prince('Prince Inheung', 1604, 1652),
     ]),
     consort('Consort Jeong (Sukui)', 1563, 1638, [
       princess('Princess Jeongjeong', 1595, 1666),
-      prince('Prince Gyeongchang', 1596, 1654),
+      prince('Prince Gyeongchang', 1596, 1644),
     ]),
     consort('Consort On', 1581, 1664, [
       prince('Prince Heungan', 1598, 1624),
       prince('Prince Gyeongpyeong', 1600, 1674),
       princess('Princess Jeonghwa', 1604, 1667),
-      prince('Prince Yeongseon', 1607, 1649),
+      prince('Prince Yeongseong', 1607, 1649),
     ]),
   ],
   'gwanghaegun-yi-hon': [
@@ -469,7 +471,7 @@ const HOUSEHOLDS: Record<string, WifeSpec[]> = {
     consort('Lady Boknyeongdang', 1882, 1929, [linked('princess-deokhye', 'Princess Deokhye', 'princess', 1912, 1989)]),
     others([prince('Prince Ui', 1877, 1955)]),
   ],
-  'sunjong-yi-cheok': [queen('Empress Sunmyeong', 1872, 1904), queen('Empress Sunjeong', 1894, 1966)],
+  'sunjong-yi-cheok': [queen('Empress Sunmyeonghyo', 1872, 1904), queen('Empress Sunjeonghyo', 1894, 1966)],
   'prince-euneon': [
     consort('Princess Consort Sangsan', 1753, 1801, [
       prince('Prince Sanggye', 1769, 1786),
