@@ -89,9 +89,11 @@ function Avatar({ person, size }: { person: AgeFlowPerson; size: number }) {
   );
 }
 
+// prefetch={false} on every link: a year lists 100+ figures, and prefetching them
+// regenerates their ISR pages (DB load) as the visitor scrolls
 function PersonRow({ person, year, note }: { person: AgeFlowPerson; year: number; note?: string }) {
   return (
-    <Link
+    <Link prefetch={false}
       href={`/persons/${person.slug}`}
       className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 transition-colors hover:border-brand-300"
     >
@@ -128,7 +130,7 @@ export default async function AgeFlowYearPage({ params }: Props) {
       />
 
       <nav className="mb-3 text-xs text-gray-500">
-        <Link href="/age-flow" className="hover:text-brand-600">Age Flow</Link>
+        <Link prefetch={false} href="/age-flow" className="hover:text-brand-600">Age Flow</Link>
         <span className="mx-1.5">›</span>
         <span className="text-gray-700">{year}</span>
       </nav>
@@ -137,7 +139,7 @@ export default async function AgeFlowYearPage({ params }: Props) {
         <p className="text-sm font-medium text-brand-600">{era} era</p>
         <h1 className="mt-1 text-3xl font-bold text-gray-900">Korea in {year}</h1>
         <p className="mt-3 text-gray-600">{describeYear(snapshot)}</p>
-        <Link
+        <Link prefetch={false}
           href={`/age-flow?year=${year}`}
           className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
         >
@@ -148,7 +150,7 @@ export default async function AgeFlowYearPage({ params }: Props) {
       {(king || wars.length > 0) && (
         <section className="mb-8 grid gap-3 sm:grid-cols-2">
           {king && (
-            <Link
+            <Link prefetch={false}
               href={`/persons/${king.slug}`}
               className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4 hover:border-amber-300"
             >
@@ -161,7 +163,7 @@ export default async function AgeFlowYearPage({ params }: Props) {
             </Link>
           )}
           {wars.map((w) => (
-            <Link
+            <Link prefetch={false}
               key={w.slug}
               href={`/nodes/${w.slug}`}
               className="rounded-xl border border-red-200 bg-red-50/60 p-4 hover:border-red-300"
@@ -182,7 +184,7 @@ export default async function AgeFlowYearPage({ params }: Props) {
           <ul className="space-y-2">
             {events.map((e) => (
               <li key={e.id}>
-                <Link href={`/nodes/${e.slug}`} className="text-sm font-medium text-brand-700 hover:underline">
+                <Link prefetch={false} href={`/nodes/${e.slug}`} className="text-sm font-medium text-brand-700 hover:underline">
                   {e.title}
                 </Link>
               </li>
@@ -228,7 +230,7 @@ export default async function AgeFlowYearPage({ params }: Props) {
         {figures.length > MAX_FIGURES && (
           <p className="mt-3 text-sm text-gray-500">
             And {figures.length - MAX_FIGURES} more —{' '}
-            <Link href={`/age-flow?year=${year}`} className="text-brand-600 hover:underline">
+            <Link prefetch={false} href={`/age-flow?year=${year}`} className="text-brand-600 hover:underline">
               see everyone in Age Flow
             </Link>
           </p>
@@ -237,14 +239,14 @@ export default async function AgeFlowYearPage({ params }: Props) {
 
       <nav className="flex items-center justify-between border-t border-gray-200 pt-4 text-sm">
         {year > JOSEON_START ? (
-          <Link href={`/age-flow/${year - 1}`} className="text-brand-600 hover:underline">← {year - 1}</Link>
+          <Link prefetch={false} href={`/age-flow/${year - 1}`} className="text-brand-600 hover:underline">← {year - 1}</Link>
         ) : <span />}
         <div className="flex gap-3 text-gray-500">
-          {year - 10 >= JOSEON_START && <Link href={`/age-flow/${year - 10}`} className="hover:text-brand-600">−10</Link>}
-          {year + 10 <= JOSEON_END && <Link href={`/age-flow/${year + 10}`} className="hover:text-brand-600">+10</Link>}
+          {year - 10 >= JOSEON_START && <Link prefetch={false} href={`/age-flow/${year - 10}`} className="hover:text-brand-600">−10</Link>}
+          {year + 10 <= JOSEON_END && <Link prefetch={false} href={`/age-flow/${year + 10}`} className="hover:text-brand-600">+10</Link>}
         </div>
         {year < JOSEON_END ? (
-          <Link href={`/age-flow/${year + 1}`} className="text-brand-600 hover:underline">{year + 1} →</Link>
+          <Link prefetch={false} href={`/age-flow/${year + 1}`} className="text-brand-600 hover:underline">{year + 1} →</Link>
         ) : <span />}
       </nav>
     </article>

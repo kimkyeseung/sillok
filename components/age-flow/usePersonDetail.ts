@@ -4,8 +4,8 @@ import useSWR from 'swr';
 import { tagLabel } from '@/lib/tags';
 import type { AgeFlowPersonDetail, AgeFlowTag } from './useAgeFlow';
 
-// Shared by hover panel (desktop), person sheet (mobile) and relation lines.
-// SWR dedupes, so hover + sheet + lines for the same person hit the API once.
+// Shared by hover panel (desktop) and person sheet (mobile).
+// SWR dedupes, so hover + sheet for the same person hit the API once.
 
 export interface AgeFlowRelation {
   relation_id: string;
@@ -64,7 +64,8 @@ async function fetchPersonDetail(url: string): Promise<AgeFlowPersonDetail> {
 }
 
 export function usePersonDetail(slug: string | null) {
-  return useSWR(slug ? `/api/persons/${slug}` : null, fetchPersonDetail, SWR_OPTIONS);
+  // /card: only the fields shown here, cached on the server for all visitors
+  return useSWR(slug ? `/api/persons/${slug}/card` : null, fetchPersonDetail, SWR_OPTIONS);
 }
 
 export function usePersonRelations(slug: string | null) {

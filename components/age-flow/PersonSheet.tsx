@@ -26,7 +26,7 @@ const RELATION_LABELS: Record<string, string> = {
   AFFILIATED: 'Affiliated',
 };
 
-/** Tap target on touch devices, where hover panel and relation lines can't open */
+/** Tap target on touch devices, where the hover panel can't open */
 export default function PersonSheet({
   person,
   currentYear,
