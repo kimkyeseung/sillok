@@ -23,7 +23,6 @@ import PersonCard from '@/components/age-flow/PersonCard';
 import TimelinePanel from '@/components/age-flow/TimelinePanel';
 import EraFilter from '@/components/age-flow/EraFilter';
 import PersonHoverPanel from '@/components/age-flow/PersonHoverPanel';
-import RelationLines from '@/components/age-flow/RelationLines';
 import EventMarker from '@/components/age-flow/EventMarker';
 import DensityBar from '@/components/age-flow/DensityBar';
 import ArtifactTimeline from '@/components/age-flow/ArtifactTimeline';
@@ -397,15 +396,6 @@ export default function AgeFlowClient({ initialData, initialYear, initialFocus =
                     +{moreCount} more
                   </button>
                 )}
-
-                {/* Relation lines SVG overlay — hovered card, else the focused figure */}
-                <RelationLines
-                  hoveredPersonId={hoveredPersonId ?? focusPerson?.id ?? null}
-                  hoveredPersonSlug={hoveredPerson?.slug ?? focusPerson?.slug ?? null}
-                  visiblePersons={shownPersons}
-                  cardRefs={cardRefs.current}
-                  gridRef={gridRef}
-                />
               </div>
             )}
           </div>
