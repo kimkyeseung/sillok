@@ -8,7 +8,7 @@
 
 ## 상수
 
-- **어드민 author_id**: `e9517e9f-511d-4b0d-a8e9-ff22a3346758` (김계승)
+- **어드민 author_id**: `ADMIN_ID` (`scripts/sb.mjs` — DB 접근은 이 헬퍼로)
 
 ## Article Fields
 
@@ -97,18 +97,10 @@ spotlight-yi-sun-sin
 
 확인 받으면 **직접 DB에 INSERT** 합니다:
 
-```javascript
-node -e "
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const envContent = fs.readFileSync('.env.local', 'utf8');
-const env = {};
-envContent.split('\n').forEach(line => {
-  const [k, ...v] = line.split('=');
-  if (k && v.length) env[k.trim()] = v.join('=').trim();
-});
-const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-sb.from('articles').insert({
+```bash
+node --input-type=module -e "
+import { sb, ADMIN_ID, out } from './scripts/sb.mjs';
+out(await sb.from('articles').insert({
   slug: '{slug}',
   title: '{title}',
   body: \`{body}\`,
@@ -117,11 +109,8 @@ sb.from('articles').insert({
   thumbnail: '{thumbnail_url}',
   is_notice: {is_notice},
   is_published: true,
-  author_id: 'e9517e9f-511d-4b0d-a8e9-ff22a3346758'
-}).select().single().then(({ data, error }) => {
-  if (error) console.error('INSERT ERROR:', error);
-  else console.log('SUCCESS:', JSON.stringify(data, null, 2));
-});
+  author_id: ADMIN_ID,
+}).select('id, slug').single());
 "
 ```
 

@@ -1,0 +1,5 @@
+# Excluded from ripgrep-based search (Claude Code Grep/Glob, rg) — still tracked by git.
+# Bulk data: data/heritage/images.json is a single 4.7 MB line; one match floods the context.
+# Read these deliberately (jq / node) when a task needs them.
+data/
+package-lock.json
