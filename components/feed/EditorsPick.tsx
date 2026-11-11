@@ -1,17 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getLatestArticle } from '@/lib/feed-data';
 
 /** Latest article from the editors (sidebar) */
 export default async function EditorsPick() {
-  const { data } = await supabaseAdmin
-    .from('articles')
-    .select('slug, title, summary, thumbnail')
-    .eq('is_deleted', false)
-    .eq('is_published', true)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const data = await getLatestArticle();
   if (!data) return null;
 
   return (

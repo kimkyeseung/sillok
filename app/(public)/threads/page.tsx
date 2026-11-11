@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getThreadList } from '@/lib/feed-data';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   },
 };
 
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+// Same list for every visitor. Thread writes call revalidateFeed(), so this is only a safety net.
+export const revalidate = 60;
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -48,22 +48,7 @@ function getYouTubeThumbnail(url: string): string | null {
 }
 
 export default async function ThreadsPage() {
-  const { data: threads } = await supabaseAdmin
-    .from('threads')
-    .select(
-      `
-      id, title, video_url,
-      like_count, reply_count, view_count,
-      created_at,
-      profiles!threads_author_id_fkey ( nickname, avatar_url ),
-      persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
-      thread_images ( id, url, sort_order ),
-      thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )
-    `
-    )
-    .eq('is_deleted', false)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  const threads = await getThreadList();
 
   return (
     <div>

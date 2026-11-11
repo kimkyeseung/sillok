@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
-
 @layer base {
   * {
     box-sizing: border-box;
@@ -73,6 +71,18 @@
 
 .animate-slide-up {
   animation: slide-up 0.2s ease-out;
+}
+
+/* Navigation progress bar — fast at first, then creeps while the server responds */
+@keyframes nav-progress {
+  0% { transform: scaleX(0); }
+  20% { transform: scaleX(0.5); }
+  60% { transform: scaleX(0.8); }
+  100% { transform: scaleX(0.95); }
+}
+
+.animate-nav-progress {
+  animation: nav-progress 8s cubic-bezier(0.1, 0.6, 0.2, 1) forwards;
 }
 
 /* Age Flow — card transitions */

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sharedCache } from '@/lib/shared-cache';
 import type { Metadata } from 'next';
 import ExploreNodesClient from '@/components/nodes/ExploreNodesClient';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
@@ -18,8 +19,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Rendered per request (ExploreNodesClient reads the query string), but the list itself is
+// shared through getExploreNodes. 'force-no-store' would bypass that cache on every request.
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const fetchCache = 'default-no-store';
 
 export interface NodeItem {
   id: string;
@@ -42,9 +45,12 @@ export interface NodeItem {
   }>;
 }
 
-export default async function NodesPage() {
+const getExploreNodes = sharedCache(
+  'nodes-explore',
+  // Node writes call revalidateAgeFlow() (same tag); the TTL is only a safety net
+  async (): Promise<{ nodes: NodeItem[]; artifactTotal: number }> => {
   // Bulk-imported heritage artifacts (~2,800) are paged in by ArtifactBrowser — only count them here
-  const [{ data }, { count: artifactTotal }] = await Promise.all([
+  const [{ data, error }, { count: artifactTotal, error: countError }] = await Promise.all([
     supabaseAdmin
       .from('nodes')
       .select(
@@ -64,6 +70,8 @@ export default async function NodesPage() {
       // Same count as the Artifacts list — designation sets count once
       .or(GROUP_PRIMARY_FILTER),
   ]);
+  // Throw so an outage is not cached as an empty list
+  if (error || countError) throw new Error(`[nodes] explore list: ${(error ?? countError)!.message}`);
 
   // Drop the Korean source text (heritage metadata) — never rendered in cards
   const nodes: NodeItem[] = ((data ?? []) as unknown as NodeItem[]).map((n) => {
@@ -72,7 +80,16 @@ export default async function NodesPage() {
     return { ...n, metadata };
   });
 
+  return { nodes, artifactTotal: artifactTotal ?? 0 };
+  },
+  { revalidate: 300, tags: ['age-flow'] },
+  () => ({ nodes: [], artifactTotal: 0 })
+);
+
+export default async function NodesPage() {
+  const { nodes, artifactTotal } = await getExploreNodes();
+
   return (
-    <ExploreNodesClient nodes={nodes} artifactTotal={artifactTotal ?? 0} />
+    <ExploreNodesClient nodes={nodes} artifactTotal={artifactTotal} />
   );
 }

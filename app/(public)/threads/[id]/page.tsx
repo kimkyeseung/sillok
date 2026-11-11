@@ -15,7 +15,8 @@ import ThreadSidebar, { RelatedThreads } from '@/components/thread/ThreadSidebar
 import { breadcrumbJsonLd, discussionJsonLd } from '@/lib/jsonld';
 
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+// 'force-no-store' would also bypass the shared caches (unstable_cache) on every request
+export const fetchCache = 'default-no-store';
 
 interface Props {
   params: { id: string };

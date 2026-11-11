@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
+import { revalidateFeed } from '@/lib/feed-data';
 import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { normalizeThreadFigures, uniqueFigureIds } from '@/lib/thread-figures';
@@ -141,6 +142,7 @@ export async function PUT(
     .eq('id', params.id)
     .single();
 
+  revalidateFeed();
   return apiSuccess(updated ? normalizeThreadFigures(updated) : updated);
 }
 
@@ -183,5 +185,6 @@ export async function DELETE(
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
+  revalidateFeed();
   return apiSuccess({ deleted: true });
 }

@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Vercel Hobby image optimization quota exhausted → new images got 402. Serve originals directly.
-    unoptimized: true,
+    // Vercel Hobby image optimization quota exhausted → new images got 402.
+    // Resizing is delegated to the image host (Supabase transformations, Wikimedia thumbs).
+    loader: 'custom',
+    loaderFile: './lib/image-loader.ts',
     remotePatterns: [
       {
         protocol: 'https',

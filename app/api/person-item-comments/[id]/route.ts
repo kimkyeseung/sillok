@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
+import { revalidateFeed } from '@/lib/feed-data';
 import { requireAdmin, requireUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
@@ -28,5 +29,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     .eq('id', params.id);
   if (error) return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
+  revalidateFeed();
   return apiSuccess({ deleted: true });
 }
