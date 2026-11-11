@@ -10,7 +10,8 @@ import { THREAD_CATEGORIES } from '@/lib/community';
 import PersonBreadcrumbJsonLd from '@/components/person/PersonBreadcrumbJsonLd';
 
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+// 'force-no-store' would also bypass the shared caches (unstable_cache) on every request
+export const fetchCache = 'default-no-store';
 
 interface Props {
   params: { slug: string };

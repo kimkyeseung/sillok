@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { UpdateMemeSchema, parseMemeContent } from '@/lib/meme';
 import { loadFiguresBySlugs } from '@/lib/meme-data';
 import { MemePublishError, hideMemeThread, syncMemeThread } from '@/lib/meme-publish';
+import { revalidateFeed } from '@/lib/feed-data';
 import { MEME_COLUMNS, withFigures, type MemeRow } from '@/lib/meme-server';
 
 const IdSchema = z.string().uuid();
@@ -77,6 +78,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } else if (wasPublished) {
     await hideMemeThread(current.thread_id);
   }
+  if (isPublished || wasPublished) revalidateFeed();
 
   const { data, error } = await supabaseAdmin
     .from('ai_drafts')
@@ -105,5 +107,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     .maybeSingle();
   if (error) return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
   await hideMemeThread(data?.thread_id ?? null);
+  revalidateFeed();
   return apiSuccess({ id: params.id });
 }

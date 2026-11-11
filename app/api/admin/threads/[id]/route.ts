@@ -1,5 +1,6 @@
 import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin } from '@/lib/auth';
+import { revalidateFeed } from '@/lib/feed-data';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // ─── DELETE /api/admin/threads/:id — Soft delete thread (admin) ───
@@ -20,6 +21,7 @@ export async function DELETE(
   if (error)
     return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
+  revalidateFeed();
   return apiSuccess({ deleted: true });
 }
 
@@ -41,5 +43,6 @@ export async function PATCH(
   if (error)
     return apiError('SERVER_ERROR', '처리 중 오류가 발생했습니다.', 500);
 
+  revalidateFeed();
   return apiSuccess({ restored: true });
 }

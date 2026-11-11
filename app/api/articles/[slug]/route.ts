@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
+import { revalidateFeed } from '@/lib/feed-data';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
@@ -65,6 +66,7 @@ export async function PUT(
   if (error || !data)
     return apiError('NODE_NOT_FOUND', 'Article not found.', 404);
 
+  revalidateFeed();
   return apiSuccess(data);
 }
 
@@ -87,5 +89,6 @@ export async function DELETE(
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
 
+  revalidateFeed();
   return apiSuccess({ deleted: true });
 }

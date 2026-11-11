@@ -14,7 +14,8 @@ import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 import { breadcrumbJsonLd, communityPageJsonLd } from '@/lib/jsonld';
 
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+// 'force-no-store' would also bypass the shared caches (unstable_cache) on every request
+export const fetchCache = 'default-no-store';
 
 interface Props {
   params: { board: string };

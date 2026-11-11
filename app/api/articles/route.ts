@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
+import { revalidateFeed } from '@/lib/feed-data';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
@@ -98,5 +99,6 @@ export async function POST(request: Request) {
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
   }
 
+  revalidateFeed();
   return apiSuccess(data);
 }

@@ -2,6 +2,7 @@
  * Home feed — server-side loaders
  */
 import { cache } from 'react';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sharedCache, orThrow } from '@/lib/shared-cache';
 import { stripMarkdown, truncateText } from '@/lib/seo';
@@ -21,6 +22,27 @@ import {
   type MonthEntry,
   type TopWindow,
 } from '@/lib/feed';
+
+// ─── Cache ───
+
+/** Tag on every cached feed list (first feed page, /threads, sidebar modules) */
+const FEED_TAG = 'feed';
+/** Safety net only — writes call revalidateFeed(), so lists normally refresh at once */
+const FEED_TTL = 60;
+
+/**
+ * Call after a thread, article or person-item comment is created, edited,
+ * deleted or restored, so the cached lists show it on the next request.
+ * Like/reply counts on cards are not revalidated — they lag up to FEED_TTL.
+ */
+export function revalidateFeed() {
+  try {
+    revalidateTag(FEED_TAG);
+    revalidatePath('/threads');
+  } catch {
+    // Outside a Next request (CLI scripts) there is no cache to clear
+  }
+}
 
 // ─── Feed ───
 
@@ -112,14 +134,16 @@ function toItem(r: Row): FeedItem {
   };
 }
 
-export async function getFeedPage({
+type FeedPage = { items: FeedItem[]; next_cursor: string | null; sort: FeedSort };
+
+async function queryFeedPage({
   sort,
   t = 'all',
   board,
   topic,
   cursor,
   limit = 20,
-}: FeedQuery): Promise<{ items: FeedItem[]; next_cursor: string | null; sort: FeedSort }> {
+}: FeedQuery): Promise<FeedPage & { failed: boolean }> {
   const run = async (activeSort: FeedSort) => {
     const column = activeSort === 'hot' ? 'hot_score' : activeSort === 'top' ? 'top_score' : 'created_at';
     let query = supabaseAdmin
@@ -166,7 +190,36 @@ export async function getFeedPage({
     result.data.length > limit && last
       ? encodeCursor({ v: last[result.column] as number | string, id: last.id })
       : null;
-  return { items: rows.map(toItem), next_cursor: next, sort: activeSort };
+  return { items: rows.map(toItem), next_cursor: next, sort: activeSort, failed: !!result.error };
+}
+
+type FirstPageQuery = { sort: FeedSort; t: TopWindow; board: string | null; topic: string | null; limit: number };
+
+// The first page is the same for every visitor — shared across requests
+const getFirstFeedPage = sharedCache(
+  'feed-first-page',
+  async (q: FirstPageQuery): Promise<FeedPage> => {
+    const { failed, ...page } = await queryFeedPage(q);
+    if (failed) throw new Error('[feed] first page query failed');
+    return page;
+  },
+  { revalidate: FEED_TTL, tags: [FEED_TAG] },
+  (q): FeedPage => ({ items: [], next_cursor: null, sort: q.sort })
+);
+
+export async function getFeedPage(query: FeedQuery): Promise<FeedPage> {
+  if (!query.cursor) {
+    return getFirstFeedPage({
+      sort: query.sort,
+      t: query.t ?? 'all',
+      board: query.board ?? null,
+      topic: query.topic ?? null,
+      limit: query.limit ?? 20,
+    });
+  }
+  // Later pages are keyed by cursor — not worth caching
+  const { failed: _failed, ...page } = await queryFeedPage(query);
+  return page;
 }
 
 /** Threads created in the last `days` days (drives the Top → Hot default switch) */
@@ -184,7 +237,7 @@ export const getRecentThreadCount = sharedCache(
     );
     return data?.length ?? 0;
   },
-  { revalidate: 300 },
+  { revalidate: 300, tags: [FEED_TAG] },
   () => 0
 );
 
@@ -348,15 +401,20 @@ export interface ActivityItem {
   href: string;
 }
 
-export const getRecentActivity = cache(async (limit = 5): Promise<ActivityItem[]> => {
-  const { data, error } = await supabaseAdmin
-    .from('person_item_comments')
-    .select('id, content, created_at, user_id, target_type, target_key, persons!inner ( slug, name_en, thumbnail, is_published )')
-    .eq('is_deleted', false)
-    .eq('persons.is_published', true)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error || !data?.length) return [];
+export const getRecentActivity = sharedCache(
+  'feed-recent-activity',
+  async (limit: number = 5): Promise<ActivityItem[]> => {
+  const data = orThrow(
+    '[feed] recent activity',
+    await supabaseAdmin
+      .from('person_item_comments')
+      .select('id, content, created_at, user_id, target_type, target_key, persons!inner ( slug, name_en, thumbnail, is_published )')
+      .eq('is_deleted', false)
+      .eq('persons.is_published', true)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+  );
+  if (!data?.length) return [];
 
   const rows = data as unknown as {
     id: string;
@@ -393,7 +451,66 @@ export const getRecentActivity = cache(async (limit = 5): Promise<ActivityItem[]
     target: r.target_type === 'GALLERY' ? 'a photo' : title.get(r.target_key) ?? 'an item',
     href: `/persons/${r.persons.slug}/${TAB[r.target_type]}`,
   }));
-});
+  },
+  { revalidate: 300, tags: [FEED_TAG] },
+  () => []
+);
+
+// ─── Editors' pick (sidebar) ───
+
+export interface LatestArticle {
+  slug: string;
+  title: string;
+  summary: string | null;
+  thumbnail: string | null;
+}
+
+export const getLatestArticle = sharedCache(
+  'feed-latest-article',
+  async (): Promise<LatestArticle | null> =>
+    orThrow(
+      '[feed] latest article',
+      await supabaseAdmin
+        .from('articles')
+        .select('slug, title, summary, thumbnail')
+        .eq('is_deleted', false)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ),
+  { revalidate: 600, tags: [FEED_TAG] },
+  () => null
+);
+
+// ─── /threads list ───
+
+const THREAD_LIST_FIELDS = `
+  id, title, video_url,
+  like_count, reply_count, view_count,
+  created_at,
+  profiles!threads_author_id_fkey ( nickname, avatar_url ),
+  persons!threads_person_id_fkey ( id, slug, name_en, name_ko, thumbnail ),
+  thread_images ( id, url, sort_order ),
+  thread_persons ( person_id, is_primary, sort_order, persons ( id, slug, name_en, name_ko, thumbnail ) )
+`;
+
+/** Newest threads for the /threads page (raw rows — the page normalizes figures) */
+export const getThreadList = sharedCache(
+  'feed-thread-list',
+  async (limit: number = 50) =>
+    orThrow(
+      '[feed] thread list',
+      await supabaseAdmin
+        .from('threads')
+        .select(THREAD_LIST_FIELDS)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+    ),
+  { revalidate: FEED_TTL, tags: [FEED_TAG] },
+  () => null
+);
 
 // ─── Sidebar ───
 

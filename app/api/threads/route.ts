@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-helpers';
+import { revalidateFeed } from '@/lib/feed-data';
 import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { threadCreateLimiter } from '@/lib/rate-limit';
@@ -196,5 +197,6 @@ export async function POST(request: Request) {
     threadId: thread.id,
   });
 
+  revalidateFeed();
   return apiSuccess(thread);
 }
