@@ -110,6 +110,7 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 | 인물 편집 콘텐츠 AI 초안 | 즉시 공개 + `is_ai_generated` 라벨, 어드민 사후 검수 |
 | AI Drafts (`ai_drafts`) | 워작 밈·번역 짤·짧은 소설을 Claude로 초안 → 어드민 검토 후 게시하면 관리자 명의 **일반 스레드**(`thread_id`)가 됨. 사용자는 테이블을 모름. 밈 PNG는 threads 버킷, 이미지 속 텍스트는 `thread_images.alt` |
 | 밈 형식 = 도감 | 형식 추가는 `lib/meme-formats.ts` 항목 + MemeCanvas 레이아웃 + 테스트 샘플. 남의 밈은 구조만 빌리고 이미지·문구·캐릭터는 가져오지 않음 |
+| 이미지: 유저 업로드 vs 운영자 | 유저 업로드는 notice-and-takedown(`/copyright`, 약관 4a) 아래 게시. 운영자 콘텐츠는 `prompts/image-policy.md` 허용 출처(공공누리 1·3유형, PD/CC0/CC BY, 자체 이미지)에서 **적극 사용**, 영화·드라마 캡처·연예인 사진 금지. Share kit는 관리자 작성 스레드 이미지만 재사용(`promoImage`) |
 | 홍보는 수동 게시 (Share kit) | `/admin/promo`: 스레드별 인스타 캐러셀(1080×1350)·플랫폼 문구·UTM 링크 생성 → 사람이 게시 후 URL 기록(`promo_posts`). 레딧 자동 게시 금지(자기홍보 차단·계정 정지 위험). 문구는 운영자임을 숨기지 않음 — 제3자 행세 금지 |
 | AI Drafts 대상·원칙 | 근대 이전 인물만 (1850년 이후 출생·생존·modern 제외 — 명예훼손 방지). 사실 기반, 본문에 근거(`fact`)와 AI 표기. 번역 짤은 출처·크레딧 필수 |
 | age-flow 카드 뷰포트 캡 | sticky 뷰포트 → 중요도(포커스·왕·전쟁·조회수) 순으로 화면에 맞는 만큼, 나머지 "+N more" |

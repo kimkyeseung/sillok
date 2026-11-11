@@ -10,7 +10,7 @@ export default function TermsPage() {
   return (
     <article className="prose prose-gray mx-auto max-w-3xl px-4 py-12">
       <h1>Terms of Service</h1>
-      <p className="text-sm text-gray-500">Last updated: March 29, 2026</p>
+      <p className="text-sm text-gray-500">Last updated: November 5, 2026</p>
 
       <h2>1. Acceptance of Terms</h2>
       <p>
@@ -43,7 +43,30 @@ export default function TermsPage() {
           You agree not to post content that is defamatory, harassing, hateful, or that violates any
           applicable law.
         </li>
-        <li>Sillok reserves the right to remove content that violates these Terms.</li>
+        <li>
+          You are responsible for the content you post, including images. Only post material you
+          created, have permission to use, or may use under the law (for example quotation, commentary
+          or parody, or public-domain and openly licensed works). Credit the source when you can.
+        </li>
+        <li>
+          Sillok hosts user content and does not review it before it appears. Sillok reserves the
+          right to remove content that violates these Terms.
+        </li>
+      </ul>
+
+      <h2>4a. Copyright Complaints</h2>
+      <ul>
+        <li>
+          If you believe content on Sillok infringes your copyright, send a notice as described on
+          our <a href="/copyright">Copyright &amp; Takedown</a> page. No account is needed.
+        </li>
+        <li>
+          We remove reported material promptly, notify the user who posted it, and accept
+          counter-notices.
+        </li>
+        <li>
+          Accounts that repeatedly post infringing material are suspended, and may be terminated.
+        </li>
       </ul>
 
       <h2>5. Prohibited Conduct</h2>
@@ -87,8 +110,8 @@ export default function TermsPage() {
 
       <h2>11. Contact</h2>
       <p>
-        For questions about these Terms, please reach out via the contact information provided on the
-        Service.
+        For questions about these Terms, email{' '}
+        <a href="mailto:contact@sillok.kr">contact@sillok.kr</a>.
       </p>
     </article>
   );

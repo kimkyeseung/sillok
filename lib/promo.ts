@@ -78,6 +78,21 @@ export const findSubreddit = (name: string | null | undefined) =>
 
 // ─── Links ───
 
+/**
+ * Image the Share kit may reuse off-site. Only images the operator posted
+ * (admin-authored threads: AI Drafts memes, public-domain art) — a user's upload
+ * is shown on Sillok under the user-content safe harbor, but re-posting it to
+ * Instagram/Reddit would be Sillok itself using it.
+ */
+export function promoImage<T extends { sort_order: number }>(
+  authorRole: string | null | undefined,
+  images: T[] | null | undefined
+): { image: T | null; blocked: boolean } {
+  const first = [...(images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0] ?? null;
+  if (!first) return { image: null, blocked: false };
+  return authorRole === 'ADMIN' ? { image: first, blocked: false } : { image: null, blocked: true };
+}
+
 export const SITE_URL = 'https://sillok.kr';
 
 /** Thread URL tagged per platform so Vercel Analytics shows what each post brought in */

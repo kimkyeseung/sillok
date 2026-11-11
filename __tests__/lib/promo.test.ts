@@ -6,6 +6,7 @@ import {
   composePost,
   findSubreddit,
   parseScoreCursor,
+  promoImage,
   promoLength,
   splitThreadContent,
   xLength,
@@ -91,5 +92,26 @@ describe('parseScoreCursor', () => {
     expect(parseScoreCursor(`12_${ID}`)).toEqual({ score: 12, id: ID });
     expect(parseScoreCursor(`abc_${ID}`)).toBeNull();
     expect(parseScoreCursor('12_1),or(id.gt.0')).toBeNull();
+  });
+});
+
+describe('promoImage', () => {
+  const imgs = [
+    { url: 'b.png', sort_order: 1 },
+    { url: 'a.png', sort_order: 0 },
+  ];
+
+  it('reuses the first image of an admin-authored thread', () => {
+    expect(promoImage('ADMIN', imgs)).toEqual({ image: { url: 'a.png', sort_order: 0 }, blocked: false });
+  });
+
+  it('blocks a user upload from off-site reuse', () => {
+    expect(promoImage('USER', imgs)).toEqual({ image: null, blocked: true });
+    expect(promoImage(null, imgs)).toEqual({ image: null, blocked: true });
+  });
+
+  it('is not blocked when there is no image', () => {
+    expect(promoImage('USER', [])).toEqual({ image: null, blocked: false });
+    expect(promoImage('ADMIN', null)).toEqual({ image: null, blocked: false });
   });
 });

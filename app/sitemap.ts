@@ -7,8 +7,9 @@ import { getAgeFlowData } from '@/lib/age-flow-data';
 import { getNotableYears } from '@/lib/age-flow';
 import { CURATED_NODES_FILTER } from '@/lib/heritage';
 
-// Regenerate hourly — otherwise the sitemap is frozen at build time
-export const revalidate = 3600;
+// Rendered per request, not at build: a slow DB would time the build out
+// (static generation limit 60s). Crawlers fetch it only a few times a day.
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://sillok.kr';
@@ -106,6 +107,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${baseUrl}/privacy`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.2,
+    },
+    {
+      url: `${baseUrl}/copyright`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.2,
