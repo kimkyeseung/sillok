@@ -2,11 +2,15 @@
  * next/image custom loader — resizing is delegated to the image host instead of
  * Vercel image optimization (Hobby quota exhausted → 402).
  *
- * - Supabase Storage public objects → Storage image transformation (`render/image`).
- *   Only `width` is sent, so the aspect ratio is kept and nothing is cropped.
+ * - Supabase Storage public objects → the WebP thumbnail pre-generated at upload
+ *   (`lib/thumbnails.ts`). Not Storage image transformations: those are billed per
+ *   origin image. A missing thumbnail falls back to the original in the browser
+ *   (`components/common/ThumbnailFallback`).
  * - Wikimedia Commons originals → Wikimedia thumbnails, small sizes only (see below).
  * - Anything else (YouTube, Google avatars, heritage hosts, local files) → unchanged.
  */
+
+import { THUMB_BUCKET, hasThumbnails, thumbObjectPath, thumbStep } from './thumbnail-paths';
 
 interface LoaderArgs {
   src: string;
@@ -15,10 +19,6 @@ interface LoaderArgs {
 }
 
 const SUPABASE_OBJECT = /^(https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1)\/object\/public\/(.+)$/;
-/** Formats the Supabase transformer accepts (gif/svg are served as they are) */
-const TRANSFORMABLE = /\.(jpe?g|png|webp)$/i;
-/** Supabase rejects widths above 2500 */
-const SUPABASE_MAX_WIDTH = 2500;
 
 const WIKIMEDIA_ORIGINAL = /^(https:\/\/upload\.wikimedia\.org\/wikipedia\/[a-z]+)\/([0-9a-f]\/[0-9a-f]{2})\/([^/?#]+\.(?:jpe?g|png))$/i;
 /**
@@ -30,15 +30,17 @@ const WIKIMEDIA_STEPS = [20, 40, 60, 120, 250];
 /** next/image asks for 256 for a 128px slot on a 2x screen — close enough to the 250 step */
 const WIKIMEDIA_MAX_REQUEST = 256;
 
-export default function imageLoader({ src, width, quality }: LoaderArgs): string {
+export default function imageLoader({ src, width }: LoaderArgs): string {
   const supabase = SUPABASE_OBJECT.exec(src);
   if (supabase) {
-    const [path, query] = supabase[2].split('?');
-    if (!TRANSFORMABLE.test(path)) return src;
-    const params = new URLSearchParams(query ?? '');
-    params.set('width', String(Math.min(width, SUPABASE_MAX_WIDTH)));
-    params.set('quality', String(quality ?? 75));
-    return `${supabase[1]}/render/image/public/${path}?${params}`;
+    const [object, query] = supabase[2].split('?');
+    const slash = object.indexOf('/');
+    const bucket = object.slice(0, slash);
+    const path = object.slice(slash + 1);
+    if (slash < 0 || !hasThumbnails(bucket, path)) return src;
+    // An existing query (cache-buster) is kept so a replaced image is refetched
+    const thumb = thumbObjectPath(bucket, path, thumbStep(width));
+    return `${supabase[1]}/object/public/${THUMB_BUCKET}/${thumb}${query ? `?${query}` : ''}`;
   }
 
   const wikimedia = WIKIMEDIA_ORIGINAL.exec(src);

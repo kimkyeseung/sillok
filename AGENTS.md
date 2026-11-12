@@ -56,6 +56,7 @@ lib/                     순수 로직(테스트 대상)과 서버 로더를 파
 ├── meme.ts              AI 초안 로직 — meme-ai(Claude) · meme-data · meme-render · meme-publish(스레드 발행)
 ├── promo.ts             Share kit 로직 (UTM, 플랫폼 글자 수, 서브레딧 안내) — promo-ai · promo-data · claude.ts(공용 Claude 호출)
 ├── person-page.ts       인물 페이지 로더 (React cache로 layout/page/metadata 공유)
+├── image-loader.ts · thumbnail-paths.ts · thumbnails.ts   next/image 로더 → 미리 만든 썸네일 (경로 규칙 / sharp 생성)
 └── jsonld.ts · seo.ts   구조화 데이터 · 메타 유틸
 db/schema.sql            전체 스키마 (44 테이블) — db/migrations/와 항상 동기화
 scripts/                 데이터 적재 (heritage: fetch → translate → import → images → enrich → ranks) · meme-draft.ts (밈 초안 CLI: formats / preview / create --post)
@@ -87,6 +88,7 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 - `view_count` 직접 UPDATE 금지 → `view_logs` + 배치 집계
 - 관계 FAMILY·ALLY·RIVAL은 단방향 1건 저장 후 OR 쿼리
 - 업로드: presigned URL (jpeg/png/webp, 5MB). `memes` 버킷(번역할 원본 짤)은 jpeg/png만 — 렌더러가 webp 불가
+- 썸네일: 이미지를 올리면 `thumbs` 버킷에 폭별 WebP(96·256·640·1080·1920)를 미리 생성 — 브라우저 업로드는 `/api/upload/complete`, 밈은 `meme-publish`. **스크립트로 이미지를 올린 뒤에는 `npm run thumbs`** (없으면 브라우저가 원본으로 대체). Supabase 이미지 변환(`render/image`)은 원본 장수만큼 과금되므로 쓰지 않는다
 - `threads.hot_score`: 트리거 + pg_cron 15분. 소수점 12자리 반올림 필수 (PostgREST float 15자리 → 커서 어긋남)
 - `threads.updated_at`: 내용 컬럼 수정 시에만 갱신 (sitemap lastmod 보호)
 - `thread_images.alt`: 이미지 설명/이미지 속 텍스트 → img alt · og:image:alt · ImageObject.caption

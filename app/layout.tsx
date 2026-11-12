@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
 import { ToastProvider } from '@/components/common/Toast';
+import ThumbnailFallback from '@/components/common/ThumbnailFallback';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -72,6 +73,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             style={{ display: 'none', visibility: 'hidden' }}
           />
         </noscript>
+        <ThumbnailFallback />
         <ToastProvider>{children}</ToastProvider>
         <Analytics />
       </body>

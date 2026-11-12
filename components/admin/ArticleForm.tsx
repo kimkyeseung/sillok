@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
+import { finalizeUpload } from '@/lib/upload';
 
 const TAGS = [
   { value: '기획', label: '기획' },
@@ -100,6 +101,7 @@ export default function ArticleForm({
         headers: { 'Content-Type': file.type },
         body: file,
       });
+      await finalizeUpload('articles', path);
 
       const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/articles/${path}`;
       setForm((prev) => ({ ...prev, thumbnail: publicUrl }));

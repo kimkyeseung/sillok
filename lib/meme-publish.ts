@@ -5,6 +5,7 @@ import { notifyFollowers } from './notifications';
 import { memeAltText, memeThreadBody, memeTranscript } from './meme';
 import { loadFiguresByIds } from './meme-data';
 import { buildMemeElement } from './meme-render';
+import { generateThumbnails, removeThumbnails } from './thumbnails';
 import type { MemeRow } from './meme-server';
 
 // ─── Publish a meme as a regular thread (server only) ───
@@ -57,6 +58,8 @@ export async function syncMemeThread(meme: MemeRow, adminId: string): Promise<st
     path = `${authorId}/${threadId}/meme-${Date.now()}.png`;
     const upload = await supabaseAdmin.storage.from('threads').upload(path, png, { contentType: 'image/png' });
     if (upload.error) throw new Error(`[meme] image upload failed: ${upload.error.message}`);
+    // Best effort — a missing thumbnail falls back to the original in the browser
+    await generateThumbnails(supabaseAdmin, 'threads', path, png).catch((e) => console.error(e));
   }
 
   const threadFields = {
@@ -93,7 +96,10 @@ export async function syncMemeThread(meme: MemeRow, adminId: string): Promise<st
 
   // Best-effort cleanup of the previous render
   const stale = oldImages.filter((u) => u.startsWith(THREADS_PUBLIC())).map((u) => u.slice(THREADS_PUBLIC().length));
-  if (stale.length) await supabaseAdmin.storage.from('threads').remove(stale);
+  if (stale.length) {
+    await supabaseAdmin.storage.from('threads').remove(stale);
+    await removeThumbnails(supabaseAdmin, 'threads', stale).catch(() => {});
+  }
 
   if (!existing) {
     const { data: primary } = await supabaseAdmin.from('persons').select('slug').eq('id', figureIds[0]).maybeSingle();

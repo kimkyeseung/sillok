@@ -31,6 +31,8 @@ describe('uploadPersonImage', () => {
           }),
       })
       // Mock file upload response
+      .mockResolvedValueOnce({ ok: true })
+      // Mock thumbnail generation response
       .mockResolvedValueOnce({ ok: true });
 
     const url = await uploadPersonImage(mockFile, 'person-1');
@@ -57,6 +59,13 @@ describe('uploadPersonImage', () => {
         body: mockFile,
       }
     );
+
+    // Should ask the server to pre-generate thumbnails
+    expect(mockFetch).toHaveBeenNthCalledWith(3, '/api/upload/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bucket: 'persons', path: 'person-1/file-id.jpg' }),
+    });
 
     // Should return public URL
     expect(url).toBe(

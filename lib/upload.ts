@@ -1,4 +1,24 @@
 /**
+ * Ask the server to pre-generate thumbnails for an image that was just PUT to
+ * its presigned URL. Best effort: if it fails the upload still stands and pages
+ * fall back to the original (components/common/ThumbnailFallback).
+ */
+export async function finalizeUpload(
+  bucket: 'avatars' | 'threads' | 'persons' | 'articles',
+  path: string
+): Promise<void> {
+  try {
+    await fetch('/api/upload/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bucket, path }),
+    });
+  } catch {
+    // ignored — see above
+  }
+}
+
+/**
  * Upload an image file to Supabase Storage via presigned URL.
  * Returns the public URL of the uploaded file.
  */
@@ -34,7 +54,10 @@ export async function uploadPersonImage(
     throw new Error('Failed to upload file');
   }
 
-  // 3. Construct public URL
+  // 3. Pre-generate thumbnails
+  await finalizeUpload('persons', path);
+
+  // 4. Construct public URL
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   return `${supabaseUrl}/storage/v1/object/public/persons/${path}`;
 }

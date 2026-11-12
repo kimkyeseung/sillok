@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { apiFetch, ApiError } from '@/lib/fetcher';
 import { useToast } from '@/components/common/Toast';
+import { finalizeUpload } from '@/lib/upload';
 import { mutate } from 'swr';
 import ImageCropModal from '@/components/admin/ImageCropModal';
 
@@ -86,6 +87,7 @@ export default function ProfileClient() {
         body: croppedFile,
       });
       if (!uploadRes.ok) throw new Error('Upload failed');
+      await finalizeUpload('avatars', path);
 
       const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
       await apiFetch('/api/profile', {

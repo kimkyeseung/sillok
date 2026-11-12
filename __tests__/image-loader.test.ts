@@ -4,34 +4,43 @@ import imageLoader from '@/lib/image-loader';
 const SB = 'https://abc123.supabase.co/storage/v1';
 
 describe('imageLoader', () => {
-  it('routes Supabase public objects through the image transformer', () => {
+  it('serves the pre-generated thumbnail for Supabase public objects', () => {
     expect(imageLoader({ src: `${SB}/object/public/persons/id-1/portrait.jpg`, width: 96 })).toBe(
-      `${SB}/render/image/public/persons/id-1/portrait.jpg?width=96&quality=75`
+      `${SB}/object/public/thumbs/persons/96/id-1/portrait.jpg.webp`
     );
   });
 
-  it('passes quality and caps the width at the Supabase limit', () => {
-    expect(imageLoader({ src: `${SB}/object/public/threads/a.webp`, width: 3840, quality: 60 })).toBe(
-      `${SB}/render/image/public/threads/a.webp?width=2500&quality=60`
-    );
+  it('picks the smallest generated width that covers the request', () => {
+    const src = `${SB}/object/public/threads/u/t/a.webp`;
+    const thumb = (w: number) => `${SB}/object/public/thumbs/threads/${w}/u/t/a.webp.webp`;
+    expect(imageLoader({ src, width: 48 })).toBe(thumb(96));
+    expect(imageLoader({ src, width: 128 })).toBe(thumb(256));
+    expect(imageLoader({ src, width: 384 })).toBe(thumb(640));
+    expect(imageLoader({ src, width: 828 })).toBe(thumb(1080));
+    expect(imageLoader({ src, width: 3840 })).toBe(thumb(1920));
+  });
+
+  it('never uses Storage image transformations', () => {
+    expect(imageLoader({ src: `${SB}/object/public/nodes/posters/a.png`, width: 640 })).not.toContain('render/image');
   });
 
   it('keeps an existing query string', () => {
     expect(imageLoader({ src: `${SB}/object/public/threads/a.png?v=2`, width: 64 })).toBe(
-      `${SB}/render/image/public/threads/a.png?v=2&width=64&quality=75`
+      `${SB}/object/public/thumbs/threads/96/a.png.webp?v=2`
     );
   });
 
-  it('leaves formats the transformer cannot handle untouched', () => {
+  it('leaves formats that have no thumbnails untouched', () => {
     const gif = `${SB}/object/public/threads/a.gif`;
     expect(imageLoader({ src: gif, width: 64 })).toBe(gif);
   });
 
-  it('leaves already-transformed and signed Supabase URLs untouched', () => {
+  it('leaves buckets without thumbnails, thumbnails themselves and signed URLs untouched', () => {
+    const meme = `${SB}/object/public/memes/sources/a.jpg`;
+    const thumb = `${SB}/object/public/thumbs/persons/96/a.jpg.webp`;
     const rendered = `${SB}/render/image/public/persons/a.jpg?width=10`;
     const signed = `${SB}/object/sign/private/a.jpg?token=x`;
-    expect(imageLoader({ src: rendered, width: 64 })).toBe(rendered);
-    expect(imageLoader({ src: signed, width: 64 })).toBe(signed);
+    for (const src of [meme, thumb, rendered, signed]) expect(imageLoader({ src, width: 64 })).toBe(src);
   });
 
   it('uses a Wikimedia thumbnail at the next allowed step for small sizes', () => {
