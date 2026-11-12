@@ -76,7 +76,105 @@ const ATTIRE = {
     'Joseon crown prince attire: a deep navy-blue gonryongpo robe with round FOUR-clawed dragon badges on the chest and shoulders, a jade belt, and an ikseongwan — a black silk cap whose two small rounded wings stand UPRIGHT at the back of the cap (not horizontal side wings like an official\'s samo)',
   royalPrince:
     'Joseon royal prince (gun) court attire: a deep crimson dallyeong robe with a square embroidered badge showing a white mythical beast (baektaek) — NOT a crane — a black samo hat with side wings, and a seodae belt',
+  queen:
+    'Joseon queen\'s attire: a deep red dangui jacket with gold-leaf phoenix patterns over a long navy chima skirt, hair in a formal braided court chignon (eoyeommeori) with a large gold binyeo hairpin and a phoenix ornament',
+  queenDowager:
+    'Joseon queen dowager\'s attire: a deep purple dangui jacket with subdued gold-leaf patterns over a dark chima skirt, hair in a formal court chignon with a jade binyeo hairpin',
+  consort:
+    'Joseon royal consort\'s attire: a green dangui jacket with gold-leaf floral patterns over a crimson chima skirt, hair in a neat chignon held with a long silver binyeo hairpin',
+  princess:
+    'Joseon princess\'s attire: a yellow-green dangui jacket with gold-leaf floral patterns over a red chima skirt, hair in a chignon with a jade binyeo hairpin',
+  girl: 'a Joseon royal girl\'s hanbok: a yellow jeogori jacket and a red chima skirt, hair in a single long braid tied with a red daenggi ribbon',
+  boy: 'a Joseon royal boy\'s hanbok: a bright blue durumagi coat over a jeogori and a small black bokgeon cap',
+  plainWoman:
+    'plain undyed white hanbok with no ornaments, hair in a simple low chignon with a wooden hairpin — the dress of a deposed royal woman living as a commoner',
+  lateNoble:
+    'late Joseon nobleman\'s attire: a light-colored dopo robe with a sash and a black horsehair gat hat',
+  lateNoblewoman:
+    'late Joseon noblewoman\'s attire: a pale jade-green jeogori and a deep blue chima, hair in a low chignon with a jade binyeo hairpin',
 };
+
+// Joseon royal family (first batch of family-tree figures): [attire, age, mood, setting?]
+// Children are shown as children; deposed women in plain dress.
+const woman = (attire, age, mood, setting) => ({ subject: 'a Korean woman', attire, age: `in her ${age}`, mood, setting });
+const man = (attire, age, mood, setting) => ({ attire, age: `in his ${age}`, mood, setting });
+const child = (subject, attire, age, mood) => ({ subject, attire, age, mood, setting: 'a sunlit palace courtyard' });
+const ROYAL_FAMILY_OVERRIDES = {
+  'queen-sinui': woman('modest late Goryeo noblewoman\'s hanbok: a pale jeogori and a long dark chima, hair in a low chignon', '50s', 'gentle, steadfast wife of a general', 'a provincial manor house in the Hamgyeong region'),
+  'queen-sindeok': woman(ATTIRE.queen, '30s', 'sharp, ambitious, protective mother'),
+  'grand-prince-hoean': man(ATTIRE.royalPrince, '30s', 'proud, restless prince with a short beard'),
+  'grand-prince-uian': { age: 'a sixteen-year-old boy', attire: ATTIRE.crownPrince, mood: 'earnest, nervous young crown prince' },
+  'queen-wongyeong': woman(ATTIRE.queen, '40s', 'strong-willed, shrewd, unbending'),
+  'grand-prince-yangnyeong': man(ATTIRE.royalPrince, '30s', 'free-spirited, mischievous, with a hint of defiance'),
+  'queen-soheon': woman(ATTIRE.queen, '40s', 'gentle, composed, quietly sorrowful'),
+  'princess-jeongui': woman(ATTIRE.princess, '20s', 'bright, intelligent, holding a sheet of paper with brush strokes'),
+  'grand-prince-imyeong': man(ATTIRE.royalPrince, '30s', 'robust, practical, keen on firearms'),
+  'grand-prince-geumseong': man(ATTIRE.royalPrince, '20s', 'loyal, resolute, grave'),
+  'queen-hyeondeok': woman(ATTIRE.consort, 'early 20s', 'gentle, graceful crown princess'),
+  'princess-gyeonghye': woman(ATTIRE.princess, '20s', 'dignified, grieving but resilient'),
+  'queen-jeongsun-danjong': woman(ATTIRE.plainWoman, '30s', 'serene, sorrowful, enduring', 'a small thatched hermitage on a hill outside the Seoul city wall'),
+  'queen-jeonghui': woman(ATTIRE.queenDowager, '50s', 'commanding, wise regent'),
+  'queen-sohye': woman(ATTIRE.queenDowager, '50s', 'stern, learned, holding a bound book'),
+  'grand-prince-wolsan': man(ATTIRE.royalPrince, '30s', 'refined, poetic, contemplative', 'a garden pavilion by a lotus pond'),
+  'grand-prince-jean': man(ATTIRE.royalPrince, '40s', 'quiet, eccentric, unassuming'),
+  'deposed-queen-yun': woman(ATTIRE.queen, '20s', 'proud, tense, strong-tempered'),
+  'queen-jeonghyeon': woman(ATTIRE.queen, '40s', 'calm, patient, dignified'),
+  'deposed-queen-sin': woman(ATTIRE.plainWoman, '40s', 'gentle, sorrowful, composed'),
+  'queen-dangyeong': woman(ATTIRE.plainWoman, '20s', 'melancholy, longing, graceful', 'a rocky hillside on Inwangsan with a red skirt spread over a rock'),
+  'queen-janggyeong': woman(ATTIRE.queen, 'early 20s', 'gentle, tender young queen'),
+  'queen-munjeong': woman(ATTIRE.queenDowager, '40s', 'formidable, imperious, sharp-eyed regent'),
+  'park-gyeong-bin': woman(ATTIRE.consort, '20s', 'beautiful, confident, ambitious'),
+  'prince-bokseong': man(ATTIRE.royalPrince, '20s', 'mild, uneasy young prince'),
+  'crown-prince-sunhoe': { age: 'a twelve-year-old boy', attire: ATTIRE.crownPrince, mood: 'delicate, earnest young crown prince' },
+  'queen-insun': woman(ATTIRE.queen, '30s', 'reserved, thoughtful'),
+  'queen-uiin': woman(ATTIRE.queen, '30s', 'kind, patient, gentle'),
+  'queen-inmok': woman(ATTIRE.queenDowager, '30s', 'grief-hardened, resolute, dignified'),
+  'kim-gong-bin': woman(ATTIRE.consort, '20s', 'beautiful, warm, delicate'),
+  'kim-in-bin': woman(ATTIRE.consort, '30s', 'clever, poised, gracious'),
+  'prince-imhae': man(ATTIRE.royalPrince, '20s', 'hot-tempered, arrogant, with a scowl'),
+  'prince-sunhwa': man(ATTIRE.royalPrince, '20s', 'brash, unruly, cold-eyed'),
+  'grand-prince-yeongchang': child('a Korean boy', ATTIRE.boy, 'about seven years old', 'innocent, curious child'),
+  'princess-jeongmyeong': woman(ATTIRE.princess, '30s', 'composed, cultured, holding a calligraphy brush', 'a study room with large calligraphy on paper'),
+  'deposed-queen-yu': woman(ATTIRE.queen, '40s', 'proud, despairing'),
+  'deposed-crown-prince-yi-ji': { age: 'in his early 20s', attire: ATTIRE.crownPrince, mood: 'anxious, determined, cornered' },
+  'queen-inheon': woman(ATTIRE.lateNoblewoman, '40s', 'anxious but steadfast mother'),
+  'grand-prince-neungchang': man(ATTIRE.royalPrince, 'mid teens', 'bright, spirited, promising youth'),
+  'queen-inyeol': woman(ATTIRE.queen, '30s', 'brave, steady, supportive'),
+  'queen-jangnyeol': woman(ATTIRE.queenDowager, '40s', 'reserved, solemn, wearing a mourning-white jacket over her dress'),
+  'crown-prince-sohyeon': { age: 'in his early 30s', attire: ATTIRE.crownPrince, mood: 'worldly, thoughtful, with a small brass celestial globe beside him', setting: 'a Qing-era residence in Shenyang' },
+  'grand-prince-inpyeong': man(ATTIRE.royalPrince, '30s', 'artistic, worldly envoy', 'a study with paintings and brushes'),
+  'queen-inseon': woman(ATTIRE.queen, '30s', 'resilient, warm, steady'),
+  'queen-myeongseong': woman(ATTIRE.queen, '30s', 'strong-willed, protective, politically sharp'),
+  'queen-ingyeong': woman(ATTIRE.queen, 'late teens', 'graceful, gentle young queen'),
+  'queen-inwon': woman(ATTIRE.queenDowager, '40s', 'dignified, protective, calm'),
+  'choe-suk-bin': woman(ATTIRE.consort, '30s', 'humble, kind, quietly determined'),
+  'prince-yeollyeong': man(ATTIRE.royalPrince, 'late teens', 'bright, cheerful, much-loved youth'),
+  'queen-jeongseong': woman(ATTIRE.queen, '40s', 'patient, gentle, lonely'),
+  'queen-jeongsun-yeongjo': woman(ATTIRE.queenDowager, '50s', 'shrewd, stern, powerful regent'),
+  'yi-yeong-bin': woman(ATTIRE.consort, '50s', 'anguished, dignified mother'),
+  'crown-prince-hyojang': child('a Korean boy', ATTIRE.crownPrince, 'about nine years old', 'gentle, serious child crown prince'),
+  'princess-hwapyeong': woman(ATTIRE.princess, 'early 20s', 'warm, kind, compassionate'),
+  'princess-hwawan': woman(ATTIRE.princess, '30s', 'clever, self-assured, scheming'),
+  'lady-hyegyeong': woman(ATTIRE.queenDowager, '60s', 'reflective, sorrowful, holding a brush over a manuscript', 'a quiet room at Changgyeonggung palace'),
+  'queen-hyoui': woman(ATTIRE.queen, '30s', 'devoted, modest, kind'),
+  'seong-ui-bin': woman(ATTIRE.consort, '20s', 'graceful, intelligent, independent-minded'),
+  'park-su-bin': woman(ATTIRE.consort, '20s', 'modest, gentle, well-mannered'),
+  'crown-prince-munhyo': child('a Korean boy', ATTIRE.boy, 'about four years old', 'sweet, cheerful small child'),
+  'queen-sunwon': woman(ATTIRE.queenDowager, '50s', 'authoritative, calculating regent'),
+  'princess-deokon': woman(ATTIRE.princess, 'early 20s', 'graceful, gentle, holding a letter written in Hangul'),
+  'queen-sinjeong': woman(ATTIRE.queenDowager, '50s', 'commanding, decisive senior dowager'),
+  'queen-hyojeong': woman(ATTIRE.queenDowager, '60s', 'quiet, serene, long-widowed'),
+  'queen-cheorin': woman(ATTIRE.queen, '20s', 'elegant, reserved, observant'),
+  'prince-namyeon': man(ATTIRE.lateNoble, '40s', 'quiet, modest nobleman'),
+  'princess-consort-sunmok': woman(ATTIRE.lateNoblewoman, '40s', 'gentle, devout, holding a rosary'),
+  'prince-waneun': man(ATTIRE.lateNoble, '30s', 'restless, uneasy, ambitious'),
+};
+// Children of the family who died young are not shown older than they lived
+for (const [slug, o] of Object.entries(ROYAL_FAMILY_OVERRIDES)) {
+  o.era ??= 'the Joseon dynasty';
+  if (o.subject === 'a Korean boy') o.subject = 'a Korean royal child';
+  ROYAL_FAMILY_OVERRIDES[slug] = o;
+}
 
 // 인물별 묘사 (시대 · 나이 · 신분 · 성별). 없으면 조선 시대 기본값 사용
 const PERSON_OVERRIDES = {
@@ -165,7 +263,7 @@ function getEraAttire(birthYear) {
 }
 
 function buildPrompt(person) {
-  const o = PERSON_OVERRIDES[person.slug] ?? {};
+  const o = PERSON_OVERRIDES[person.slug] ?? ROYAL_FAMILY_OVERRIDES[person.slug] ?? {};
   const lifespan =
     person.birth_year != null && person.death_year != null ? person.death_year - person.birth_year : 60;
   const age = o.age ?? `in his ${Math.min(Math.max(Math.floor(lifespan * 0.6), 30), 60)}s`;
