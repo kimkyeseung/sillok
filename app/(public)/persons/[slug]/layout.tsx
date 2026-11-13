@@ -21,6 +21,7 @@ import MonarchNavbox from '@/components/person/MonarchNavbox';
 import AiDraftBadge from '@/components/person/AiDraftBadge';
 import { personTabs } from '@/lib/person-sections';
 import { tagLabel } from '@/lib/tags';
+import { findHub, hubPath } from '@/lib/person-directory';
 import { isInYearRange } from '@/lib/age-flow';
 import PersonStatusButtons from '@/components/person/PersonStatusButtons';
 import SuggestFactButton from '@/components/person/SuggestFactButton';
@@ -115,11 +116,21 @@ export default async function PersonLayout({
                 {person.birth_year ?? '?'} ~ {person.death_year ?? '?'}
               </span>
             )}
-            {person.tags.map((tag) => (
-              <span key={tag.id} className="badge-brand">
-                {tag.name_en ? tagLabel(tag.name_en) : tag.name_ko}
-              </span>
-            ))}
+            {person.tags.map((tag) => {
+              const label = tag.name_en ? tagLabel(tag.name_en) : tag.name_ko;
+              const hub =
+                tag.name_en && tag.type !== 'CUSTOM' ? findHub(tag.type === 'ERA' ? 'era' : 'field', tag.name_en) : null;
+              // Era / field tags link to their hub page (every figure page → its listings)
+              return hub ? (
+                <Link key={tag.id} href={hubPath(hub)} prefetch={false} className="badge-brand hover:bg-brand-100">
+                  {label}
+                </Link>
+              ) : (
+                <span key={tag.id} className="badge-brand">
+                  {label}
+                </span>
+              );
+            })}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">

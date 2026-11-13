@@ -281,6 +281,33 @@ export function communityPageJsonLd(page: {
   };
 }
 
+/** Era / field hub: a CollectionPage whose main entity is the list of figures shown */
+export function figureHubJsonLd(page: {
+  name: string;
+  description: string;
+  path: string;
+  figures: { slug: string; name_en: string }[];
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: page.name,
+    description: page.description,
+    url: `${BASE_URL}${page.path}`,
+    isPartOf: { '@type': 'WebSite', name: 'Sillok', url: BASE_URL },
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: page.figures.length,
+      itemListElement: page.figures.map((f, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${BASE_URL}/persons/${f.slug}`,
+        name: f.name_en,
+      })),
+    },
+  };
+}
+
 interface ForumReply {
   id: string;
   parent_id: string | null;

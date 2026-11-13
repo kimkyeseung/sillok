@@ -6,6 +6,8 @@ import { getBoardInfo, getTopicInfo } from '@/lib/feed-data';
 import { getAgeFlowData } from '@/lib/age-flow-data';
 import { getNotableYears } from '@/lib/age-flow';
 import { CURATED_NODES_FILTER } from '@/lib/heritage';
+import { getPersonDirectory } from '@/lib/person-directory-data';
+import { HUBS, hubFigures, hubPath, isHubIndexable, latestUpdate } from '@/lib/person-directory';
 
 // Rendered per request, not at build: a slow DB would time the build out
 // (static generation limit 60s). Crawlers fetch it only a few times a day.
@@ -196,8 +198,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return [];
     });
 
+  // Era / field hubs with enough figures (thin hubs are noindex); lastmod = newest figure edit
+  const directory = await getPersonDirectory();
+  const hubPages: MetadataRoute.Sitemap = HUBS.flatMap((hub) => {
+    const figures = hubFigures(directory, hub);
+    if (!isHubIndexable(figures.length)) return [];
+    const updated = latestUpdate(figures);
+    return [
+      {
+        url: `${baseUrl}${hubPath(hub)}`,
+        ...(updated && { lastModified: new Date(updated) }),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      },
+    ];
+  });
+
   return [
     ...staticPages,
+    ...hubPages,
     ...communityPages,
     ...ageFlowYearPages,
     ...personPages,

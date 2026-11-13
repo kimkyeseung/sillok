@@ -35,6 +35,7 @@ app/
 │   ├── t/[topic]/           토픽 = 스레드 category (discussion, trivia, qna, sources, film-tv)
 │   ├── threads/[id]/        스레드 상세 + 대댓글 트리
 │   ├── persons/[slug]/      인물 상세 — 탭별 URL (timeline, relations, legacy, related, gallery, threads, sources, stats)
+│   ├── persons/era/[era]/ · persons/field/[field]/   시대·분야 허브 (태그별 전체 인물, 오래된 순). /persons는 허브 링크 + 최근 등록 40명 + 전체 A–Z 색인
 │   ├── age-flow/[year]/     연도 페이지 ("Korea in 1592") — 공유 카드 /api/og/age-flow/[year]
 │   ├── age-flow/royal-family/  조선 왕실 탭 — 스크롤 연도에 살아 있는 왕족만 가계도로 표시, 후궁·대를 잇지 않는 자녀 등은 묶음 카드 → 팝업. 왕족은 lib/joseon-royal-family.ts (대부분 인물 레코드 없음), 연도별 계산 lib/royal-timeline.ts, 배치 lib/royal-tree.ts
 │   └── nodes/               노드 탐색 · 유물 탭 (목록/지도, 필터, 컬렉션) · /nodes/[slug] 상세
@@ -55,6 +56,7 @@ lib/                     순수 로직(테스트 대상)과 서버 로더를 파
 ├── meme-formats.ts      밈 형식 도감 (구조·웃음 포인트·필드) — 검증·AI 프롬프트·편집 폼·이미지 alt가 모두 여기서 파생
 ├── meme.ts              AI 초안 로직 — meme-ai(Claude) · meme-data · meme-render · meme-publish(스레드 발행)
 ├── promo.ts             Share kit 로직 (UTM, 플랫폼 글자 수, 서브레딧 안내) — promo-ai · promo-data · claude.ts(공용 Claude 호출)
+├── person-directory.ts · person-directory-data.ts   인물 허브 정의·정렬·A–Z 묶음 / 전체 인물 로더(sharedCache 10분)
 ├── person-page.ts       인물 페이지 로더 (React cache로 layout/page/metadata 공유)
 ├── image-loader.ts · thumbnail-paths.ts · thumbnails.ts   next/image 로더 → 미리 만든 썸네일 (경로 규칙 / sharp 생성)
 └── jsonld.ts · seo.ts   구조화 데이터 · 메타 유틸
@@ -123,4 +125,5 @@ scripts/                 데이터 적재 (heritage: fetch → translate → imp
 | 국가유산 일괄 등록 (`metadata.source = 'khs'`) | 국보·보물 ~2,800건은 AI 번역 초안 → 검수 전까지 큐레이션 목록·age-flow·sitemap 제외 + noindex |
 | 유물 이미지 미러링 안 함 | 공공누리 1유형만 썸네일, 1·3유형은 `node_images` 갤러리 (3유형은 크롭 금지) |
 | PersonAvatar 태그별 스타일 | FIELD 태그별 배경·아이콘 (`components/common/PersonAvatar.tsx`) |
+| 인물 허브 (`lib/person-directory.ts`) | 모든 인물이 `/persons`에서 크롤 가능한 링크로 닿아야 함 (A–Z 색인 + 시대·분야 허브). 허브 slug = `tags.name_en`, 새 FIELD 태그는 `FIELD_HUBS`에 추가. 인물 5명(`HUB_MIN_FIGURES`) 미만 허브는 noindex + sitemap 제외. 목록 링크는 `prefetch={false}` (인물 페이지 ISR 재생성 방지) |
 | 빈 게시판·토픽 noindex | 글 0개면 noindex + sitemap 제외 (thin content 방지) |

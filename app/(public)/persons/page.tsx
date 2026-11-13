@@ -1,13 +1,15 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { Metadata } from 'next';
 import RankingSection, { type RankedPerson } from '@/components/ranking/RankingSection';
-import PersonAvatar from '@/components/common/PersonAvatar';
+import FigureGrid from '@/components/person/FigureGrid';
+import HubLinks from '@/components/person/HubLinks';
 import { getPrimaryFieldTag } from '@/lib/person-utils';
 import { sanitizeSearchTerm } from '@/lib/search';
 import { tagLabel } from '@/lib/tags';
 import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { getPersonDirectory } from '@/lib/person-directory-data';
+import { groupByInitial, hubCounts, lifespan } from '@/lib/person-directory';
 
 export const metadata: Metadata = {
   title: 'Figures',
@@ -27,7 +29,8 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+// 'force-no-store' would also bypass the shared directory cache on every request
+export const fetchCache = 'default-no-store';
 
 interface SearchParams {
   q?: string;
@@ -53,7 +56,8 @@ export default async function PersonsPage({
     query = query.or(`name_en.ilike.%${q}%,name_ko.ilike.%${q}%`);
   }
 
-  const { data: persons } = await query;
+  const [{ data: persons }, directory] = await Promise.all([query, getPersonDirectory()]);
+  const index = q ? [] : groupByInitial(directory);
 
   // ── Trending Figures: gravity decay scoring ──
   // score = Σ (1 + replies*0.5 + likes) / (age_days + 2)^1.5
@@ -142,11 +146,11 @@ export default async function PersonsPage({
       <div className="my-8 border-t border-gray-200" />
 
       {/* All Figures Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">All Figures</h2>
+          <h2 className="text-xl font-bold text-gray-900">{q ? 'Search Results' : 'All Figures'}</h2>
           <p className="mt-0.5 text-sm text-gray-500">
-            Explore Korean historical figures
+            {q ? `Figures matching "${q}"` : `${directory.length} Korean historical figures`}
           </p>
         </div>
         <form className="flex gap-2">
@@ -163,49 +167,50 @@ export default async function PersonsPage({
         </form>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {(persons ?? []).map((person) => (
-          <Link
-            key={person.id}
-            href={`/persons/${person.slug}`}
-            className="card group p-4 text-center"
-          >
-            {person.thumbnail ? (
-              <Image
-                src={person.thumbnail}
-                alt={person.name_en}
-                width={80}
-                height={80}
-                className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-gray-100 transition-all group-hover:ring-brand-200"
-              />
-            ) : (
-              <div className="mx-auto h-20 w-20 overflow-hidden rounded-full ring-2 ring-gray-100 transition-all group-hover:ring-brand-200">
-                <PersonAvatar
-                  name={person.name_ko}
-                  fieldTag={getPrimaryFieldTag(
-                    ((person as any).person_tags ?? [])
-                      .map((pt: any) => pt.tags)
-                      .filter(Boolean)
-                  )}
-                  size="lg"
-                />
-              </div>
-            )}
-            <p className="mt-3 text-sm font-semibold text-gray-900 group-hover:text-brand-600">
-              {person.name_en}
-            </p>
-            {person.name_hanja && (
-              <p className="text-xs text-gray-400">{person.name_hanja}</p>
-            )}
-            {(person.birth_year || person.death_year) && (
-              <p className="mt-0.5 text-xs text-gray-400">
-                {person.birth_year ?? '?'} ~ {person.death_year ?? '?'}
-              </p>
-            )}
-          </Link>
-        ))}
+      {/* Era / field hubs */}
+      <div className="mb-6">
+        <HubLinks counts={hubCounts(directory)} />
       </div>
+
+      {!q && (persons ?? []).length > 0 && (
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">Recently added</h3>
+      )}
+
+      {/* Grid */}
+      <FigureGrid
+        figures={(persons ?? []).map((person) => ({
+          ...person,
+          fieldTag: getPrimaryFieldTag(
+            ((person as any).person_tags ?? []).map((pt: any) => pt.tags).filter(Boolean)
+          ),
+        }))}
+      />
+
+      {/* A–Z index: a crawlable link to every figure (the grid above shows only the newest) */}
+      {index.length > 0 && (
+        <section aria-labelledby="figures-az" className="mt-10">
+          <h3 id="figures-az" className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+            A–Z index
+          </h3>
+          <div className="space-y-5">
+            {index.map((group) => (
+              <div key={group.letter} className="flex gap-4">
+                <span className="w-6 shrink-0 text-lg font-bold text-brand-600">{group.letter}</span>
+                <ul className="grid flex-1 grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.persons.map((p) => (
+                    <li key={p.id} className="truncate text-sm">
+                      <Link href={`/persons/${p.slug}`} prefetch={false} className="text-gray-800 hover:text-brand-600">
+                        {p.name_en}
+                      </Link>
+                      {lifespan(p) && <span className="ml-1.5 text-xs text-gray-400">{lifespan(p)}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {(persons ?? []).length === 0 && (
         <div className="card-flat flex flex-col items-center py-16">
