@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { reportLimiter } from '@/lib/rate-limit';
+import { notifyAdmin } from '@/lib/admin-notify';
 
 // ─── POST /api/reports — Submit report [USER] ───
 
@@ -66,6 +67,15 @@ export async function POST(request: Request) {
 
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+
+  await notifyAdmin({
+    title: '새 신고',
+    url: '/admin/reports',
+    fields: [
+      { name: '대상', value: target_type },
+      { name: '사유', value: reason },
+    ],
+  });
 
   return apiSuccess(data);
 }

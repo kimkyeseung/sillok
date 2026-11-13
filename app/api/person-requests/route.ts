@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-helpers';
 import { requireAdmin, requireActiveUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { personRequestLimiter } from '@/lib/rate-limit';
+import { notifyAdmin } from '@/lib/admin-notify';
 
 // ─── POST /api/person-requests — Person addition request [USER] ───
 
@@ -43,6 +44,12 @@ export async function POST(request: Request) {
 
   if (error)
     return apiError('SERVER_ERROR', 'An error occurred while processing.', 500);
+
+  await notifyAdmin({
+    title: `인물 요청: ${data.name_ko}${data.name_hanja ? ` (${data.name_hanja})` : ''}`,
+    description: data.reason,
+    url: '/admin/person-requests',
+  });
 
   return apiSuccess(data);
 }
